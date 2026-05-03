@@ -1,4 +1,46 @@
 RewriteEngine On
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^ index.php [L]
+
+# Tienda
+RewriteRule ^tienda/?$ index.php?route=tienda [L,QSA]
+RewriteRule ^producto/([a-zA-Z0-9-]+)/?$ index.php?route=producto&slug=$1 [L,QSA]
+RewriteRule ^categoria/([a-zA-Z0-9-]+)/?$ index.php?route=tienda&categoria=$1 [L,QSA]
+
+# Carrito
+RewriteRule ^carrito/?$ index.php?route=carrito [L,QSA]
+RewriteRule ^carrito/agregar/?$ index.php?route=carrito_agregar [L,QSA]
+RewriteRule ^carrito/actualizar/?$ index.php?route=carrito_actualizar [L,QSA]
+RewriteRule ^carrito/eliminar/([0-9]+)/?$ index.php?route=carrito_eliminar&id=$1 [L,QSA]
+
+# Checkout
+RewriteRule ^checkout/?$ index.php?route=checkout [L,QSA]
+RewriteRule ^checkout/invitado/?$ index.php?route=checkout&invitado=1 [L,QSA]
+RewriteRule ^checkout/guardar/?$ index.php?route=checkout_guardar [L,QSA]
+
+# Pedido confirmado
+RewriteRule ^pedido/gracias/?$ index.php?route=pedido_gracias [L,QSA]
+
+# Auth cliente
+RewriteRule ^ingresar/?$ index.php?route=cliente_login [L,QSA]
+RewriteRule ^registro/?$ index.php?route=cliente_registro [L,QSA]
+RewriteRule ^salir/?$ index.php?route=cliente_logout [L,QSA]
+RewriteRule ^cliente/ingresar/?$ index.php?route=cliente_ingresar [L,QSA]
+RewriteRule ^cliente/guardar-registro/?$ index.php?route=cliente_guardar_registro [L,QSA]
+
+# Cuenta del cliente
+RewriteRule ^mi-cuenta/pedidos/?$ index.php?route=cliente_pedidos [L,QSA]
+RewriteRule ^mi-cuenta/pedido/([0-9]+)/?$ index.php?route=cliente_pedido_detalle&id=$1 [L,QSA]
+
+# Panel admin
+RewriteRule ^admin/?$ index.php?route=dashboard [L,QSA]
+RewriteRule ^admin/productos/?$ index.php?route=productos [L,QSA]
+RewriteRule ^admin/pedidos/?$ index.php?route=admin_pedidos [L,QSA]
+RewriteRule ^admin/pedido/([0-9]+)/?$ index.php?route=admin_pedido_detalle&id=$1 [L,QSA]
+RewriteRule ^admin/pedido/estado/?$ index.php?route=admin_pedido_estado [L,QSA]
+RewriteRule ^admin/clientes/?$ index.php?route=admin_clientes [L,QSA]
+RewriteRule ^admin/cliente/?$ index.php?route=admin_cliente_detalle [L,QSA]
+
+# Raiz -> tienda
+RewriteRule ^/?$ index.php?route=tienda [L,QSA]
