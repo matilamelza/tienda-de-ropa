@@ -5,7 +5,7 @@ class ClienteController extends Controller
     public function pedidos()
     {
         if (!isset($_SESSION['cliente'])) {
-            $this->redirect('/tienda_ropa/cliente/ingresar');
+            $this->redirect('<?= BASE_URL ?>/cliente/ingresar');
         }
 
         $pedidoModel = new Pedido();
@@ -24,7 +24,7 @@ class ClienteController extends Controller
     public function pedidoDetalle()
     {
         if (!isset($_SESSION['cliente'])) {
-            $this->redirect('/tienda_ropa/cliente/ingresar');
+            $this->redirect('<?= BASE_URL ?>/cliente/ingresar');
         }
 
         $id = (int) ($_GET['id'] ?? 0);
@@ -34,9 +34,9 @@ class ClienteController extends Controller
 
         $pedido = $pedidoModel->buscarPedido($id);
 
-        // 🔒 seguridad: solo ver su pedido
+        //  seguridad: solo ver su pedido
         if (!$pedido || $pedido['id_usuario_cliente'] != $_SESSION['cliente']['id_usuario_cliente']) {
-            $this->redirect('/tienda_ropa/cliente/pedidos');
+            $this->redirect('<?= BASE_URL ?>/mi-cuenta/pedidos');
         }
 
         $items = $pedidoModel->listarItems($id);

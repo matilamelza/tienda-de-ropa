@@ -83,6 +83,6 @@ class PedidoController extends Controller
 
         $pedidoModel->actualizarEstado($id_pedido, $nuevo_estado);
 
-        $this->redirect('index.php?route=admin_pedido_detalle&id=' . $id_pedido);
+        $this->redirect('<?= BASE_URL ?>/admin/pedido/' . $id_pedido);
     }
 }

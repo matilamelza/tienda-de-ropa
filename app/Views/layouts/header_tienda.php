@@ -13,7 +13,7 @@
 
         <div class="h-20 flex items-center justify-between">
 
-            <a href="/tienda_ropa/tienda" class="flex items-center gap-3">
+            <a href="<?= BASE_URL ?>/tienda" class="flex items-center gap-3">
                 <div class="w-12 h-12 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold">
                     LOGO
                 </div>
@@ -24,11 +24,11 @@
             </a>
 
             <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
-                <a href="/tienda_ropa/tienda" class="hover:text-gray-500">Inicio</a>
+                <a href="<?= BASE_URL ?>/tienda" class="hover:text-gray-500">Inicio</a>
 
                 <?php if (isset($categoriasMenu) && $categoriasMenu && $categoriasMenu->num_rows > 0): ?>
                     <?php while ($catMenu = $categoriasMenu->fetch_assoc()): ?>
-                        <a href="/tienda_ropa/categoria/<?php echo urlencode($catMenu['slug']); ?>"
+                        <a href="<?= BASE_URL ?>/categoria/<?php echo urlencode($catMenu['slug']); ?>"
                            class="hover:text-gray-500">
                             <?php echo htmlspecialchars($catMenu['nombre']); ?>
                         </a>
@@ -39,21 +39,21 @@
             <div class="hidden md:flex items-center gap-4">
 
                 <?php if (isset($_SESSION['cliente'])): ?>
-                   <a href="/tienda_ropa/mi-cuenta/pedidos"
+                   <a href="<?= BASE_URL ?>/mi-cuenta/pedidos"
    class="text-sm text-gray-500 hover:text-gray-900">
     Mis pedidos
 </a>
 
-                    <a href="/tienda_ropa/salir" class="text-sm font-medium hover:text-gray-500">
+                    <a href="<?= BASE_URL ?>/salir" class="text-sm font-medium hover:text-gray-500">
                         Salir
                     </a>
                 <?php else: ?>
-                    <a href="/tienda_ropa/ingresar" class="text-sm font-medium hover:text-gray-500">
+                    <a href="<?= BASE_URL ?>/ingresar" class="text-sm font-medium hover:text-gray-500">
                         Ingresar
                     </a>
                 <?php endif; ?>
 
-                <a href="/tienda_ropa/carrito" class="text-sm font-medium hover:text-gray-500">
+                <a href="<?= BASE_URL ?>/carrito" class="text-sm font-medium hover:text-gray-500">
                     Carrito
                 </a>
 
@@ -69,7 +69,7 @@
 
         <div id="menuMobile" class="hidden md:hidden border-t py-4">
             <nav class="flex flex-col gap-3 text-sm font-medium">
-                <a href="/tienda_ropa/tienda" class="py-2">
+                <a href="<?= BASE_URL ?>/tienda" class="py-2">
                     Inicio
                 </a>
 
@@ -79,23 +79,23 @@
                 ?>
 
                 <?php while ($catMobile = $categoriasMobile->fetch_assoc()): ?>
-                    <a href="/tienda_ropa/tienda?categoria=<?php echo urlencode($catMobile['slug']); ?>"
+                    <a href="<?= BASE_URL ?>/categoria/<?php echo urlencode($catMobile['slug']); ?>"
                        class="py-2 border-t">
                         <?php echo htmlspecialchars($catMobile['nombre']); ?>
                     </a>
                 <?php endwhile; ?>
 
                 <?php if (isset($_SESSION['cliente'])): ?>
-    <a href="/tienda_ropa/salir" class="py-2 border-t">
+    <a href="<?= BASE_URL ?>/salir" class="py-2 border-t">
         Salir
     </a>
 <?php else: ?>
-    <a href="/tienda_ropa/ingresar" class="py-2 border-t">
+    <a href="<?= BASE_URL ?>/ingresar" class="py-2 border-t">
         Ingresar
     </a>
 <?php endif; ?>
 
-                <a href="/tienda_ropa/carrito" class="py-2 border-t">
+                <a href="<?= BASE_URL ?>/carrito" class="py-2 border-t">
                     Carrito
                 </a>
             </nav>

@@ -46,14 +46,14 @@ class CarritoController extends Controller
     public function agregar()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('/tienda_ropa/tienda');
+            $this->redirect('<?= BASE_URL ?>/tienda');
         }
 
         $id_variante = (int) ($_POST['id_variante'] ?? 0);
         $cantidad = (int) ($_POST['cantidad'] ?? 1);
 
         if ($id_variante <= 0) {
-            $this->redirect('/tienda_ropa/tienda');
+            $this->redirect('<?= BASE_URL ?>/tienda');
         }
 
         if ($cantidad < 1) {
@@ -64,7 +64,7 @@ class CarritoController extends Controller
         $variante = $carritoModel->buscarVarianteDetalle($id_variante);
 
         if (!$variante || $variante['activo'] != 1 || $variante['stock'] <= 0) {
-            $this->redirect('/tienda_ropa/producto/' . ($variante['id_producto'] ?? 0));
+            $this->redirect('<?= BASE_URL ?>/producto/' . ($variante['id_producto'] ?? 0));
         }
 
         if ($cantidad > $variante['stock']) {
@@ -87,7 +87,7 @@ class CarritoController extends Controller
             ];
         }
 
-        $this->redirect('/tienda_ropa/carrito');
+        $this->redirect('<?= BASE_URL ?>/carrito');
     }
 
     public function eliminar()
@@ -98,13 +98,13 @@ class CarritoController extends Controller
             unset($_SESSION['carrito'][$id_variante]);
         }
 
-        $this->redirect('/tienda_ropa/carrito');
+        $this->redirect('<?= BASE_URL ?>/carrito');
     }
 
     public function actualizar()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('/tienda_ropa/carrito');
+            $this->redirect('<?= BASE_URL ?>/carrito');
         }
 
         $cantidades = $_POST['cantidades'] ?? [];
@@ -120,6 +120,6 @@ class CarritoController extends Controller
             }
         }
 
-        $this->redirect('/tienda_ropa/carrito');
+        $this->redirect('<?= BASE_URL ?>/carrito');
     }
 }

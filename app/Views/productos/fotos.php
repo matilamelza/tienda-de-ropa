@@ -29,7 +29,7 @@
     <?php while ($f = $fotos->fetch_assoc()): ?>
 
         <div class="bg-white p-2 rounded shadow">
-            <img src="/tienda_ropa/public/uploads/productos/<?php echo $f['imagen']; ?>"
+            <img src="<?= BASE_URL ?>/public/uploads/productos/<?php echo $f['imagen']; ?>"
                  class="w-full h-40 object-cover rounded">
         </div>
 

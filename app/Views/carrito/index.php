@@ -11,7 +11,7 @@
             <h2 class="text-2xl font-bold text-gray-900">Tu carrito está vacío</h2>
             <p class="text-gray-500 mt-2">Agregá productos desde la tienda.</p>
 
-            <a href="/tienda_ropa/tienda"
+            <a href="<?= BASE_URL ?>/tienda"
                class="inline-block mt-6 bg-gray-900 text-white px-6 py-3 rounded-full">
                 Ver productos
             </a>
@@ -19,7 +19,7 @@
 
     <?php else: ?>
 
-        <form action="/tienda_ropa/carrito/actualizar" method="POST">
+        <form action="<?= BASE_URL ?>/carrito/actualizar" method="POST">
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
@@ -32,7 +32,7 @@
 
                             <div class="w-28 h-32 bg-gray-100 rounded-2xl overflow-hidden flex-shrink-0">
                                 <?php if (!empty($v['foto'])): ?>
-                                    <img src="/tienda_ropa/public/uploads/productos/<?php echo htmlspecialchars($v['foto']); ?>"
+                                    <img src="<?= BASE_URL ?>/public/uploads/productos/<?php echo htmlspecialchars($v['foto']); ?>"
                                          class="w-full h-full object-cover">
                                 <?php endif; ?>
                             </div>
@@ -54,8 +54,8 @@
                                         </p>
                                     </div>
 
-                                    <a href="/tienda_ropa/carrito/eliminar/<?php echo $v['id_variante']; ?>">
-                                       class="text-sm text-red-500 hover:text-red-700">
+                                    <a href="<?= BASE_URL ?>/carrito/eliminar/<?php echo $v['id_variante']; ?>"
+                                            class="text-sm text-red-500 hover:text-red-700">
                                         Eliminar
                                     </a>
                                 </div>
@@ -114,12 +114,12 @@
                             <strong>$<?php echo number_format($total, 2, ',', '.'); ?></strong>
                         </div>
 
-                       <a href="/tienda_ropa/checkout"
+                       <a href="<?= BASE_URL ?>/checkout"
    class="block text-center w-full bg-gray-900 text-white py-4 rounded-full font-semibold hover:bg-gray-800">
     Finalizar compra
 </a>
 
-                        <a href="/tienda_ropa/tienda"
+                        <a href="<?= BASE_URL ?>/tienda"
                            class="block text-center mt-4 text-sm text-gray-500 hover:text-gray-900">
                             Seguir comprando
                         </a>

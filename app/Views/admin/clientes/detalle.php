@@ -20,7 +20,7 @@ $estados = [
         </p>
     </div>
 
-    <a href="/tienda_ropa/admin/clientes"
+    <a href="<?= BASE_URL ?>/admin/clientes"
        class="px-4 py-2 rounded-lg border bg-white text-gray-700">
         Volver
     </a>
@@ -154,7 +154,7 @@ $estados = [
                                 </td>
 
                                 <td class="px-4 py-3 text-right">
-                                    <a href="/tienda_ropa/admin/pedido/<?php echo $p['id_pedido']; ?>"
+                                    <a href="<?= BASE_URL ?>/admin/pedido/<?php echo $p['id_pedido']; ?>"
                                        class="text-gray-700 hover:underline">
                                         Ver pedido
                                     </a>

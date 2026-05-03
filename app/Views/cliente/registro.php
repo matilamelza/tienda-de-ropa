@@ -9,7 +9,7 @@
         </div>
     <?php endif; ?>
 
-    <form action="/tienda_ropa/cliente/guardar-registro" method="POST" class="space-y-4 bg-white border rounded-3xl p-6">
+    <form action="<?= BASE_URL ?>/cliente/guardar-registro" method="POST" class="space-y-4 bg-white border rounded-3xl p-6">
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -42,7 +42,7 @@
             Crear cuenta
         </button>
 
-        <a href="/tienda_ropa/ingresar"
+        <a href="<?= BASE_URL ?>/ingresar"
            class="block text-center text-sm text-gray-500 hover:text-gray-900">
             Ya tengo cuenta
         </a>

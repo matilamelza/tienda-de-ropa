@@ -35,7 +35,7 @@
     <div class="max-w-7xl mx-auto px-4 py-10">
 
         <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
-            <a href="/tienda_ropa/tienda" class="hover:text-gray-900">
+            <a href="<?= BASE_URL ?>/tienda" class="hover:text-gray-900">
                 Inicio
             </a>
             <span>/</span>
@@ -55,7 +55,7 @@
                 </h1>
             </div>
 
-            <a href="/tienda_ropa/tienda"
+            <a href="<?= BASE_URL ?>/tienda"
                class="text-sm text-gray-500 hover:text-gray-900">
                 Ver todos los productos
             </a>
@@ -86,12 +86,12 @@
         <?php if ($productos && $productos->num_rows > 0): ?>
             <?php while ($p = $productos->fetch_assoc()): ?>
 
-                <a href="/tienda_ropa/producto/<?php echo htmlspecialchars($p['slug']); ?>"
+                <a href="<?= BASE_URL ?>/producto/<?php echo htmlspecialchars($p['slug']); ?>"
                    class="group block">
 
                     <div class="aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden shadow-sm group-hover:shadow-lg transition">
                         <?php if (!empty($p['foto_principal'])): ?>
-                            <img src="/tienda_ropa/public/uploads/productos/<?php echo htmlspecialchars($p['foto_principal']); ?>"
+                            <img src="<?= BASE_URL ?>/public/uploads/productos/<?php echo htmlspecialchars($p['foto_principal']); ?>"
                                  class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                         <?php else: ?>
                             <div class="w-full h-full flex items-center justify-center text-gray-400">

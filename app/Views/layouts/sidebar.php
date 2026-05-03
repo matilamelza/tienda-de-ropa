@@ -22,7 +22,7 @@
     Pedidos
 </a>
 
-<a href="/tienda_ropa/admin/clientes"
+<a href="<?= BASE_URL ?>/admin/clientes"
    class="block px-4 py-2 rounded hover:bg-gray-800">
     Clientes
 </a>
@@ -47,7 +47,7 @@
             Colores
         </a>
 
-        <a href="/tienda_ropa/tienda"
+        <a href="<?= BASE_URL ?>/tienda"
    class="block px-4 py-2 rounded hover:bg-gray-800">
    Ver tienda 🛒
 </a>

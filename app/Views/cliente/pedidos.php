@@ -43,7 +43,7 @@ $estados = [
                             $<?php echo number_format($p['total'], 2, ',', '.'); ?>
                         </p>
 
-                                <a href="/tienda_ropa/mi-cuenta/pedido/<?php echo $p['id_pedido']; ?>"
+                                <a href="<?= BASE_URL ?>/mi-cuenta/pedido/<?php echo $p['id_pedido']; ?>"
                                    class="text-sm text-gray-600 hover:underline">
                                     Ver detalle
                                 </a>
@@ -60,7 +60,7 @@ $estados = [
         <div class="bg-gray-50 rounded-3xl p-10 text-center">
             <h2 class="text-xl font-bold">Todavía no hiciste pedidos</h2>
 
-            <a href="/tienda_ropa/tienda"
+            <a href="<?= BASE_URL ?>/tienda"
                class="inline-block mt-4 bg-gray-900 text-white px-5 py-3 rounded-full">
                 Ir a la tienda
             </a>

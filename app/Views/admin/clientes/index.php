@@ -62,7 +62,7 @@
                         </td>
 
                         <td class="px-4 py-3 text-right">
-                            <a href="/tienda_ropa/admin/cliente?id=<?php echo $c['id_cliente']; ?>"
+                            <a href="<?= BASE_URL ?>/admin/cliente?id=<?php echo $c['id_cliente']; ?>"
                                class="text-gray-700 hover:underline">
                                 Ver detalle
                             </a>

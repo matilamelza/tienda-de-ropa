@@ -3,40 +3,29 @@ RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-RewriteRule ^([a-zA-Z0-9-_/]+)/?$ public/index.php?route=$1 [L,QSA]
-
-RewriteRule ^$ public/index.php?route=tienda [L,QSA]
-RewriteRule ^tienda/?$ public/index.php?route=tienda [L,QSA]
-
-RewriteRule ^categoria/([a-zA-Z0-9-]+)/?$ public/index.php?route=tienda&categoria=$1 [L,QSA]
-RewriteRule ^producto/([a-zA-Z0-9-]+)/?$ public/index.php?route=producto&slug=$1 [L,QSA]
-
-RewriteRule ^carrito/?$ public/index.php?route=carrito [L,QSA]
-RewriteRule ^checkout/?$ public/index.php?route=checkout [L,QSA]
-
-RewriteRule ^ingresar/?$ public/index.php?route=cliente_login [L,QSA]
-RewriteRule ^registro/?$ public/index.php?route=cliente_registro [L,QSA]
-RewriteRule ^salir/?$ public/index.php?route=cliente_logout [L,QSA]
-
-RewriteRule ^mi-cuenta/pedidos/?$ public/index.php?route=cliente_pedidos [L,QSA]
-RewriteRule ^mi-cuenta/pedido/([0-9]+)/?$ public/index.php?route=cliente_pedido_detalle&id=$1 [L,QSA]
-
-RewriteRule ^admin/?$ public/index.php?route=dashboard [L,QSA]
-RewriteRule ^admin/productos/?$ public/index.php?route=productos [L,QSA]
-RewriteRule ^admin/pedidos/?$ public/index.php?route=admin_pedidos [L,QSA]
-RewriteRule ^admin/pedido/([0-9]+)/?$ public/index.php?route=admin_pedido_detalle&id=$1 [L,QSA]
-
-RewriteRule ^cliente/ingresar/?$ public/index.php?route=cliente_ingresar [L,QSA]
-RewriteRule ^cliente/guardar-registro/?$ public/index.php?route=cliente_guardar_registro [L,QSA]
-
-RewriteRule ^checkout/invitado/?$ public/index.php?route=checkout&invitado=1 [L,QSA]
-
-RewriteRule ^checkout/guardar/?$ public/index.php?route=checkout_guardar [L,QSA]
-
-RewriteRule ^carrito/agregar/?$ public/index.php?route=carrito_agregar [L,QSA]
-RewriteRule ^carrito/actualizar/?$ public/index.php?route=carrito_actualizar [L,QSA]
-RewriteRule ^carrito/eliminar/([0-9]+)/?$ public/index.php?route=carrito_eliminar&id=$1 [L,QSA]
-
-RewriteRule ^admin/pedido/estado/?$ public/index.php?route=admin_pedido_estado [L,QSA]
-
-
+RewriteRule ^tienda_ropa/tienda/?$ tienda_ropa/public/index.php?route=tienda [L,QSA]
+RewriteRule ^tienda_ropa/producto/([a-zA-Z0-9-]+)/?$ tienda_ropa/public/index.php?route=producto&slug=$1 [L,QSA]
+RewriteRule ^tienda_ropa/categoria/([a-zA-Z0-9-]+)/?$ tienda_ropa/public/index.php?route=tienda&categoria=$1 [L,QSA]
+RewriteRule ^tienda_ropa/carrito/?$ tienda_ropa/public/index.php?route=carrito [L,QSA]
+RewriteRule ^tienda_ropa/carrito/agregar/?$ tienda_ropa/public/index.php?route=carrito_agregar [L,QSA]
+RewriteRule ^tienda_ropa/carrito/actualizar/?$ tienda_ropa/public/index.php?route=carrito_actualizar [L,QSA]
+RewriteRule ^tienda_ropa/carrito/eliminar/([0-9]+)/?$ tienda_ropa/public/index.php?route=carrito_eliminar&id=$1 [L,QSA]
+RewriteRule ^tienda_ropa/checkout/?$ tienda_ropa/public/index.php?route=checkout [L,QSA]
+RewriteRule ^tienda_ropa/checkout/invitado/?$ tienda_ropa/public/index.php?route=checkout&invitado=1 [L,QSA]
+RewriteRule ^tienda_ropa/checkout/guardar/?$ tienda_ropa/public/index.php?route=checkout_guardar [L,QSA]
+RewriteRule ^tienda_ropa/ingresar/?$ tienda_ropa/public/index.php?route=cliente_login [L,QSA]
+RewriteRule ^tienda_ropa/registro/?$ tienda_ropa/public/index.php?route=cliente_registro [L,QSA]
+RewriteRule ^tienda_ropa/salir/?$ tienda_ropa/public/index.php?route=cliente_logout [L,QSA]
+RewriteRule ^tienda_ropa/cliente/ingresar/?$ tienda_ropa/public/index.php?route=cliente_ingresar [L,QSA]
+RewriteRule ^tienda_ropa/cliente/guardar-registro/?$ tienda_ropa/public/index.php?route=cliente_guardar_registro [L,QSA]
+RewriteRule ^tienda_ropa/mi-cuenta/pedidos/?$ tienda_ropa/public/index.php?route=cliente_pedidos [L,QSA]
+RewriteRule ^tienda_ropa/mi-cuenta/pedido/([0-9]+)/?$ tienda_ropa/public/index.php?route=cliente_pedido_detalle&id=$1 [L,QSA]
+RewriteRule ^tienda_ropa/admin/?$ tienda_ropa/public/index.php?route=dashboard [L,QSA]
+RewriteRule ^tienda_ropa/admin/productos/?$ tienda_ropa/public/index.php?route=productos [L,QSA]
+RewriteRule ^tienda_ropa/admin/pedidos/?$ tienda_ropa/public/index.php?route=admin_pedidos [L,QSA]
+RewriteRule ^tienda_ropa/admin/pedido/([0-9]+)/?$ tienda_ropa/public/index.php?route=admin_pedido_detalle&id=$1 [L,QSA]
+RewriteRule ^tienda_ropa/admin/pedido/estado/?$ tienda_ropa/public/index.php?route=admin_pedido_estado [L,QSA]
+RewriteRule ^tienda_ropa/admin/clientes/?$ tienda_ropa/public/index.php?route=admin_clientes [L,QSA]
+RewriteRule ^tienda_ropa/admin/cliente/?$ tienda_ropa/public/index.php?route=admin_cliente_detalle [L,QSA]
+RewriteRule ^tienda_ropa/pedido/gracias/?$ tienda_ropa/public/index.php?route=pedido_gracias [L,QSA]
+RewriteRule ^tienda_ropa/?$ tienda_ropa/public/index.php?route=tienda [L,QSA]

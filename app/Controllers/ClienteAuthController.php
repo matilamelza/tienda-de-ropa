@@ -15,7 +15,7 @@ class ClienteAuthController extends Controller
     public function ingresar()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('/tienda_ropa/cliente/login');
+            $this->redirect('<?= BASE_URL ?>/cliente/login');
         }
 
         $email = trim($_POST['email'] ?? '');
@@ -25,7 +25,7 @@ class ClienteAuthController extends Controller
         $usuario = $usuarioModel->validarLogin($email, $password);
 
         if (!$usuario) {
-            $this->redirect('/tienda_ropa/cliente/login?error=1');
+           $this->redirect('<?= BASE_URL ?>/ingresar?error=1');
         }
 
         $_SESSION['cliente'] = [
@@ -36,7 +36,7 @@ class ClienteAuthController extends Controller
             'telefono' => $usuario['telefono']
         ];
 
-        $this->redirect('/tienda_ropa/checkout');
+        $this->redirect('<?= BASE_URL ?>/checkout');
     }
 
     public function registro()
@@ -52,7 +52,7 @@ class ClienteAuthController extends Controller
     public function guardarRegistro()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('/tienda_ropa/cliente/registro');
+            $this->redirect('<?= BASE_URL ?>/cliente/registro');
         }
 
         $email = trim($_POST['email'] ?? '');
@@ -60,7 +60,7 @@ class ClienteAuthController extends Controller
         $usuarioModel = new UsuarioCliente();
 
         if ($usuarioModel->buscarPorEmail($email)) {
-            $this->redirect('/tienda_ropa/cliente/registro?error=email');
+            $this->redirect('<?= BASE_URL ?>/cliente/registro?error=email');
         }
 
         $id_usuario_cliente = $usuarioModel->crear([
@@ -79,12 +79,12 @@ class ClienteAuthController extends Controller
             'telefono' => trim($_POST['telefono'] ?? '')
         ];
 
-        $this->redirect('/tienda_ropa/checkout');
+        $this->redirect('<?= BASE_URL ?>/checkout');
     }
 
     public function logout()
     {
         unset($_SESSION['cliente']);
-        $this->redirect('/tienda_ropa/tienda');
+        $this->redirect('<?= BASE_URL ?>/tienda');
     }
 }

@@ -1,5 +1,7 @@
 <?php
 session_start();
+define('BASE_URL', '');
+
 require_once __DIR__ . '/../app/Core/Controller.php';
 require_once __DIR__ . '/../app/Core/helpers.php';
 

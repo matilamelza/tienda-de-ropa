@@ -24,7 +24,7 @@
             </a>
         <?php endif; ?>
 
-        <a href="/tienda_ropa/tienda"
+        <a href="<?= BASE_URL ?>/tienda"
            class="block mt-5 text-sm text-gray-500 hover:text-gray-900">
             Volver a la tienda
         </a>

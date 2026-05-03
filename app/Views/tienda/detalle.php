@@ -15,7 +15,7 @@ while ($v = $variantes->fetch_assoc()) {
 <section class="max-w-7xl mx-auto px-4 py-10">
 
     <div class="mb-6">
-        <a href="/tienda_ropa/tienda" class="text-sm text-gray-500 hover:text-gray-900">
+        <a href="<?= BASE_URL ?>/tienda" class="text-sm text-gray-500 hover:text-gray-900">
             ← Volver a la tienda
         </a>
     </div>
@@ -27,7 +27,7 @@ while ($v = $variantes->fetch_assoc()) {
             <div class="bg-gray-100 rounded-3xl overflow-hidden aspect-[4/5]">
                 <?php if ($fotoPrincipal): ?>
                     <img id="imagenPrincipal"
-                         src="/tienda_ropa/public/uploads/productos/<?php echo htmlspecialchars($fotoPrincipal); ?>"
+                         src="<?= BASE_URL ?>/public/uploads/productos/<?php echo htmlspecialchars($fotoPrincipal); ?>"
                          class="w-full h-full object-cover">
                 <?php else: ?>
                     <div class="w-full h-full flex items-center justify-center text-gray-400">
@@ -42,7 +42,7 @@ while ($v = $variantes->fetch_assoc()) {
                         <button type="button"
                                 onclick="cambiarImagen('<?php echo htmlspecialchars($foto['imagen']); ?>')"
                                 class="aspect-square rounded-xl overflow-hidden border bg-gray-100 hover:border-gray-900">
-                            <img src="/tienda_ropa/public/uploads/productos/<?php echo htmlspecialchars($foto['imagen']); ?>"
+                            <img src="<?= BASE_URL ?>/public/uploads/productos/<?php echo htmlspecialchars($foto['imagen']); ?>"
                                  class="w-full h-full object-cover">
                         </button>
                     <?php endforeach; ?>
@@ -71,7 +71,7 @@ while ($v = $variantes->fetch_assoc()) {
                 </p>
             <?php endif; ?>
 
-            <form action="/tienda_ropa/carrito/agregar" method="POST" class="space-y-6">
+            <form action="<?= BASE_URL ?>/carrito/agregar" method="POST" class="space-y-6">
     <input type="hidden" name="id_variante" id="id_variante">
 
                 <!-- TALLE -->
@@ -163,7 +163,7 @@ const btnAgregar = document.getElementById('btnAgregar');
 const cantidadInput = document.getElementById('cantidad');
 
 function cambiarImagen(imagen) {
-    document.getElementById('imagenPrincipal').src = '/tienda_ropa/public/uploads/productos/' + imagen;
+    document.getElementById('imagenPrincipal').src = '<?= BASE_URL ?>/public/uploads/productos/' + imagen;
 }
 
 function cargarTalles() {

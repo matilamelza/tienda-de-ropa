@@ -9,7 +9,7 @@
         </div>
     <?php endif; ?>
 
-   <form action="/tienda_ropa/cliente/ingresar"  method="POST" class="space-y-4 bg-white border rounded-3xl p-6">
+   <form action="<?= BASE_URL ?>/cliente/ingresar"  method="POST" class="space-y-4 bg-white border rounded-3xl p-6">
 
         <div>
             <label class="block text-sm font-medium mb-1">Email</label>
@@ -25,12 +25,12 @@
             Ingresar
         </button>
 
-        <a href="/tienda_ropa/registro"
+        <a href="<?= BASE_URL ?>/registro"
            class="block text-center text-sm text-gray-500 hover:text-gray-900">
             Crear cuenta
         </a>
 
-        <a href="/tienda_ropa/checkout/invitado"
+        <a href="<?= BASE_URL ?>/checkout/invitado"
            class="block text-center text-sm text-gray-500 hover:text-gray-900">
             Continuar como invitado
         </a>

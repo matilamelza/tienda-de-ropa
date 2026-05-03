@@ -5,7 +5,7 @@
         <p class="text-gray-500 mt-1">Completá tus datos para confirmar el pedido.</p>
     </div>
 
-    <form action="/tienda_ropa/checkout/guardar" method="POST">
+    <form action="<?= BASE_URL ?>/checkout/guardar" method="POST">
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
@@ -92,7 +92,7 @@
                         Enviar solicitud por whatsapp
                     </button>
 
-                    <a href="/tienda_ropa/carrito"
+                    <a href="<?= BASE_URL ?>/carrito"
                        class="block text-center mt-4 text-sm text-gray-500 hover:text-gray-900">
                         Volver al carrito
                     </a>
