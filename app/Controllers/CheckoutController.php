@@ -9,11 +9,11 @@ class CheckoutController extends Controller
 $modoInvitado = isset($_GET['invitado']) && $_GET['invitado'] == 1;
 
 if (!$clienteLogueado && !$modoInvitado) {
-    $this->redirect('<?= BASE_URL ?>/ingresar');
+    $this->redirect(BASE_URL . '/ingresar');
 }
     
         if (empty($_SESSION['carrito'])) {
-            $this->redirect('<?= BASE_URL ?>/carrito');
+            $this->redirect(BASE_URL . '/carrito');
         }
 
         $categoriaModel = new Categoria();
@@ -57,7 +57,7 @@ if (!$clienteLogueado && !$modoInvitado) {
     public function guardar()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_SESSION['carrito'])) {
-            $this->redirect('<?= BASE_URL ?>/carrito');
+            $this->redirect(BASE_URL . '/carrito');
         }
 
         $carritoModel = new Carrito();
@@ -70,7 +70,7 @@ if (!$clienteLogueado && !$modoInvitado) {
             $variante = $carritoModel->buscarVarianteDetalle((int)$id_variante);
 
             if (!$variante || $variante['stock'] < $itemCarrito['cantidad']) {
-                $this->redirect('<?= BASE_URL ?>/carrito');
+                $this->redirect(BASE_URL . '/carrito');
             }
 
             $precio = $variante['precio'] !== null && $variante['precio'] !== ''
@@ -153,7 +153,7 @@ if (!$clienteLogueado && !$modoInvitado) {
 
                 $_SESSION['ultimo_pedido_whatsapp'] = $urlWhatsapp;
 
-                $this->redirect('<?= BASE_URL ?>/pedido/gracias?id=' . $id_pedido);
+                $this->redirect(BASE_URL . '/pedido/gracias?id=' . $id_pedido);
 
         } catch (Exception $e) {
             $pedidoModel->rollback();
