@@ -11,9 +11,7 @@
     <div class="w-full max-w-md">
 
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-900 text-white font-bold text-xl mb-4">
-                A
-            </div>
+          
             <h1 class="text-2xl font-bold text-gray-900">Panel de administración</h1>
             <p class="text-gray-500 text-sm mt-1">Ingresá para continuar</p>
         </div>
