@@ -73,9 +73,17 @@ RewriteRule ^admin/productos/subir-foto/?$          index.php?route=productos_su
 RewriteRule ^admin/productos/eliminar-foto/?$       index.php?route=productos_eliminar_foto       [L,QSA]
 RewriteRule ^admin/productos/?$                     index.php?route=productos                     [L,QSA]
 
-# Raiz -> tienda
-RewriteRule ^/?$ index.php?route=tienda [L,QSA]
+# Configuración
+RewriteRule ^admin/configuracion/?$                 index.php?route=admin_configuracion                  [L,QSA]
+RewriteRule ^admin/configuracion/guardar/?$         index.php?route=admin_configuracion_guardar          [L,QSA]
+RewriteRule ^admin/configuracion/eliminar-imagen/?$ index.php?route=admin_configuracion_eliminar_imagen  [L,QSA]
+
 
 RewriteRule ^admin/login/?$ index.php?route=admin_login [L,QSA]
 RewriteRule ^admin/ingresar/?$ index.php?route=admin_ingresar [L,QSA]
 RewriteRule ^admin/logout/?$ index.php?route=admin_logout [L,QSA]
+
+# Raiz -> tienda
+RewriteRule ^/?$ index.php?route=tienda [L,QSA]
+
+

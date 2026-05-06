@@ -1,5 +1,5 @@
 <?php
-  require_once __DIR__ . '/../../app/Models/ConfiguracionTienda.php';
+  require_once dirname(__DIR__, 2) . '/Models/ConfiguracionTienda.php';
   $cfg = new ConfiguracionTienda();
   $conf = $cfg->todas();
 ?>
