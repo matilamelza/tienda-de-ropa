@@ -67,6 +67,48 @@ switch ($route) {
         $controller->index();
         break;
 
+        case 'productos_editar':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->editar();
+        break;
+ 
+    case 'productos_actualizar':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->actualizar();
+        break;
+ 
+    case 'productos_eliminar':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->eliminar();
+        break;
+ 
+    case 'productos_editar_variante':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->editarVariante();
+        break;
+ 
+    case 'productos_actualizar_variante':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->actualizarVariante();
+        break;
+ 
+    case 'productos_eliminar_variante':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->eliminarVariante();
+        break;
+ 
+    case 'productos_eliminar_foto':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->eliminarFoto();
+        break;
+
     case 'productos_crear':
         requireAdmin();
         $controller = new ProductoController();
