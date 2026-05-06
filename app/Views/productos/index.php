@@ -4,7 +4,7 @@
         <p class="text-gray-500">Listado general de productos</p>
     </div>
 
-    <a href="index.php?route=productos_crear"
+    <a href="<?= BASE_URL ?>/admin/productos/crear"
        class="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800">
         Nuevo producto
     </a>

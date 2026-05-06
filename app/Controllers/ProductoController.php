@@ -29,7 +29,7 @@ class ProductoController extends Controller
     public function guardar()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('index.php?route=productos');
+            $this->redirect(BASE_URL . '/admin/productos');
         }
 
         $nombre = trim($_POST['nombre'] ?? '');
@@ -48,7 +48,7 @@ class ProductoController extends Controller
         $productoModel = new Producto();
         $productoModel->guardar($data);
 
-        $this->redirect('index.php?route=productos');
+        $this->redirect(BASE_URL . '/admin/productos');
     }
 
     public function variantes()
@@ -56,7 +56,7 @@ class ProductoController extends Controller
         $id_producto = (int) ($_GET['id'] ?? 0);
 
         if ($id_producto <= 0) {
-            $this->redirect('index.php?route=productos');
+            $this->redirect(BASE_URL . '/admin/productos');
         }
 
         $productoModel = new Producto();
@@ -79,7 +79,7 @@ class ProductoController extends Controller
     public function guardarVariante()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('index.php?route=productos');
+            $this->redirect(BASE_URL . '/admin/productos');
         }
 
         $id_producto = (int) $_POST['id_producto'];
