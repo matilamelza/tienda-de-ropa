@@ -32,6 +32,7 @@ class MarcaController extends Controller
 
         $data = [
             'nombre' => $nombre,
+            'slug'   => generarSlug($nombre),
             'activo' => isset($_POST['activo']) ? 1 : 0
         ];
 
@@ -72,6 +73,7 @@ class MarcaController extends Controller
 
         $data = [
             'nombre' => $nombre,
+            'slug'   => generarSlug($nombre),  
             'activo' => isset($_POST['activo']) ? 1 : 0
         ];
 

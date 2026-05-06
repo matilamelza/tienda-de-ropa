@@ -42,6 +42,22 @@ RewriteRule ^admin/pedido/estado/?$ index.php?route=admin_pedido_estado [L,QSA]
 RewriteRule ^admin/clientes/?$ index.php?route=admin_clientes [L,QSA]
 RewriteRule ^admin/cliente/?$ index.php?route=admin_cliente_detalle [L,QSA]
 
+# Categorías
+RewriteRule ^admin/categorias/?$              index.php?route=categorias [L,QSA]
+RewriteRule ^admin/categorias/crear/?$        index.php?route=categorias_crear [L,QSA]
+RewriteRule ^admin/categorias/guardar/?$      index.php?route=categorias_guardar [L,QSA]
+RewriteRule ^admin/categorias/editar/?$       index.php?route=categorias_editar [L,QSA]
+RewriteRule ^admin/categorias/actualizar/?$   index.php?route=categorias_actualizar [L,QSA]
+RewriteRule ^admin/categorias/eliminar/?$     index.php?route=categorias_eliminar [L,QSA]
+
+# Marcas
+RewriteRule ^admin/marcas/?$                  index.php?route=marcas [L,QSA]
+RewriteRule ^admin/marcas/crear/?$            index.php?route=marcas_crear [L,QSA]
+RewriteRule ^admin/marcas/guardar/?$          index.php?route=marcas_guardar [L,QSA]
+RewriteRule ^admin/marcas/editar/?$           index.php?route=marcas_editar [L,QSA]
+RewriteRule ^admin/marcas/actualizar/?$       index.php?route=marcas_actualizar [L,QSA]
+RewriteRule ^admin/marcas/eliminar/?$         index.php?route=marcas_eliminar [L,QSA]
+
 # Raiz -> tienda
 RewriteRule ^/?$ index.php?route=tienda [L,QSA]
 

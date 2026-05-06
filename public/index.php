@@ -22,6 +22,7 @@ require_once __DIR__ . '/../app/Models/UsuarioAdmin.php';
 require_once __DIR__ . '/../app/Controllers/DashboardController.php';
 require_once __DIR__ . '/../app/Controllers/ProductoController.php';
 require_once __DIR__ . '/../app/Controllers/CategoriaController.php';
+require_once __DIR__ . '/../app/Controllers/MarcaController.php';
 require_once __DIR__ . '/../app/Controllers/TiendaController.php';
 require_once __DIR__ . '/../app/Controllers/CarritoController.php';
 require_once __DIR__ . '/../app/Controllers/CheckoutController.php';
@@ -107,6 +108,75 @@ switch ($route) {
         $controller = new CategoriaController();
         $controller->index();
         break;
+
+    case 'categorias_crear':
+        requireAdmin();
+        $controller = new CategoriaController();
+        $controller->crear();
+        break;
+
+    case 'categorias_guardar':
+        requireAdmin();
+        $controller = new CategoriaController();
+        $controller->guardar();
+        break;
+
+    case 'categorias_editar':
+        requireAdmin();
+        $controller = new CategoriaController();
+        $controller->editar();
+        break;
+
+    case 'categorias_actualizar':
+        requireAdmin();
+        $controller = new CategoriaController();
+        $controller->actualizar();
+        break;
+
+    case 'categorias_eliminar':
+        requireAdmin();
+        $controller = new CategoriaController();
+        $controller->eliminar();
+        break;
+
+    // ─── MARCAS ───────────────────────────────────────────────────────────────
+
+    case 'marcas':
+        requireAdmin();
+        $controller = new MarcaController();
+        $controller->index();
+        break;
+
+    case 'marcas_crear':
+        requireAdmin();
+        $controller = new MarcaController();
+        $controller->crear();
+        break;
+
+    case 'marcas_guardar':
+        requireAdmin();
+        $controller = new MarcaController();
+        $controller->guardar();
+        break;
+
+    case 'marcas_editar':
+        requireAdmin();
+        $controller = new MarcaController();
+        $controller->editar();
+        break;
+
+    case 'marcas_actualizar':
+        requireAdmin();
+        $controller = new MarcaController();
+        $controller->actualizar();
+        break;
+
+    case 'marcas_eliminar':
+        requireAdmin();
+        $controller = new MarcaController();
+        $controller->eliminar();
+        break;
+
 
     case 'admin_pedidos':
         requireAdmin();

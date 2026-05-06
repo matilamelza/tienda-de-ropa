@@ -33,23 +33,19 @@ class Marca extends Conexion
 
     public function crear($data)
     {
-        $sql = "INSERT INTO marcas (nombre, activo) VALUES (?, ?)";
-
+        $sql = "INSERT INTO marcas (nombre, slug, activo) VALUES (?, ?, ?)";
         $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("si", $data['nombre'], $data['activo']);
-
+        $stmt->bind_param("ssi", $data['nombre'], $data['slug'], $data['activo']);
         return $stmt->execute();
     }
 
     public function actualizar($id, $data)
-    {
-        $sql = "UPDATE marcas SET nombre = ?, activo = ? WHERE id_marca = ?";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("sii", $data['nombre'], $data['activo'], $id);
-
-        return $stmt->execute();
-    }
+{
+    $sql = "UPDATE marcas SET nombre = ?, slug = ?, activo = ? WHERE id_marca = ?";
+    $stmt = $this->db->prepare($sql);
+    $stmt->bind_param("ssii", $data['nombre'], $data['slug'], $data['activo'], $id);
+    return $stmt->execute();
+}
 
     public function eliminar($id)
     {
