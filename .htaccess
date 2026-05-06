@@ -44,3 +44,7 @@ RewriteRule ^admin/cliente/?$ public/index.php?route=admin_cliente_detalle [L,QS
 
 # Raiz -> tienda
 RewriteRule ^/?$ public/index.php?route=tienda [L,QSA]
+
+RewriteRule ^admin/login/?$ public/index.php?route=admin_login [L,QSA]
+RewriteRule ^admin/ingresar/?$ public/index.php?route=admin_ingresar [L,QSA]
+RewriteRule ^admin/logout/?$ public/index.php?route=admin_logout [L,QSA]
