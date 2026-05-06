@@ -2,110 +2,132 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Tienda de Ropa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ 
+    <?php
+    // ── Cargar configuración desde la BD ──────────────────────
+    require_once __DIR__ . '/../../app/Models/ConfiguracionTienda.php';
+    $cfg = new ConfiguracionTienda();
+    $conf = $cfg->todas();
+ 
+    $tituloPag     = htmlspecialchars($conf['seo_titulo']      ?? ($conf['tienda_nombre'] ?? 'Tienda'));
+    $metaDesc      = htmlspecialchars($conf['seo_descripcion'] ?? '');
+    $metaKeys      = htmlspecialchars($conf['seo_keywords']    ?? '');
+    $fuente        = htmlspecialchars($conf['fuente_principal'] ?? 'Inter');
+    $fuenteTitulos = htmlspecialchars($conf['fuente_titulos']  ?? 'Inter');
+    $favicon       = $conf['tienda_favicon'] ?? '';
+    ?>
+ 
+    <title><?= $tituloPag ?></title>
+ 
+    <?php if ($metaDesc): ?>
+        <meta name="description" content="<?= $metaDesc ?>">
+    <?php endif; ?>
+    <?php if ($metaKeys): ?>
+        <meta name="keywords" content="<?= $metaKeys ?>">
+    <?php endif; ?>
+ 
+    <!-- Favicon -->
+    <?php if ($favicon): ?>
+        <link rel="icon" href="<?= BASE_URL ?>/<?= htmlspecialchars($favicon) ?>">
+    <?php endif; ?>
+ 
+    <!-- Google Fonts (solo las fuentes usadas) -->
+    <?php
+    $fontsNeeded = array_unique([$fuente, $fuenteTitulos]);
+    $fontsQuery  = implode('&family=', array_map(fn($f) => urlencode($f) . ':wght@400;500;600;700', $fontsNeeded));
+    ?>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=<?= $fontsQuery ?>&display=swap" rel="stylesheet">
+ 
     <script src="https://cdn.tailwindcss.com"></script>
+ 
+    <!-- CSS dinámico con las variables personalizadas -->
+    <?= $cfg->generarCSS() ?>
+ 
 </head>
-
+ 
 <body class="bg-white text-gray-900">
-
-<header class="border-b bg-white sticky top-0 z-50">
+ 
+<!-- ── Barra de anuncio ──────────────────────────────────────── -->
+<?php if (!empty($conf['anuncio_activo']) && $conf['anuncio_activo'] === '1' && !empty($conf['anuncio_texto'])): ?>
+    <div class="text-center text-sm py-2 px-4 font-medium"
+         style="background-color: <?= htmlspecialchars($conf['anuncio_color_bg'] ?? '#111827') ?>;
+                color: <?= htmlspecialchars($conf['anuncio_color_texto'] ?? '#fff') ?>">
+        <?= htmlspecialchars($conf['anuncio_texto']) ?>
+    </div>
+<?php endif; ?>
+ 
+<header class="border-b sticky top-0 z-50"
+        style="background-color: var(--color-header-bg)">
     <div class="max-w-7xl mx-auto px-4">
-
         <div class="h-20 flex items-center justify-between">
-
+ 
+            <!-- Logo + Nombre -->
             <a href="<?= BASE_URL ?>/tienda" class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold">
-                    LOGO
-                </div>
+                <?php if (!empty($conf['tienda_logo'])): ?>
+                    <img src="<?= BASE_URL ?>/<?= htmlspecialchars($conf['tienda_logo']) ?>"
+                         alt="<?= htmlspecialchars($conf['tienda_nombre'] ?? 'Logo') ?>"
+                         class="h-12 w-auto object-contain">
+                <?php else: ?>
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm"
+                         style="background-color: var(--color-primario); color: var(--color-boton-texto)">
+                        LOGO
+                    </div>
+                <?php endif; ?>
                 <div>
-                    <h1 class="text-xl font-bold leading-none">Mi Tienda</h1>
-                    <!-- <p class="text-xs text-gray-500">Ropa urbana</p> -->
+                    <h1 class="text-xl font-bold leading-none">
+                        <?= htmlspecialchars($conf['tienda_nombre'] ?? 'Mi Tienda') ?>
+                    </h1>
+                    <?php if (!empty($conf['tienda_slogan'])): ?>
+                        <p class="text-xs text-gray-500">
+                            <?= htmlspecialchars($conf['tienda_slogan']) ?>
+                        </p>
+                    <?php endif; ?>
                 </div>
             </a>
-
+ 
+            <!-- Nav categorías -->
             <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
-                <a href="<?= BASE_URL ?>/tienda" class="hover:text-gray-500">Inicio</a>
-
+                <a href="<?= BASE_URL ?>/tienda" class="hover:opacity-70">Inicio</a>
                 <?php if (isset($categoriasMenu) && $categoriasMenu && $categoriasMenu->num_rows > 0): ?>
                     <?php while ($catMenu = $categoriasMenu->fetch_assoc()): ?>
-                        <a href="<?= BASE_URL ?>/categoria/<?php echo urlencode($catMenu['slug']); ?>"
-                           class="hover:text-gray-500">
-                            <?php echo htmlspecialchars($catMenu['nombre']); ?>
+                        <a href="<?= BASE_URL ?>/categoria/<?= urlencode($catMenu['slug']) ?>"
+                           class="hover:opacity-70">
+                            <?= htmlspecialchars($catMenu['nombre']) ?>
                         </a>
                     <?php endwhile; ?>
                 <?php endif; ?>
             </nav>
-
+ 
+            <!-- Acciones -->
             <div class="hidden md:flex items-center gap-4">
-
                 <?php if (isset($_SESSION['cliente'])): ?>
-                   <a href="<?= BASE_URL ?>/mi-cuenta/pedidos"
-   class="text-sm text-gray-500 hover:text-gray-900">
-    Mis pedidos
-</a>
-
-                    <a href="<?= BASE_URL ?>/salir" class="text-sm font-medium hover:text-gray-500">
-                        Salir
-                    </a>
+                    <a href="<?= BASE_URL ?>/mi-cuenta/pedidos" class="text-sm hover:opacity-70">Mis pedidos</a>
+                    <a href="<?= BASE_URL ?>/salir" class="text-sm font-medium hover:opacity-70">Salir</a>
                 <?php else: ?>
-                    <a href="<?= BASE_URL ?>/ingresar" class="text-sm font-medium hover:text-gray-500">
-                        Ingresar
-                    </a>
+                    <a href="<?= BASE_URL ?>/ingresar" class="text-sm font-medium hover:opacity-70">Ingresar</a>
                 <?php endif; ?>
-
-                <a href="<?= BASE_URL ?>/carrito" class="text-sm font-medium hover:text-gray-500">
-                    Carrito
-                </a>
-
+                <a href="<?= BASE_URL ?>/carrito" class="text-sm font-medium hover:opacity-70">Carrito</a>
             </div>
-
-            <button type="button"
-                    onclick="toggleMenuMobile()"
-                    class="md:hidden border rounded-lg px-3 py-2 text-sm">
-                Menú
-            </button>
-
+ 
+            <button type="button" onclick="toggleMenuMobile()"
+                    class="md:hidden border rounded-lg px-3 py-2 text-sm">Menú</button>
         </div>
-
-        <div id="menuMobile" class="hidden md:hidden border-t py-4">
-            <nav class="flex flex-col gap-3 text-sm font-medium">
-                <a href="<?= BASE_URL ?>/tienda" class="py-2">
-                    Inicio
-                </a>
-
-                <?php
-                $categoriaModelMobile = new Categoria();
-                $categoriasMobile = $categoriaModelMobile->listarMenu();
-                ?>
-
-                <?php while ($catMobile = $categoriasMobile->fetch_assoc()): ?>
-                    <a href="<?= BASE_URL ?>/categoria/<?php echo urlencode($catMobile['slug']); ?>"
-                       class="py-2 border-t">
-                        <?php echo htmlspecialchars($catMobile['nombre']); ?>
-                    </a>
-                <?php endwhile; ?>
-
+ 
+        <!-- Menú mobile -->
+        <div id="menuMobile" class="hidden pb-4 md:hidden border-t pt-4">
+            <nav class="flex flex-col gap-2 text-sm">
+                <a href="<?= BASE_URL ?>/tienda" class="py-2 hover:opacity-70">Inicio</a>
                 <?php if (isset($_SESSION['cliente'])): ?>
-    <a href="<?= BASE_URL ?>/salir" class="py-2 border-t">
-        Salir
-    </a>
-<?php else: ?>
-    <a href="<?= BASE_URL ?>/ingresar" class="py-2 border-t">
-        Ingresar
-    </a>
-<?php endif; ?>
-
-                <a href="<?= BASE_URL ?>/carrito" class="py-2 border-t">
-                    Carrito
-                </a>
+                    <a href="<?= BASE_URL ?>/mi-cuenta/pedidos" class="py-2">Mis pedidos</a>
+                    <a href="<?= BASE_URL ?>/salir" class="py-2">Salir</a>
+                <?php else: ?>
+                    <a href="<?= BASE_URL ?>/ingresar" class="py-2">Ingresar</a>
+                <?php endif; ?>
+                <a href="<?= BASE_URL ?>/carrito" class="py-2">Carrito</a>
             </nav>
         </div>
-
     </div>
 </header>
-
-<script>
-function toggleMenuMobile() {
-    document.getElementById('menuMobile').classList.toggle('hidden');
-}
-</script>
+<?php

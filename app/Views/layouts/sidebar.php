@@ -47,6 +47,11 @@
             Colores
         </a>
 
+         <a href="<?= BASE_URL ?>/admin/configuracion"
+           class="block px-4 py-2 rounded hover:bg-gray-800">
+            Personalización ⚙️
+        </a>
+
         <div class="border-t border-gray-700 my-2"></div>
 
         <a href="<?= BASE_URL ?>/tienda"

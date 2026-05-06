@@ -42,6 +42,26 @@ RewriteRule ^admin/pedido/estado/?$ public/index.php?route=admin_pedido_estado [
 RewriteRule ^admin/clientes/?$ public/index.php?route=admin_clientes [L,QSA]
 RewriteRule ^admin/cliente/?$ public/index.php?route=admin_cliente_detalle [L,QSA]
 
+RewriteRule ^admin/productos/editar/?$              public/index.php?route=productos_editar              [L,QSA]
+RewriteRule ^admin/productos/actualizar/?$          public/index.php?route=productos_actualizar          [L,QSA]
+RewriteRule ^admin/productos/eliminar/?$            public/index.php?route=productos_eliminar            [L,QSA]
+RewriteRule ^admin/productos/crear/?$               public/index.php?route=productos_crear               [L,QSA]
+RewriteRule ^admin/productos/guardar/?$             public/index.php?route=productos_guardar             [L,QSA]
+RewriteRule ^admin/productos/variantes/?$           public/index.php?route=productos_variantes           [L,QSA]
+RewriteRule ^admin/productos/guardar-variante/?$    public/index.php?route=productos_guardar_variante    [L,QSA]
+RewriteRule ^admin/productos/editar-variante/?$     public/index.php?route=productos_editar_variante     [L,QSA]
+RewriteRule ^admin/productos/actualizar-variante/?$ public/index.php?route=productos_actualizar_variante [L,QSA]
+RewriteRule ^admin/productos/eliminar-variante/?$   public/index.php?route=productos_eliminar_variante   [L,QSA]
+RewriteRule ^admin/productos/fotos/?$               public/index.php?route=productos_fotos               [L,QSA]
+RewriteRule ^admin/productos/subir-foto/?$          public/index.php?route=productos_subir_foto          [L,QSA]
+RewriteRule ^admin/productos/eliminar-foto/?$       public/index.php?route=productos_eliminar_foto       [L,QSA]
+RewriteRule ^admin/productos/?$                     public/index.php?route=productos                     [L,QSA]
+
+RewriteRule ^admin/configuracion/?$         public/index.php?route=admin_configuracion          [L,QSA]
+RewriteRule ^admin/configuracion/guardar/?$ public/index.php?route=admin_configuracion_guardar  [L,QSA]
+RewriteRule ^admin/configuracion/eliminar-imagen/?$ public/index.php?route=admin_configuracion_eliminar_imagen [L,QSA]
+
+
 # Raiz -> tienda
 RewriteRule ^/?$ public/index.php?route=tienda [L,QSA]
 

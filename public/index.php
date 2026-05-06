@@ -31,6 +31,23 @@ require_once __DIR__ . '/../app/Controllers/PedidoController.php';
 require_once __DIR__ . '/../app/Controllers/ClienteController.php';
 require_once __DIR__ . '/../app/Controllers/ClienteAdminController.php';
 require_once __DIR__ . '/../app/Controllers/AdminAuthController.php'; 
+require_once __DIR__ . '/../app/Controllers/ConfiguracionController.php';
+
+require_once __DIR__ . '/../app/Models/ConfiguracionTienda.php';
+$cfgTienda = new ConfiguracionTienda();
+if ($cfgTienda->get('mantenimiento_activo') === '1' && !isset($_SESSION['admin'])) {
+    $msg = $cfgTienda->get('mantenimiento_mensaje', 'Estamos en mantenimiento. Volvemos pronto.');
+    http_response_code(503);
+    echo '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Mantenimiento</title>
+          <script src="https://cdn.tailwindcss.com"></script></head>
+          <body class="min-h-screen flex items-center justify-center bg-gray-50">
+          <div class="text-center p-10 bg-white rounded-3xl shadow-lg max-w-md">
+            <p class="text-6xl mb-4">🚧</p>
+            <h1 class="text-2xl font-bold mb-2">Sitio en mantenimiento</h1>
+            <p class="text-gray-500">' . htmlspecialchars($msg) . '</p>
+          </div></body></html>';
+    exit;
+}
 
 $route = $_GET['route'] ?? 'tienda';
 
@@ -179,6 +196,24 @@ switch ($route) {
         requireAdmin();
         $controller = new CategoriaController();
         $controller->eliminar();
+        break;
+
+        case 'admin_configuracion':
+        requireAdmin();
+        $controller = new ConfiguracionController();
+        $controller->index();
+        break;
+ 
+    case 'admin_configuracion_guardar':
+        requireAdmin();
+        $controller = new ConfiguracionController();
+        $controller->guardar();
+        break;
+ 
+    case 'admin_configuracion_eliminar_imagen':
+        requireAdmin();
+        $controller = new ConfiguracionController();
+        $controller->eliminarImagen();
         break;
 
     // ─── MARCAS ───────────────────────────────────────────────────────────────
