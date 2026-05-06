@@ -4,83 +4,143 @@ define('BASE_URL', '');
 
 require_once __DIR__ . '/../app/Core/Controller.php';
 require_once __DIR__ . '/../app/Core/helpers.php';
+require_once __DIR__ . '/../app/Core/auth.php';         
 
+// Models
 require_once __DIR__ . '/../app/Models/Producto.php';
 require_once __DIR__ . '/../app/Models/Categoria.php';
 require_once __DIR__ . '/../app/Models/Marca.php';
+require_once __DIR__ . '/../app/Models/Talle.php';
+require_once __DIR__ . '/../app/Models/Color.php';
+require_once __DIR__ . '/../app/Models/Carrito.php';
+require_once __DIR__ . '/../app/Models/Pedido.php';
+require_once __DIR__ . '/../app/Models/UsuarioCliente.php';
+require_once __DIR__ . '/../app/Models/Cliente.php';
+require_once __DIR__ . '/../app/Models/UsuarioAdmin.php'; 
 
+// Controllers
 require_once __DIR__ . '/../app/Controllers/DashboardController.php';
 require_once __DIR__ . '/../app/Controllers/ProductoController.php';
 require_once __DIR__ . '/../app/Controllers/CategoriaController.php';
 require_once __DIR__ . '/../app/Controllers/TiendaController.php';
-
-require_once __DIR__ . '/../app/Models/Talle.php';
-require_once __DIR__ . '/../app/Models/Color.php';
-require_once __DIR__ . '/../app/Models/Carrito.php';
 require_once __DIR__ . '/../app/Controllers/CarritoController.php';
-
 require_once __DIR__ . '/../app/Controllers/CheckoutController.php';
-require_once __DIR__ . '/../app/Models/Pedido.php';
-
-require_once __DIR__ . '/../app/Models/UsuarioCliente.php';
 require_once __DIR__ . '/../app/Controllers/ClienteAuthController.php';
-
-
 require_once __DIR__ . '/../app/Controllers/PedidoController.php';
-
 require_once __DIR__ . '/../app/Controllers/ClienteController.php';
-
-require_once __DIR__ . '/../app/Models/Cliente.php';
 require_once __DIR__ . '/../app/Controllers/ClienteAdminController.php';
+require_once __DIR__ . '/../app/Controllers/AdminAuthController.php'; 
 
-$route = $_GET['route'] ?? 'dashboard';
+$route = $_GET['route'] ?? 'tienda';
 
 switch ($route) {
 
+    // ─── AUTH ADMIN ────────────────────────────────────────────────────────────
+
+    case 'admin_login':
+        $controller = new AdminAuthController();
+        $controller->login();
+        break;
+
+    case 'admin_ingresar':
+        $controller = new AdminAuthController();
+        $controller->ingresar();
+        break;
+
+    case 'admin_logout':
+        $controller = new AdminAuthController();
+        $controller->logout();
+        break;
+
+    // ─── ADMIN (protegidas) ────────────────────────────────────────────────────
+
     case 'dashboard':
+        requireAdmin();
         $controller = new DashboardController();
         $controller->index();
         break;
 
     case 'productos':
+        requireAdmin();
         $controller = new ProductoController();
         $controller->index();
         break;
 
     case 'productos_crear':
+        requireAdmin();
         $controller = new ProductoController();
         $controller->crear();
         break;
 
     case 'productos_guardar':
+        requireAdmin();
         $controller = new ProductoController();
         $controller->guardar();
         break;
 
-    case 'categorias':
-        $controller = new CategoriaController();
-        $controller->index();
-        break;
-
     case 'productos_variantes':
+        requireAdmin();
         $controller = new ProductoController();
         $controller->variantes();
         break;
 
     case 'productos_guardar_variante':
+        requireAdmin();
         $controller = new ProductoController();
         $controller->guardarVariante();
         break;
 
     case 'productos_fotos':
+        requireAdmin();
         $controller = new ProductoController();
         $controller->fotos();
         break;
 
     case 'productos_subir_foto':
+        requireAdmin();
         $controller = new ProductoController();
         $controller->subirFoto();
         break;
+
+    case 'categorias':
+        requireAdmin();
+        $controller = new CategoriaController();
+        $controller->index();
+        break;
+
+    case 'admin_pedidos':
+        requireAdmin();
+        $controller = new PedidoController();
+        $controller->index();
+        break;
+
+    case 'admin_pedido_detalle':
+        requireAdmin();
+        $controller = new PedidoController();
+        $controller->detalle();
+        break;
+
+    case 'admin_pedido_estado':
+        requireAdmin();
+        $controller = new PedidoController();
+        $controller->actualizarEstado();
+        break;
+
+    case 'admin_clientes':
+    case 'admin/clientes':
+        requireAdmin();
+        $controller = new ClienteAdminController();
+        $controller->index();
+        break;
+
+    case 'admin_cliente_detalle':
+    case 'admin/cliente':
+        requireAdmin();
+        $controller = new ClienteAdminController();
+        $controller->detalle();
+        break;
+
+    // ─── TIENDA ────────────────────────────────────────────────────────────────
 
     case 'tienda':
         $controller = new TiendaController();
@@ -128,9 +188,9 @@ switch ($route) {
         break;
 
     case 'cliente_login':
-    $controller = new ClienteAuthController();
-    $controller->login();
-    break;
+        $controller = new ClienteAuthController();
+        $controller->login();
+        break;
 
     case 'cliente_ingresar':
         $controller = new ClienteAuthController();
@@ -152,43 +212,18 @@ switch ($route) {
         $controller->logout();
         break;
 
-    case 'admin_pedidos':
-        $controller = new PedidoController();
-        $controller->index();
-        break;
-
-    case 'admin_pedido_detalle':
-        $controller = new PedidoController();
-        $controller->detalle();
-        break;
-
-    case 'admin_pedido_estado':
-        $controller = new PedidoController();
-        $controller->actualizarEstado();
-    break;
-
     case 'cliente_pedidos':
-    $controller = new ClienteController();
-    $controller->pedidos();
-    break;
-
-case 'cliente_pedido_detalle':
-    $controller = new ClienteController();
-    $controller->pedidoDetalle();
-    break;
-
-    case 'admin_clientes':
-    case 'admin/clientes':
-        $controller = new ClienteAdminController();
-        $controller->index();
+        $controller = new ClienteController();
+        $controller->pedidos();
         break;
 
-    case 'admin_cliente_detalle':
-    case 'admin/cliente':
-        $controller = new ClienteAdminController();
-        $controller->detalle();
+    case 'cliente_pedido_detalle':
+        $controller = new ClienteController();
+        $controller->pedidoDetalle();
         break;
+
     default:
+        http_response_code(404);
         echo 'Ruta no encontrada';
         break;
 }
