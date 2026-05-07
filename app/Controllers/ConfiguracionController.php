@@ -2,11 +2,7 @@
 
 require_once __DIR__ . '/../Models/ConfiguracionTienda.php';
 
-/**
- * Controller: ConfiguracionController
- * Gestiona la sección de personalización del panel admin.
- */
-class ConfiguracionController
+class ConfiguracionController extends Controller
 {
     private ConfiguracionTienda $model;
 
@@ -15,13 +11,11 @@ class ConfiguracionController
         $this->model = new ConfiguracionTienda();
     }
 
-    // ─────────────────────────────────────────────────────────
     // GET /admin/configuracion
-    // ─────────────────────────────────────────────────────────
     public function index(): void
     {
-        $grupos = $this->model->porGrupo();
-        $config = $this->model->todas();
+        $grupos  = $this->model->porGrupo();
+        $config  = $this->model->todas();
         $mensaje = $_SESSION['config_msg'] ?? null;
         unset($_SESSION['config_msg']);
 
@@ -32,9 +26,7 @@ class ConfiguracionController
         ]);
     }
 
-    // ─────────────────────────────────────────────────────────
     // POST /admin/configuracion/guardar
-    // ─────────────────────────────────────────────────────────
     public function guardar(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -44,32 +36,20 @@ class ConfiguracionController
 
         $datos = [];
 
-        // ── Recoger todos los campos de texto/select/checkbox ──
         $camposTexto = [
-            // Identidad
             'tienda_nombre', 'tienda_slogan', 'tienda_descripcion',
-            // Colores
             'color_primario', 'color_secundario', 'color_acento',
             'color_fondo', 'color_texto', 'color_header_bg',
             'color_footer_bg', 'color_boton_bg', 'color_boton_texto',
-            // Tipografía
             'fuente_principal', 'fuente_titulos', 'tamano_base',
-            // Contacto / redes
             'tienda_email', 'tienda_telefono', 'tienda_whatsapp',
             'tienda_direccion', 'tienda_instagram', 'tienda_facebook', 'tienda_tiktok',
-            // Hero
             'hero_titulo', 'hero_subtitulo', 'hero_boton_texto', 'hero_estilo',
-            // SEO
             'seo_titulo', 'seo_descripcion', 'seo_keywords',
-            // Envíos
             'envio_gratis_minimo', 'politica_cambios', 'metodos_pago',
-            // Anuncio
             'anuncio_texto', 'anuncio_color_bg', 'anuncio_color_texto',
-            // Footer
             'footer_texto',
-            // Tienda
             'productos_por_pagina', 'moneda_simbolo', 'moneda_codigo',
-            // Mantenimiento
             'mantenimiento_mensaje',
         ];
 
@@ -77,7 +57,6 @@ class ConfiguracionController
             $datos[$campo] = trim($_POST[$campo] ?? '');
         }
 
-        // ── Checkboxes (0/1) ──
         $checkboxes = [
             'anuncio_activo', 'footer_mostrar_redes',
             'mostrar_precio', 'mostrar_stock',
@@ -87,7 +66,6 @@ class ConfiguracionController
             $datos[$campo] = isset($_POST[$campo]) ? '1' : '0';
         }
 
-        // ── Imágenes ──────────────────────────────────────────
         $imagenes = ['tienda_logo' => 'logo', 'tienda_favicon' => 'favicon', 'hero_imagen' => 'hero'];
         foreach ($imagenes as $campo => $tipo) {
             if (!empty($_FILES[$campo]['name'])) {
@@ -95,7 +73,6 @@ class ConfiguracionController
                 if ($ruta !== false) {
                     $datos[$campo] = $ruta;
                 }
-                // si falla la subida, no pisamos el valor anterior
             }
         }
 
@@ -108,12 +85,10 @@ class ConfiguracionController
         $this->redirect(BASE_URL . '/admin/configuracion');
     }
 
-    // ─────────────────────────────────────────────────────────
     // POST /admin/configuracion/eliminar-imagen
-    // ─────────────────────────────────────────────────────────
     public function eliminarImagen(): void
     {
-        $campo = $_POST['campo'] ?? '';
+        $campo     = $_POST['campo'] ?? '';
         $permitidos = ['tienda_logo', 'tienda_favicon', 'hero_imagen'];
 
         if (in_array($campo, $permitidos, true)) {
@@ -128,24 +103,5 @@ class ConfiguracionController
         }
 
         $this->redirect(BASE_URL . '/admin/configuracion');
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────
-    private function view(string $vista, array $datos = []): void
-    {
-        extract($datos);
-        $archivo = __DIR__ . '/../Views/' . str_replace('.', '/', $vista) . '.php';
-        require __DIR__ . '/../Views/layouts/header_admin.php';
-        require __DIR__ . '/../Views/layouts/sidebar.php';
-        require $archivo;
-        require __DIR__ . '/../Views/layouts/footer_admin.php';
-    }
-
-    private function redirect(string $url): void
-    {
-        header('Location: ' . $url);
-        exit;
     }
 }
