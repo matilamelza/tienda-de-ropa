@@ -47,9 +47,23 @@
             Colores
         </a>
 
-         <a href="<?= BASE_URL ?>/admin/configuracion"
+        <a href="<?= BASE_URL ?>/admin/configuracion"
            class="block px-4 py-2 rounded hover:bg-gray-800">
             Personalización ⚙️
+        </a>
+
+        <!-- Resets pendientes con badge si hay solicitudes -->
+        <a href="<?= BASE_URL ?>/admin/resets"
+           class="flex items-center justify-between px-4 py-2 rounded hover:bg-gray-800">
+            <span>Recuperar contraseñas</span>
+            <?php
+            $cantResets = count($_SESSION['admin_resets_pendientes'] ?? []);
+            if ($cantResets > 0):
+            ?>
+                <span class="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    <?= $cantResets ?>
+                </span>
+            <?php endif; ?>
         </a>
 
         <div class="border-t border-gray-700 my-2"></div>
@@ -61,15 +75,15 @@
 
     </nav>
 
-    <!-- Info y logout del admin logueado -->
+    <!-- Info y logout -->
     <div class="p-4 border-t border-gray-700">
         <?php if (isset($_SESSION['admin'])): ?>
             <p class="text-xs text-gray-400 mb-1">Sesión activa</p>
             <p class="text-sm font-medium truncate">
-                <?php echo htmlspecialchars($_SESSION['admin']['nombre']); ?>
+                <?= htmlspecialchars($_SESSION['admin']['nombre']) ?>
             </p>
             <p class="text-xs text-gray-500 truncate mb-3">
-                <?php echo htmlspecialchars($_SESSION['admin']['email']); ?>
+                <?= htmlspecialchars($_SESSION['admin']['email']) ?>
             </p>
         <?php endif; ?>
 

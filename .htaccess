@@ -29,6 +29,12 @@ RewriteRule ^salir/?$                              index.php?route=cliente_logou
 RewriteRule ^cliente/ingresar/?$                   index.php?route=cliente_ingresar           [L,QSA]
 RewriteRule ^cliente/guardar-registro/?$           index.php?route=cliente_guardar_registro   [L,QSA]
 
+# Recuperar contraseña
+RewriteRule ^olvide-mi-password/?$                 index.php?route=olvide_password            [L,QSA]
+RewriteRule ^solicitar-reset/?$                    index.php?route=solicitar_reset            [L,QSA]
+RewriteRule ^nueva-password/?$                     index.php?route=nueva_password             [L,QSA]
+RewriteRule ^guardar-nueva-password/?$             index.php?route=guardar_nueva_password     [L,QSA]
+
 # Cuenta del cliente
 RewriteRule ^mi-cuenta/pedidos/?$                  index.php?route=cliente_pedidos            [L,QSA]
 RewriteRule ^mi-cuenta/pedido/([0-9]+)/?$          index.php?route=cliente_pedido_detalle&id=$1 [L,QSA]
@@ -45,6 +51,10 @@ RewriteRule ^admin/pedido/([0-9]+)/?$              index.php?route=admin_pedido_
 RewriteRule ^admin/pedido/estado/?$                index.php?route=admin_pedido_estado        [L,QSA]
 RewriteRule ^admin/clientes/?$                     index.php?route=admin_clientes             [L,QSA]
 RewriteRule ^admin/cliente/?$                      index.php?route=admin_cliente_detalle      [L,QSA]
+
+# Resets de contraseña (admin)
+RewriteRule ^admin/resets/?$                       index.php?route=admin_resets               [L,QSA]
+RewriteRule ^admin/resets/limpiar/?$               index.php?route=admin_resets_limpiar       [L,QSA]
 
 # Productos
 RewriteRule ^admin/productos/editar/?$             index.php?route=productos_editar              [L,QSA]
@@ -79,8 +89,8 @@ RewriteRule ^admin/marcas/actualizar/?$            index.php?route=marcas_actual
 RewriteRule ^admin/marcas/eliminar/?$              index.php?route=marcas_eliminar            [L,QSA]
 
 # Configuración
-RewriteRule ^admin/configuracion/?$                index.php?route=admin_configuracion                 [L,QSA]
-RewriteRule ^admin/configuracion/guardar/?$        index.php?route=admin_configuracion_guardar         [L,QSA]
+RewriteRule ^admin/configuracion/?$                index.php?route=admin_configuracion                  [L,QSA]
+RewriteRule ^admin/configuracion/guardar/?$        index.php?route=admin_configuracion_guardar          [L,QSA]
 RewriteRule ^admin/configuracion/eliminar-imagen/?$ index.php?route=admin_configuracion_eliminar_imagen [L,QSA]
 
 # Raíz -> tienda

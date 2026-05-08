@@ -40,4 +40,9 @@ class ClienteAdminController extends Controller
             'pedidos' => $pedidos
         ]);
     }
+
+    public function resets()
+    {
+        $this->view('admin/resets/index', []);
+    }
 }

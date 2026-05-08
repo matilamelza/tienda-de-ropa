@@ -361,6 +361,26 @@ switch ($route) {
         $controller->logout();
         break;
 
+     case 'olvide_password':
+            $controller = new ClienteAuthController();
+            $controller->olvideMiPassword();
+            break;
+
+        case 'solicitar_reset':
+            $controller = new ClienteAuthController();
+            $controller->solicitarReset();
+            break;
+
+        case 'nueva_password':
+            $controller = new ClienteAuthController();
+            $controller->formularioNuevaPassword();
+            break;
+
+        case 'guardar_nueva_password':
+            $controller = new ClienteAuthController();
+            $controller->guardarNuevaPassword();
+            break;
+
     case 'cliente_pedidos':
         $controller = new ClienteController();
         $controller->pedidos();
@@ -370,6 +390,18 @@ switch ($route) {
         $controller = new ClienteController();
         $controller->pedidoDetalle();
         break;
+
+case 'admin_resets':
+    requireAdmin();
+    $controller = new ClienteAdminController();
+    $controller->resets();
+    break;
+
+case 'admin_resets_limpiar':
+    requireAdmin();
+    unset($_SESSION['admin_resets_pendientes']);
+    header('Location: ' . BASE_URL . '/admin/resets');
+    exit;
 
     default:
         http_response_code(404);
