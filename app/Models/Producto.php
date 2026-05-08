@@ -308,4 +308,119 @@ class Producto extends Conexion
 
         return $stmt->get_result();
     }
+
+    /**
+     * Busca y filtra productos para la tienda.
+     * Soporta: búsqueda por texto, categoría, marca, precio min/max y orden.
+     */
+    public function buscarFiltrado(array $filtros = []): array
+    {
+        $q          = trim($filtros['q']          ?? '');
+        $categoria  = trim($filtros['categoria']  ?? '');
+        $marca      = (int)($filtros['marca']      ?? 0);
+        $precioMin  = $filtros['precio_min'] !== '' ? (float)($filtros['precio_min'] ?? 0) : null;
+        $precioMax  = $filtros['precio_max'] !== '' ? (float)($filtros['precio_max'] ?? 0) : null;
+        $orden      = $filtros['orden'] ?? 'reciente';
+ 
+        $where  = ['p.activo = 1'];
+        $params = [];
+        $types  = '';
+ 
+        if ($q !== '') {
+            $like = '%' . $q . '%';
+            $where[]  = '(p.nombre LIKE ? OR p.descripcion LIKE ? OR m.nombre LIKE ?)';
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+            $types   .= 'sss';
+        }
+ 
+        if ($categoria !== '') {
+            $where[]  = 'c.slug = ?';
+            $params[] = $categoria;
+            $types   .= 's';
+        }
+ 
+        if ($marca > 0) {
+            $where[]  = 'p.id_marca = ?';
+            $params[] = $marca;
+            $types   .= 'i';
+        }
+ 
+        if ($precioMin !== null) {
+            $where[]  = 'p.precio_base >= ?';
+            $params[] = $precioMin;
+            $types   .= 'd';
+        }
+ 
+        if ($precioMax !== null && $precioMax > 0) {
+            $where[]  = 'p.precio_base <= ?';
+            $params[] = $precioMax;
+            $types   .= 'd';
+        }
+ 
+        switch ($orden) {
+            case 'precio_asc':  $orderBy = 'p.precio_base ASC';  break;
+            case 'precio_desc': $orderBy = 'p.precio_base DESC'; break;
+            case 'nombre':      $orderBy = 'p.nombre ASC';       break;
+            default:            $orderBy = 'p.id_producto DESC'; break;
+        }
+ 
+        $sql = "SELECT 
+                    p.*,
+                    c.nombre AS categoria,
+                    c.slug   AS categoria_slug,
+                    m.nombre AS marca,
+                    (
+                        SELECT pf.imagen 
+                        FROM producto_fotos pf 
+                        WHERE pf.id_producto = p.id_producto 
+                        ORDER BY pf.principal DESC, pf.id_foto ASC 
+                        LIMIT 1
+                    ) AS foto_principal
+                FROM productos p
+                INNER JOIN categorias c ON c.id_categoria = p.id_categoria
+                LEFT JOIN marcas m ON m.id_marca = p.id_marca
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY " . $orderBy;
+ 
+        $stmt = $this->db->prepare($sql);
+ 
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+ 
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+ 
+    /**
+     * Devuelve todas las marcas que tienen al menos un producto activo.
+     */
+    public function listarMarcasActivas(): array
+    {
+        $sql = "SELECT DISTINCT m.id_marca, m.nombre
+                FROM marcas m
+                INNER JOIN productos p ON p.id_marca = m.id_marca
+                WHERE p.activo = 1 AND m.activo = 1
+                ORDER BY m.nombre ASC";
+ 
+        return $this->db->query($sql)->fetch_all(MYSQLI_ASSOC);
+    }
+ 
+    /**
+     * Devuelve el precio mínimo y máximo de productos activos.
+     */
+    public function rangoPrecio(): array
+    {
+        $row = $this->db->query(
+            "SELECT MIN(precio_base) AS minimo, MAX(precio_base) AS maximo
+             FROM productos WHERE activo = 1"
+        )->fetch_assoc();
+ 
+        return [
+            'min' => (float)($row['minimo'] ?? 0),
+            'max' => (float)($row['maximo'] ?? 0),
+        ];
+    }
 }

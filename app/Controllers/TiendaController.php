@@ -8,22 +8,49 @@ class TiendaController extends Controller
         $categoriaModel = new Categoria();
         $cfgModel       = new ConfiguracionTienda();
 
-        $categoriasMenu  = $categoriaModel->listarMenu();
-        $categoriaSlug   = $_GET['categoria'] ?? null;
-        $categoriaActual = null;
+        $categoriasMenu = $categoriaModel->listarMenu();
 
-        if ($categoriaSlug) {
-            $categoriaActual = $categoriaModel->buscarPorSlug($categoriaSlug);
-            $productos       = $productoModel->listarPorCategoriaSlug($categoriaSlug);
-        } else {
-            $productos = $productoModel->listar();
+        // ── Leer filtros del GET ─────────────────────────────────────────────
+        $filtros = [
+            'q'          => trim($_GET['q']          ?? ''),
+            'categoria'  => trim($_GET['categoria']  ?? ''),
+            'marca'      => (int)($_GET['marca']     ?? 0),
+            'precio_min' => $_GET['precio_min']      ?? '',
+            'precio_max' => $_GET['precio_max']      ?? '',
+            'orden'      => $_GET['orden']           ?? 'reciente',
+        ];
+
+        $hayFiltros = $filtros['q'] !== ''
+            || $filtros['categoria'] !== ''
+            || $filtros['marca'] > 0
+            || $filtros['precio_min'] !== ''
+            || $filtros['precio_max'] !== ''
+            || $filtros['orden'] !== 'reciente';
+
+        // ── Datos para los selects de filtro ─────────────────────────────────
+        $categorias  = $categoriaModel->listarActivas();
+        $marcas      = $productoModel->listarMarcasActivas();
+        $rangoPrecio = $productoModel->rangoPrecio();
+
+        // ── Categoría actual (para el breadcrumb) ────────────────────────────
+        $categoriaActual = null;
+        if ($filtros['categoria'] !== '') {
+            $categoriaActual = $categoriaModel->buscarPorSlug($filtros['categoria']);
         }
 
+        // ── Productos ────────────────────────────────────────────────────────
+        $productos = $productoModel->buscarFiltrado($filtros);
+
         $this->view('tienda/index', [
-            'productos'       => $productos,
-            'categoriasMenu'  => $categoriasMenu,
-            'categoriaActual' => $categoriaActual,
-            'config'          => $cfgModel->todas(),
+            'productos'      => $productos,
+            'categoriasMenu' => $categoriasMenu,
+            'categoriaActual'=> $categoriaActual,
+            'config'         => $cfgModel->todas(),
+            'filtros'        => $filtros,
+            'categorias'     => $categorias,
+            'marcas'         => $marcas,
+            'rangoPrecio'    => $rangoPrecio,
+            'hayFiltros'     => $hayFiltros,
         ], 'tienda');
     }
 
@@ -49,11 +76,11 @@ class TiendaController extends Controller
         $fotos     = $productoModel->listarFotos($id);
 
         $this->view('tienda/detalle', [
-            'producto'      => $producto,
-            'variantes'     => $variantes,
-            'fotos'         => $fotos,
-            'categoriasMenu'=> $categoriaModel->listarMenu(),
-            'config'        => $cfgModel->todas(),
+            'producto'       => $producto,
+            'variantes'      => $variantes,
+            'fotos'          => $fotos,
+            'categoriasMenu' => $categoriaModel->listarMenu(),
+            'config'         => $cfgModel->todas(),
         ], 'tienda');
     }
 }
