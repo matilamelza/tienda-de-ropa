@@ -227,6 +227,64 @@ class Pedido extends Conexion
     return $stmt->get_result();
 }
 
+ public function listarPaginado(int $pagina = 1, int $porPagina = 20, string $busqueda = ''): array
+    {
+        $offset = ($pagina - 1) * $porPagina;
+ 
+        if ($busqueda !== '') {
+            $like = '%' . $busqueda . '%';
+            $sql = "SELECT 
+                        p.*,
+                        c.nombre, c.apellido, c.telefono, c.email
+                    FROM pedidos p
+                    LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
+                    WHERE c.nombre LIKE ? OR c.apellido LIKE ?
+                       OR c.telefono LIKE ? OR c.email LIKE ?
+                       OR p.id_pedido LIKE ?
+                    ORDER BY p.id_pedido DESC
+                    LIMIT ? OFFSET ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param('sssssii', $like, $like, $like, $like, $like, $porPagina, $offset);
+        } else {
+            $sql = "SELECT 
+                        p.*,
+                        c.nombre, c.apellido, c.telefono, c.email
+                    FROM pedidos p
+                    LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
+                    ORDER BY p.id_pedido DESC
+                    LIMIT ? OFFSET ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param('ii', $porPagina, $offset);
+        }
+ 
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+ 
+    /**
+     * Cuenta el total de pedidos (con búsqueda opcional).
+     */
+    public function contarPedidos(string $busqueda = ''): int
+    {
+        if ($busqueda !== '') {
+            $like = '%' . $busqueda . '%';
+            $sql = "SELECT COUNT(*) AS total
+                    FROM pedidos p
+                    LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
+                    WHERE c.nombre LIKE ? OR c.apellido LIKE ?
+                       OR c.telefono LIKE ? OR c.email LIKE ?
+                       OR p.id_pedido LIKE ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param('sssss', $like, $like, $like, $like, $like);
+        } else {
+            $sql  = "SELECT COUNT(*) AS total FROM pedidos";
+            $stmt = $this->db->prepare($sql);
+        }
+ 
+        $stmt->execute();
+        return (int) $stmt->get_result()->fetch_assoc()['total'];
+    }
+
     public function begin()
     {
         $this->db->begin_transaction();
