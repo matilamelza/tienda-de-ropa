@@ -16,6 +16,14 @@
     $fuente        = htmlspecialchars($conf['fuente_principal'] ?? 'Inter');
     $fuenteTitulos = htmlspecialchars($conf['fuente_titulos']  ?? 'Inter');
     $favicon       = $conf['tienda_favicon'] ?? '';
+
+    // ── Contador de carrito ──────────────────────────────────
+    $totalItemsCarrito = 0;
+    if (!empty($_SESSION['carrito']) && is_array($_SESSION['carrito'])) {
+        foreach ($_SESSION['carrito'] as $item) {
+            $totalItemsCarrito += (int)($item['cantidad'] ?? 1);
+        }
+    }
     ?>
  
     <title><?= $tituloPag ?></title>
@@ -108,7 +116,26 @@
                 <?php else: ?>
                     <a href="<?= BASE_URL ?>/ingresar" class="text-sm font-medium hover:opacity-70">Ingresar</a>
                 <?php endif; ?>
-                <a href="<?= BASE_URL ?>/carrito" class="text-sm font-medium hover:opacity-70">Carrito</a>
+
+                <!-- Carrito con contador -->
+                <a href="<?= BASE_URL ?>/carrito"
+                   class="relative inline-flex items-center gap-2 text-sm font-medium hover:opacity-70">
+                    <span class="relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.4 6M17 13l1.4 6M9 19a1 1 0 100 2 1 1 0 000-2zm8 0a1 1 0 100 2 1 1 0 000-2z"/>
+                        </svg>
+                        <?php if ($totalItemsCarrito > 0): ?>
+                            <span class="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1
+                                         rounded-full text-[10px] font-bold flex items-center justify-center"
+                                  style="background-color: var(--color-primario); color: var(--color-boton-texto)">
+                                <?= $totalItemsCarrito > 99 ? '99+' : $totalItemsCarrito ?>
+                            </span>
+                        <?php endif; ?>
+                    </span>
+                    Carrito
+                </a>
             </div>
  
             <button type="button" onclick="toggleMenuMobile()"
@@ -125,7 +152,18 @@
                 <?php else: ?>
                     <a href="<?= BASE_URL ?>/ingresar" class="py-2">Ingresar</a>
                 <?php endif; ?>
-                <a href="<?= BASE_URL ?>/carrito" class="py-2">Carrito</a>
+
+                <!-- Carrito mobile con contador -->
+                <a href="<?= BASE_URL ?>/carrito" class="py-2 flex items-center gap-2">
+                    Carrito
+                    <?php if ($totalItemsCarrito > 0): ?>
+                        <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1
+                                     rounded-full text-[11px] font-bold"
+                              style="background-color: var(--color-primario); color: var(--color-boton-texto)">
+                            <?= $totalItemsCarrito > 99 ? '99+' : $totalItemsCarrito ?>
+                        </span>
+                    <?php endif; ?>
+                </a>
             </nav>
         </div>
     </div>
