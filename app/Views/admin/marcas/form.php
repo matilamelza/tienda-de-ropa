@@ -27,8 +27,10 @@
           method="POST"
           class="bg-white rounded-lg shadow p-6 space-y-5">
 
+        <?= csrf_field() ?>
+
         <?php if ($editando): ?>
-            <input type="hidden" name="id_marca" value="<?php echo $marca['id_marca']; ?>">
+            <input type="hidden" name="id_marca" value="<?php echo (int) $marca['id_marca']; ?>">
         <?php endif; ?>
 
         <div>

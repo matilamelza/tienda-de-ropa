@@ -26,7 +26,7 @@ class MarcaController extends Controller
 
         $nombre = trim($_POST['nombre'] ?? '');
 
-        if (empty($nombre)) {
+        if ($nombre === '') {
             $this->redirect(BASE_URL . '/admin/marcas/crear?error=nombre');
         }
 
@@ -47,7 +47,7 @@ class MarcaController extends Controller
         $id = (int) ($_GET['id'] ?? 0);
 
         $marcaModel = new Marca();
-        $marca = $marcaModel->buscarPorId($id);
+        $marca      = $marcaModel->buscarPorId($id);
 
         if (!$marca) {
             $this->redirect(BASE_URL . '/admin/marcas');
@@ -67,13 +67,13 @@ class MarcaController extends Controller
         $id     = (int) ($_POST['id_marca'] ?? 0);
         $nombre = trim($_POST['nombre'] ?? '');
 
-        if (empty($nombre)) {
+        if ($nombre === '') {
             $this->redirect(BASE_URL . '/admin/marcas/editar?id=' . $id . '&error=nombre');
         }
 
         $data = [
             'nombre' => $nombre,
-            'slug'   => generarSlug($nombre),  
+            'slug'   => generarSlug($nombre),
             'activo' => isset($_POST['activo']) ? 1 : 0
         ];
 
@@ -85,7 +85,15 @@ class MarcaController extends Controller
 
     public function eliminar()
     {
-        $id = (int) ($_GET['id'] ?? 0);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/marcas');
+        }
+
+        $id = (int) ($_POST['id'] ?? 0);
+
+        if ($id <= 0) {
+            $this->redirect(BASE_URL . '/admin/marcas');
+        }
 
         $marcaModel = new Marca();
 
