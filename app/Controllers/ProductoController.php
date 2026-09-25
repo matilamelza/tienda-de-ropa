@@ -3,6 +3,7 @@
 class ProductoController extends Controller
 {
     private const FOTO_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+    private const FOTOS_POR_PRODUCTO = 10;
     private const FOTO_MIMES     = [
         'image/jpeg' => 'jpg',
         'image/png'  => 'png',
@@ -279,7 +280,9 @@ class ProductoController extends Controller
 
         $this->view('productos/fotos', [
             'producto' => $producto,
-            'fotos'    => $productoModel->listarFotos($id_producto)
+            'fotos'    => $productoModel->listarFotos($id_producto),
++            'maxFotos' => self::FOTOS_POR_PRODUCTO,
+            
         ]);
     }
 
@@ -336,6 +339,67 @@ class ProductoController extends Controller
         $productoModel->guardarFoto($id_producto, $nombre);
 
         $this->redirect($volver . '&ok=subida');
+    }
+
+        /**
+     * AJAX: sube UNA foto (la vista las manda de a una).
+     * Responde: { ok, id_foto, imagen, url, total } o { ok: false, error }
+     */
+    public function subirFotoAjax()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+
+        $id_producto   = (int) ($_POST['id_producto'] ?? 0);
+        $productoModel = new Producto();
+
+        if ($id_producto <= 0 || !$productoModel->buscarPorId($id_producto)) {
+            $this->json(['ok' => false, 'error' => 'Producto no encontrado'], 404);
+        }
+
+        if ($productoModel->contarFotos($id_producto) >= self::FOTOS_POR_PRODUCTO) {
+            $this->json(['ok' => false, 'error' => 'Máximo ' . self::FOTOS_POR_PRODUCTO . ' fotos por producto'], 409);
+        }
+
+        $archivo = $_FILES['foto'] ?? null;
+
+        if (!$archivo || $archivo['error'] !== UPLOAD_ERR_OK) {
+            error_log('subirFotoAjax: error PHP ' . ($archivo['error'] ?? 'sin archivo'));
+            $this->json(['ok' => false, 'error' => 'No llegó la imagen'], 400);
+        }
+
+        if ($archivo['size'] > self::FOTO_MAX_BYTES) {
+            $this->json(['ok' => false, 'error' => 'La imagen supera los 5 MB'], 400);
+        }
+
+        $carpeta = __DIR__ . '/../../public/uploads/productos';
+
+        if (!is_dir($carpeta) && !mkdir($carpeta, 0755, true)) {
+            error_log('subirFotoAjax: no se pudo crear ' . $carpeta);
+            $this->json(['ok' => false, 'error' => 'Error del servidor'], 500);
+        }
+
+        $nombre = procesar_imagen($archivo['tmp_name'], $carpeta, 'prod_');
+
+        if ($nombre === null) {
+            $this->json(['ok' => false, 'error' => 'Formato no válido (usá JPG, PNG o WebP)'], 400);
+        }
+
+        $id_foto = $productoModel->guardarFoto($id_producto, $nombre);
+
+        if ($id_foto <= 0) {
+            @unlink($carpeta . '/' . $nombre);
+            $this->json(['ok' => false, 'error' => 'No se pudo guardar la foto'], 500);
+        }
+
+        $this->json([
+            'ok'      => true,
+            'id_foto' => $id_foto,
+            'imagen'  => $nombre,
+            'url'     => BASE_URL . '/public/uploads/productos/' . $nombre,
+            'total'   => $productoModel->contarFotos($id_producto),
+        ]);
     }
 
     public function eliminarFoto()

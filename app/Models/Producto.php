@@ -259,7 +259,7 @@ class Producto extends Conexion
         );
         $stmt->bind_param("isii", $id_producto, $nombreArchivo, $principal, $orden);
 
-        return $stmt->execute();
+        return $stmt->execute() ? (int) $this->db->insert_id : 0;
     }
 
     public function eliminarFoto($id_foto)
@@ -358,6 +358,15 @@ class Producto extends Conexion
         );
         $stmt->bind_param("i", $id_producto);
         $stmt->execute();
+    }
+
+    public function contarFotos(int $id_producto): int
+    {
+        $stmt = $this->db->prepare("SELECT COUNT(*) AS total FROM producto_fotos WHERE id_producto = ?");
+        $stmt->bind_param("i", $id_producto);
+        $stmt->execute();
+
+        return (int) $stmt->get_result()->fetch_assoc()['total'];
     }
 
     // ─── TIENDA ────────────────────────────────────────────────────────────────

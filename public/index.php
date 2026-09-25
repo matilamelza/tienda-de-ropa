@@ -38,6 +38,7 @@ require_once __DIR__ . '/../app/Core/Controller.php';
 require_once __DIR__ . '/../app/Core/helpers.php';
 require_once __DIR__ . '/../app/Core/auth.php';
 require_once __DIR__ . '/../app/Core/csrf.php';
+require_once __DIR__ . '/../app/Core/imagenes.php';
 
 // ── CSRF: todo POST tiene que traer el token de la sesión ────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_valido()) {
@@ -224,6 +225,12 @@ switch ($route) {
         requireAdmin();
         $controller = new ProductoController();
         $controller->ordenarFotos();
+        break;
+
+    case 'productos_subir_foto_ajax':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->subirFotoAjax();
         break;
 
     // ─── CATEGORÍAS ────────────────────────────────────────────────────────────
