@@ -12,6 +12,7 @@ function h(string $str): string {
 
 <!-- Forms ocultos para eliminar imágenes (FUERA del form principal) -->
 <form id="form-eliminar-imagen" method="POST" action="<?= BASE_URL ?>/admin/configuracion/eliminar-imagen" style="display:none">
+    
     <input type="hidden" name="campo" id="campo-eliminar">
 </form>
 
@@ -33,6 +34,8 @@ function h(string $str): string {
       method="POST"
       enctype="multipart/form-data"
       class="space-y-8">
+
+      <?= csrf_field() ?>
 
     <!-- 1. IDENTIDAD -->
     <div class="bg-white rounded-2xl shadow-sm border p-6">

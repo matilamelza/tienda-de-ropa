@@ -29,6 +29,8 @@
         <form action="<?= BASE_URL ?>/admin/ingresar" method="POST"
               class="bg-white rounded-2xl shadow-sm border p-8 space-y-5">
 
+              <?= csrf_field() ?>
+
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
                     Email

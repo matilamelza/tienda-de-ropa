@@ -12,6 +12,8 @@
     <form action="<?= BASE_URL ?>/guardar-nueva-password" method="POST"
           class="space-y-4 bg-white border rounded-3xl p-6">
 
+          <?= csrf_field() ?>
+
         <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
 
         <div>

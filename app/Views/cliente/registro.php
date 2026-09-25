@@ -11,6 +11,7 @@
 
     <form action="<?= BASE_URL ?>/cliente/guardar-registro" method="POST" class="space-y-4 bg-white border rounded-3xl p-6">
 
+        <?= csrf_field() ?>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium mb-1">Nombre *</label>

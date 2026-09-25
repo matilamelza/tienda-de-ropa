@@ -210,6 +210,8 @@ $linkWhatsapp = "https://wa.me/" . $telefonoLimpio . "?text=" . rawurlencode($me
 
             <form action="<?= BASE_URL ?>/admin/pedido/estado" method="POST" class="space-y-4">
 
+                <?= csrf_field() ?>
+
                 <input type="hidden" name="id_pedido" value="<?php echo (int) $pedido['id_pedido']; ?>">
 
                 <select name="estado" class="w-full border rounded-lg px-3 py-2 bg-white">

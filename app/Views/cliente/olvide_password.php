@@ -20,6 +20,8 @@
         <form action="<?= BASE_URL ?>/solicitar-reset" method="POST"
               class="space-y-4 bg-white border rounded-3xl p-6">
 
+            <?= csrf_field() ?>
+
             <div>
                 <label class="block text-sm font-medium mb-1">Email de tu cuenta</label>
                 <input type="email" name="email" required autofocus

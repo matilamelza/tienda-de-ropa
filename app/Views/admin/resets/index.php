@@ -55,11 +55,13 @@ $resets = $_SESSION['admin_resets_pendientes'] ?? [];
     </div>
 
     <div class="mt-4 text-right">
-        <a href="<?= BASE_URL ?>/admin/resets/limpiar"
-           onclick="return confirm('¿Limpiar todas las solicitudes vistas?')"
-           class="text-sm text-gray-400 hover:text-red-500">
-            Limpiar lista
-        </a>
+        <?= boton_eliminar(
+            BASE_URL . '/admin/resets/limpiar',
+            [],
+            '¿Limpiar todas las solicitudes vistas?',
+            'Limpiar lista',
+            'text-sm text-gray-400 hover:text-red-500'
+        ) ?>
     </div>
 
 <?php endif; ?>

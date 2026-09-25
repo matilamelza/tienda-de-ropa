@@ -80,6 +80,8 @@ $politica    = trim($conf['politica_cambios'] ?? '');
             <form action="<?= BASE_URL ?>/carrito/agregar" method="POST" class="space-y-6">
                 <input type="hidden" name="id_variante" id="id_variante">
 
+                <?= csrf_field() ?>
+
                 <!-- TALLE -->
                 <div>
                     <div class="flex justify-between mb-2">

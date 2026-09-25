@@ -12,6 +12,8 @@ $politica    = trim($conf['politica_cambios'] ?? '');
 
     <form action="<?= BASE_URL ?>/checkout/guardar" method="POST">
 
+        <?= csrf_field() ?>
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
             <div class="lg:col-span-2 bg-white border rounded-3xl p-6">
