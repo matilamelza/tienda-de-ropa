@@ -6,7 +6,8 @@ define('BASE_URL', '');
 
 require_once __DIR__ . '/../app/Core/Controller.php';
 require_once __DIR__ . '/../app/Core/helpers.php';
-require_once __DIR__ . '/../app/Core/auth.php';         
+require_once __DIR__ . '/../app/Core/auth.php';
+require_once __DIR__ . '/../app/Core/csrf.php';
 
 // Models
 require_once __DIR__ . '/../app/Models/Producto.php';
