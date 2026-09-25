@@ -206,8 +206,8 @@ class ProductoController extends Controller
 
         $this->view('productos/variante_form', [
             'variante' => $variante,
-            'talles'   => $talleModel->listarActivos(),
-            'colores'  => $colorModel->listarActivos()
+            'talles'   => $talleModel->listarParaVariante($variante['id_talle'] ? (int) $variante['id_talle'] : null),
+            'colores'  => $colorModel->listarParaVariante($variante['id_color'] ? (int) $variante['id_color'] : null)
         ]);
     }
 

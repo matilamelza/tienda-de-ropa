@@ -83,6 +83,22 @@ RewriteRule ^admin/productos/subir-foto/?$          index.php?route=productos_su
 RewriteRule ^admin/productos/eliminar-foto/?$       index.php?route=productos_eliminar_foto       [L,QSA]
 RewriteRule ^admin/productos/?$                     index.php?route=productos                     [L,QSA]
 
+# Talles
+RewriteRule ^admin/talles/?$            index.php?route=talles             [L,QSA]
+RewriteRule ^admin/talles/crear/?$      index.php?route=talles_crear       [L,QSA]
+RewriteRule ^admin/talles/guardar/?$    index.php?route=talles_guardar     [L,QSA]
+RewriteRule ^admin/talles/editar/?$     index.php?route=talles_editar      [L,QSA]
+RewriteRule ^admin/talles/actualizar/?$ index.php?route=talles_actualizar  [L,QSA]
+RewriteRule ^admin/talles/eliminar/?$   index.php?route=talles_eliminar    [L,QSA]
+
+# Colores
+RewriteRule ^admin/colores/?$            index.php?route=colores            [L,QSA]
+RewriteRule ^admin/colores/crear/?$      index.php?route=colores_crear      [L,QSA]
+RewriteRule ^admin/colores/guardar/?$    index.php?route=colores_guardar    [L,QSA]
+RewriteRule ^admin/colores/editar/?$     index.php?route=colores_editar     [L,QSA]
+RewriteRule ^admin/colores/actualizar/?$ index.php?route=colores_actualizar [L,QSA]
+RewriteRule ^admin/colores/eliminar/?$   index.php?route=colores_eliminar   [L,QSA]
+
 # Configuración
 RewriteRule ^admin/configuracion/?$                 index.php?route=admin_configuracion                  [L,QSA]
 RewriteRule ^admin/configuracion/guardar/?$         index.php?route=admin_configuracion_guardar          [L,QSA]

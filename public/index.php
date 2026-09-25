@@ -63,6 +63,8 @@ require_once __DIR__ . '/../app/Controllers/DashboardController.php';
 require_once __DIR__ . '/../app/Controllers/ProductoController.php';
 require_once __DIR__ . '/../app/Controllers/CategoriaController.php';
 require_once __DIR__ . '/../app/Controllers/MarcaController.php';
+require_once __DIR__ . '/../app/Controllers/TalleController.php';
+require_once __DIR__ . '/../app/Controllers/ColorController.php';
 require_once __DIR__ . '/../app/Controllers/TiendaController.php';
 require_once __DIR__ . '/../app/Controllers/CarritoController.php';
 require_once __DIR__ . '/../app/Controllers/CheckoutController.php';
@@ -283,6 +285,82 @@ switch ($route) {
         $controller->eliminar();
         break;
 
+    // ─── TALLES ────────────────────────────────────────────────────────────────
+
+    case 'talles':
+        requireAdmin();
+        $controller = new TalleController();
+        $controller->index();
+        break;
+
+    case 'talles_crear':
+        requireAdmin();
+        $controller = new TalleController();
+        $controller->crear();
+        break;
+
+    case 'talles_guardar':
+        requireAdmin();
+        $controller = new TalleController();
+        $controller->guardar();
+        break;
+
+    case 'talles_editar':
+        requireAdmin();
+        $controller = new TalleController();
+        $controller->editar();
+        break;
+
+    case 'talles_actualizar':
+        requireAdmin();
+        $controller = new TalleController();
+        $controller->actualizar();
+        break;
+
+    case 'talles_eliminar':
+        requireAdmin();
+        $controller = new TalleController();
+        $controller->eliminar();
+        break;
+
+    // ─── COLORES ───────────────────────────────────────────────────────────────
+
+    case 'colores':
+        requireAdmin();
+        $controller = new ColorController();
+        $controller->index();
+        break;
+
+    case 'colores_crear':
+        requireAdmin();
+        $controller = new ColorController();
+        $controller->crear();
+        break;
+
+    case 'colores_guardar':
+        requireAdmin();
+        $controller = new ColorController();
+        $controller->guardar();
+        break;
+
+    case 'colores_editar':
+        requireAdmin();
+        $controller = new ColorController();
+        $controller->editar();
+        break;
+
+    case 'colores_actualizar':
+        requireAdmin();
+        $controller = new ColorController();
+        $controller->actualizar();
+        break;
+
+    case 'colores_eliminar':
+        requireAdmin();
+        $controller = new ColorController();
+        $controller->eliminar();
+        break;
+
     // ─── CONFIGURACIÓN ─────────────────────────────────────────────────────────
 
     case 'admin_configuracion':
@@ -464,7 +542,6 @@ switch ($route) {
     // ─── 404 ───────────────────────────────────────────────────────────────────
 
     default:
-        http_response_code(404);
         $controller = new TiendaController();
         $controller->noEncontrado();
         break;
