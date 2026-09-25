@@ -44,12 +44,11 @@ class ConfiguracionController extends Controller
             'fuente_principal', 'fuente_titulos', 'tamano_base',
             'tienda_email', 'tienda_telefono', 'tienda_whatsapp',
             'tienda_direccion', 'tienda_instagram', 'tienda_facebook', 'tienda_tiktok',
-            'hero_titulo', 'hero_subtitulo', 'hero_boton_texto', 'hero_estilo',
+            'hero_etiqueta', 'hero_titulo', 'hero_subtitulo', 'hero_boton_texto', 'hero_estilo',
             'seo_titulo', 'seo_descripcion', 'seo_keywords',
-            'envio_gratis_minimo', 'politica_cambios', 'metodos_pago',
+            'politica_cambios', 'metodos_pago',
             'anuncio_texto', 'anuncio_color_bg', 'anuncio_color_texto',
             'footer_texto',
-            'productos_por_pagina', 'moneda_simbolo', 'moneda_codigo',
             'mantenimiento_mensaje',
         ];
 
@@ -59,7 +58,6 @@ class ConfiguracionController extends Controller
 
         $checkboxes = [
             'anuncio_activo', 'footer_mostrar_redes',
-            'mostrar_precio', 'mostrar_stock',
             'permitir_invitados', 'mantenimiento_activo',
         ];
         foreach ($checkboxes as $campo) {
@@ -88,7 +86,12 @@ class ConfiguracionController extends Controller
     // POST /admin/configuracion/eliminar-imagen
     public function eliminarImagen(): void
     {
-        $campo     = $_POST['campo'] ?? '';
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/configuracion');
+            return;
+        }
+
+        $campo      = $_POST['campo'] ?? '';
         $permitidos = ['tienda_logo', 'tienda_favicon', 'hero_imagen'];
 
         if (in_array($campo, $permitidos, true)) {

@@ -325,7 +325,7 @@ function h(string $str): string {
                 <input type="text" name="tienda_whatsapp"
                        value="<?= h($config['tienda_whatsapp'] ?? '') ?>"
                        class="input" placeholder="5491112345678">
-                <p class="text-xs text-gray-400 mt-1">Se usa para el botón de consulta por pedido.</p>
+                <p class="text-xs text-gray-400 mt-1">Se usa para recibir los pedidos y para el botón de consulta.</p>
             </div>
 
             <div>
@@ -398,30 +398,21 @@ function h(string $str): string {
         </div>
     </div>
 
-    <!-- 8. ENVÍOS Y PAGOS -->
+    <!-- 8. PAGOS Y CAMBIOS -->
     <div class="bg-white rounded-2xl shadow-sm border p-6">
         <h2 class="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-            <span class="text-2xl">🚚</span> Envíos y pagos
+            <span class="text-2xl">💳</span> Pagos y cambios
         </h2>
-        <p class="text-sm text-gray-400 mb-6">Configuración de costos de envío y métodos de pago aceptados.</p>
+        <p class="text-sm text-gray-400 mb-6">Métodos de pago aceptados y política de cambios que ven los clientes.</p>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-                <label class="label">Monto mínimo para envío gratis (0 = siempre gratis)</label>
-                <div class="flex">
-                    <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 bg-gray-50 text-gray-500 text-sm">$</span>
-                    <input type="number" name="envio_gratis_minimo" min="0"
-                           value="<?= h($config['envio_gratis_minimo'] ?? '0') ?>"
-                           class="input rounded-l-none">
-                </div>
-            </div>
+        <div class="grid grid-cols-1 gap-5">
             <div>
                 <label class="label">Métodos de pago aceptados</label>
                 <input type="text" name="metodos_pago"
                        value="<?= h($config['metodos_pago'] ?? '') ?>"
                        class="input" placeholder="Efectivo, Transferencia, Mercado Pago">
             </div>
-            <div class="md:col-span-2">
+            <div>
                 <label class="label">Política de cambios y devoluciones</label>
                 <textarea name="politica_cambios" rows="3"
                           class="input" placeholder="Aceptamos cambios dentro de los 30 días..."><?= h($config['politica_cambios'] ?? '') ?></textarea>
@@ -429,54 +420,21 @@ function h(string $str): string {
         </div>
     </div>
 
-    <!-- 9. MONEDA Y COMPORTAMIENTO -->
+    <!-- 9. COMPRAS -->
     <div class="bg-white rounded-2xl shadow-sm border p-6">
         <h2 class="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-            <span class="text-2xl">⚙️</span> Moneda y comportamiento
+            <span class="text-2xl">🛒</span> Compras
         </h2>
-        <p class="text-sm text-gray-400 mb-6">Opciones generales de la tienda.</p>
+        <p class="text-sm text-gray-400 mb-6">Cómo pueden comprar los clientes.</p>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div>
-                <label class="label">Símbolo de moneda</label>
-                <input type="text" name="moneda_simbolo" maxlength="5"
-                       value="<?= h($config['moneda_simbolo'] ?? '$') ?>"
-                       class="input" placeholder="$">
-            </div>
-            <div>
-                <label class="label">Código de moneda</label>
-                <input type="text" name="moneda_codigo" maxlength="5"
-                       value="<?= h($config['moneda_codigo'] ?? 'ARS') ?>"
-                       class="input" placeholder="ARS">
-            </div>
-            <div>
-                <label class="label">Productos por página</label>
-                <select name="productos_por_pagina" class="input">
-                    <?php foreach ([6, 9, 12, 16, 20, 24] as $n): ?>
-                        <option value="<?= $n ?>" <?= ($config['productos_por_pagina'] ?? '12') == $n ? 'selected' : '' ?>><?= $n ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-        </div>
-
-        <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <?php
-            $checks = [
-                'mostrar_precio'     => 'Mostrar precios en la tienda',
-                'mostrar_stock'      => 'Mostrar indicador de stock',
-                'permitir_invitados' => 'Permitir compra sin registro',
-            ];
-            foreach ($checks as $campo => $etiqueta): ?>
-                <label class="flex items-center gap-3 cursor-pointer">
-                    <label class="toggle-label">
-                        <input type="checkbox" name="<?= $campo ?>" value="1"
-                               <?= !empty($config[$campo]) && $config[$campo] === '1' ? 'checked' : '' ?>>
-                        <span class="toggle"></span>
-                    </label>
-                    <span class="text-sm text-gray-700"><?= $etiqueta ?></span>
-                </label>
-            <?php endforeach; ?>
-        </div>
+        <label class="flex items-center gap-3 cursor-pointer">
+            <label class="toggle-label">
+                <input type="checkbox" name="permitir_invitados" value="1"
+                       <?= ($config['permitir_invitados'] ?? '1') === '1' ? 'checked' : '' ?>>
+                <span class="toggle"></span>
+            </label>
+            <span class="text-sm text-gray-700">Permitir compra sin registro (como invitado)</span>
+        </label>
     </div>
 
     <!-- 10. FOOTER -->
@@ -491,7 +449,7 @@ function h(string $str): string {
                 <label class="label">Texto del footer</label>
                 <input type="text" name="footer_texto"
                        value="<?= h($config['footer_texto'] ?? '') ?>"
-                       class="input" placeholder="© 2025 Mi Tienda. Todos los derechos reservados.">
+                       class="input" placeholder="© <?= date('Y') ?> Mi Tienda. Todos los derechos reservados.">
             </div>
             <label class="flex items-center gap-3 cursor-pointer">
                 <label class="toggle-label">

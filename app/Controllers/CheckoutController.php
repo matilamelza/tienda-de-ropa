@@ -5,7 +5,9 @@ class CheckoutController extends Controller
     public function index()
     {
         $clienteLogueado = $_SESSION['cliente'] ?? null;
-        $modoInvitado    = isset($_GET['invitado']) && $_GET['invitado'] == 1;
+        $cfgTienda       = new ConfiguracionTienda();
+        $permiteInvitado = $cfgTienda->get('permitir_invitados', '1') === '1';
+            $modoInvitado    = $permiteInvitado && isset($_GET['invitado']) && $_GET['invitado'] == 1;
 
         if (!$clienteLogueado && !$modoInvitado) {
             $this->redirect(BASE_URL . '/ingresar');
@@ -55,8 +57,9 @@ class CheckoutController extends Controller
 
     public function guardar()
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_SESSION['carrito'])) {
-            $this->redirect(BASE_URL . '/carrito');
+        $cfgTienda = new ConfiguracionTienda();
+        if (empty($_SESSION['cliente']) && $cfgTienda->get('permitir_invitados', '1') !== '1') {
+            $this->redirect(BASE_URL . '/ingresar');
         }
 
         $carritoModel = new Carrito();

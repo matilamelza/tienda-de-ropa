@@ -46,10 +46,12 @@
             Crear cuenta
         </a>
 
-        <a href="<?= BASE_URL ?>/checkout/invitado"
-           class="block text-center text-sm text-gray-500 hover:text-gray-900">
-            Continuar como invitado
-        </a>
+        <?php if (($conf['permitir_invitados'] ?? '1') === '1'): ?>
+            <a href="<?= BASE_URL ?>/checkout/invitado"
+               class="block text-center text-sm text-gray-500 hover:text-gray-900">
+                Continuar como invitado
+            </a>
+        <?php endif; ?>
 
     </form>
 
