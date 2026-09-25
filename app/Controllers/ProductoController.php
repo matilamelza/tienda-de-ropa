@@ -281,7 +281,7 @@ class ProductoController extends Controller
         $this->view('productos/fotos', [
             'producto' => $producto,
             'fotos'    => $productoModel->listarFotos($id_producto),
-+            'maxFotos' => self::FOTOS_POR_PRODUCTO,
+            'maxFotos' => self::FOTOS_POR_PRODUCTO,
             
         ]);
     }
