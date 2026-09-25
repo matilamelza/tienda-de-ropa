@@ -16,7 +16,7 @@ class Producto extends Conexion
                         SELECT pf.imagen 
                         FROM producto_fotos pf 
                         WHERE pf.id_producto = p.id_producto 
-                        ORDER BY pf.principal DESC, pf.id_foto ASC 
+                        ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC 
                         LIMIT 1
                     ) AS foto_principal
                 FROM productos p
@@ -28,7 +28,7 @@ class Producto extends Conexion
         return $this->db->query($sql);
     }
 
-        public function guardar($data)
+    public function guardar($data)
     {
         $sql = "INSERT INTO productos 
                 (id_categoria, id_marca, nombre, slug, descripcion, precio_base, precio_costo, activo, destacado)
@@ -84,8 +84,6 @@ class Producto extends Conexion
 
         return $stmt->execute();
     }
-
-    
 
     /**
      * Borrado lógico: marca la fecha, lo desactiva y libera el slug.
@@ -241,13 +239,25 @@ class Producto extends Conexion
 
     // ─── FOTOS ─────────────────────────────────────────────────────────────────
 
-    public function guardarFoto($id_producto, $nombreArchivo, $principal = 0)
+    /** Agrega una foto al final. Si es la primera del producto, queda como principal. */
+    public function guardarFoto($id_producto, $nombreArchivo)
     {
-        $sql = "INSERT INTO producto_fotos (id_producto, imagen, principal)
-                VALUES (?, ?, ?)";
+        $stmt = $this->db->prepare(
+            "SELECT COALESCE(MAX(orden), 0) + 1 AS siguiente, COUNT(*) AS total
+             FROM producto_fotos WHERE id_producto = ?"
+        );
+        $stmt->bind_param("i", $id_producto);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("isi", $id_producto, $nombreArchivo, $principal);
+        $orden     = (int) $row['siguiente'];
+        $principal = ((int) $row['total'] === 0) ? 1 : 0;
+
+        $stmt = $this->db->prepare(
+            "INSERT INTO producto_fotos (id_producto, imagen, principal, orden)
+             VALUES (?, ?, ?, ?)"
+        );
+        $stmt->bind_param("isii", $id_producto, $nombreArchivo, $principal, $orden);
 
         return $stmt->execute();
     }
@@ -273,16 +283,81 @@ class Producto extends Conexion
         $stmt->bind_param("i", $id_foto);
         $stmt->execute();
 
+        // Si se borró la principal, la siguiente pasa a serlo
+        $this->sincronizarPrincipal((int) $foto['id_producto']);
+
         return $foto['id_producto'];
     }
 
     public function listarFotos($id_producto)
     {
-        $stmt = $this->db->prepare("SELECT * FROM producto_fotos WHERE id_producto = ? ORDER BY principal DESC, id_foto ASC");
+        $stmt = $this->db->prepare(
+            "SELECT * FROM producto_fotos
+             WHERE id_producto = ?
+             ORDER BY orden ASC, id_foto ASC"
+        );
         $stmt->bind_param("i", $id_producto);
         $stmt->execute();
 
         return $stmt->get_result();
+    }
+
+    /**
+     * Guarda el orden nuevo de las fotos de un producto.
+     * $ids: ids de foto en el orden deseado (el primero queda como principal).
+     * Solo toca fotos que pertenezcan a ese producto.
+     */
+    public function guardarOrdenFotos(int $id_producto, array $ids): bool
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids), fn($id) => $id > 0));
+
+        if (empty($ids)) {
+            return false;
+        }
+
+        try {
+            $this->db->begin_transaction();
+
+            $stmt = $this->db->prepare(
+                "UPDATE producto_fotos
+                 SET orden = ?, principal = ?
+                 WHERE id_foto = ? AND id_producto = ?"
+            );
+
+            foreach ($ids as $i => $id_foto) {
+                $orden     = $i + 1;
+                $principal = ($i === 0) ? 1 : 0;
+
+                $stmt->bind_param("iiii", $orden, $principal, $id_foto, $id_producto);
+                $stmt->execute();
+            }
+
+            $this->db->commit();
+
+        } catch (Throwable $e) {
+            $this->db->rollback();
+            error_log('guardarOrdenFotos: ' . $e->getMessage());
+            return false;
+        }
+
+        return true;
+    }
+
+    /** Deja como principal la primera foto según el orden (y ninguna otra). */
+    private function sincronizarPrincipal(int $id_producto): void
+    {
+        $stmt = $this->db->prepare("UPDATE producto_fotos SET principal = 0 WHERE id_producto = ?");
+        $stmt->bind_param("i", $id_producto);
+        $stmt->execute();
+
+        $stmt = $this->db->prepare(
+            "UPDATE producto_fotos SET principal = 1
+             WHERE id_producto = ?
+             ORDER BY orden ASC, id_foto ASC
+             LIMIT 1"
+        );
+        $stmt->bind_param("i", $id_producto);
+        $stmt->execute();
     }
 
     // ─── TIENDA ────────────────────────────────────────────────────────────────
@@ -297,7 +372,7 @@ class Producto extends Conexion
                         SELECT pf.imagen 
                         FROM producto_fotos pf 
                         WHERE pf.id_producto = p.id_producto 
-                        ORDER BY pf.principal DESC, pf.id_foto ASC 
+                        ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC 
                         LIMIT 1
                     ) AS foto_principal
                 FROM productos p
@@ -407,7 +482,7 @@ class Producto extends Conexion
                         SELECT pf.imagen 
                         FROM producto_fotos pf 
                         WHERE pf.id_producto = p.id_producto 
-                        ORDER BY pf.principal DESC, pf.id_foto ASC 
+                        ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC 
                         LIMIT 1
                     ) AS foto_principal
                 FROM productos p

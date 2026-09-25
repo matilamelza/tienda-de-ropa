@@ -218,6 +218,12 @@ switch ($route) {
         $controller = new ProductoController();
         $controller->eliminarFoto();
         break;
+    
+    case 'productos_ordenar_fotos':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->ordenarFotos();
+        break;
 
     // ─── CATEGORÍAS ────────────────────────────────────────────────────────────
 

@@ -355,4 +355,41 @@ class ProductoController extends Controller
 
         $this->redirect(BASE_URL . '/admin/productos/fotos?id=' . $id_producto . '&ok=eliminada');
     }
+
+        /**
+     * AJAX: guarda el orden de las fotos.
+     * Recibe por POST: id_producto, ids[] (en el orden nuevo) y csrf_token.
+     * Responde JSON: { ok: true } o { ok: false, error: "..." }
+     */
+    public function ordenarFotos()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['ok' => false, 'error' => 'Método no permitido']);
+            exit;
+        }
+
+        $id_producto = (int) ($_POST['id_producto'] ?? 0);
+        $ids         = $_POST['ids'] ?? [];
+
+        if ($id_producto <= 0 || !is_array($ids) || empty($ids)) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'Datos incompletos']);
+            exit;
+        }
+
+        $productoModel = new Producto();
+        $ok            = $productoModel->guardarOrdenFotos($id_producto, $ids);
+
+        if (!$ok) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'No se pudo guardar el orden']);
+            exit;
+        }
+
+        echo json_encode(['ok' => true]);
+        exit;
+    }
 }
