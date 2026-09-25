@@ -8,6 +8,7 @@ class Carrito extends Conexion
     {
         $sql = "SELECT 
                     pv.*,
+                    (pv.stock - pv.stock_reservado) AS disponible,
                     p.nombre AS producto,
                     p.precio_base,
                     p.id_producto,

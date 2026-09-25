@@ -4,6 +4,7 @@ require_once __DIR__ . '/Conexion.php';
 
 class Pedido extends Conexion
 {
+    // ─── CLIENTES ──────────────────────────────────────────────────────────────
 
     public function buscarCliente($telefono, $email)
     {
@@ -17,6 +18,7 @@ class Pedido extends Conexion
 
         return $stmt->get_result()->fetch_assoc();
     }
+
     public function crearCliente($data)
     {
         $sql = "INSERT INTO clientes 
@@ -40,18 +42,20 @@ class Pedido extends Conexion
         return $this->db->insert_id;
     }
 
+    // ─── PEDIDOS ───────────────────────────────────────────────────────────────
+
     public function crearPedido($id_cliente, $id_usuario_cliente, $total, $observaciones)
-{
-    $sql = "INSERT INTO pedidos 
-            (id_cliente, id_usuario_cliente, total, estado, observaciones)
-            VALUES (?, ?, ?, 'pendiente_contacto', ?)";
+    {
+        $sql = "INSERT INTO pedidos 
+                (id_cliente, id_usuario_cliente, total, estado, observaciones)
+                VALUES (?, ?, ?, 'pendiente_contacto', ?)";
 
-    $stmt = $this->db->prepare($sql);
-    $stmt->bind_param("iids", $id_cliente, $id_usuario_cliente, $total, $observaciones);
-    $stmt->execute();
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("iids", $id_cliente, $id_usuario_cliente, $total, $observaciones);
+        $stmt->execute();
 
-    return $this->db->insert_id;
-}
+        return $this->db->insert_id;
+    }
 
     public function agregarItem($id_pedido, $item)
     {
@@ -72,19 +76,6 @@ class Pedido extends Conexion
             $item['precio_unitario'],
             $item['subtotal']
         );
-
-        return $stmt->execute();
-    }
-
-    public function descontarStock($id_variante, $cantidad)
-    {
-        $sql = "UPDATE producto_variantes
-                SET stock = stock - ?
-                WHERE id_variante = ?
-                AND stock >= ?";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("iii", $cantidad, $id_variante, $cantidad);
 
         return $stmt->execute();
     }
@@ -154,7 +145,39 @@ class Pedido extends Conexion
         return $stmt->get_result()->fetch_assoc();
     }
 
-    public function reservarStock($id_variante, $cantidad)
+    // ─── STOCK ─────────────────────────────────────────────────────────────────
+
+    /** Resta del stock real, solo si hay disponible (stock - reservado) suficiente. */
+    public function descontarStock($id_variante, $cantidad): bool
+    {
+        $sql = "UPDATE producto_variantes
+                SET stock = stock - ?
+                WHERE id_variante = ?
+                AND (stock - stock_reservado) >= ?";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("iii", $cantidad, $id_variante, $cantidad);
+        $stmt->execute();
+
+        return $stmt->affected_rows === 1;
+    }
+
+    /** Suma al stock real (pedido pagado/entregado que se cancela). */
+    public function devolverStock($id_variante, $cantidad): bool
+    {
+        $sql = "UPDATE producto_variantes
+                SET stock = stock + ?
+                WHERE id_variante = ?";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("ii", $cantidad, $id_variante);
+        $stmt->execute();
+
+        return $stmt->affected_rows === 1;
+    }
+
+    /** Reserva stock, solo si hay disponible suficiente. */
+    public function reservarStock($id_variante, $cantidad): bool
     {
         $sql = "UPDATE producto_variantes
                 SET stock_reservado = stock_reservado + ?
@@ -163,21 +186,81 @@ class Pedido extends Conexion
 
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("iii", $cantidad, $id_variante, $cantidad);
+        $stmt->execute();
 
-        return $stmt->execute();
+        return $stmt->affected_rows === 1;
     }
 
-    public function liberarStock($id_variante, $cantidad)
+    /** Libera una reserva (nunca deja stock_reservado negativo). */
+    public function liberarStock($id_variante, $cantidad): bool
     {
         $sql = "UPDATE producto_variantes
-                SET stock_reservado = stock_reservado - ?
+                SET stock_reservado = IF(stock_reservado >= ?, stock_reservado - ?, 0)
                 WHERE id_variante = ?";
 
         $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("ii", $cantidad, $id_variante);
+        $stmt->bind_param("iii", $cantidad, $cantidad, $id_variante);
+        $stmt->execute();
 
-        return $stmt->execute();
+        return true;
     }
+
+    /** Devuelve el grupo de stock de un estado: libre | reservado | descontado */
+    public static function grupoStock(string $estado): string
+    {
+        if ($estado === 'pendiente_pago') {
+            return 'reservado';
+        }
+        if (in_array($estado, ['pagado', 'entregado'], true)) {
+            return 'descontado';
+        }
+        return 'libre';
+    }
+
+    /**
+     * Aplica al stock el cambio de estado de un pedido.
+     * Devuelve false si algún ítem no tiene stock suficiente.
+     * Debe llamarse dentro de una transacción (si devuelve false, hacer rollback).
+     */
+    public function aplicarCambioStock(int $id_pedido, string $estadoAnterior, string $estadoNuevo): bool
+    {
+        $desde = self::grupoStock($estadoAnterior);
+        $hasta = self::grupoStock($estadoNuevo);
+
+        if ($desde === $hasta) {
+            return true;
+        }
+
+        $res   = $this->listarItems($id_pedido);
+        $items = [];
+        while ($row = $res->fetch_assoc()) {
+            $items[] = $row;
+        }
+
+        foreach ($items as $item) {
+            $id   = (int) $item['id_variante'];
+            $cant = (int) $item['cantidad'];
+
+            // 1) Deshacer lo que hacía el estado anterior
+            if ($desde === 'reservado') {
+                $this->liberarStock($id, $cant);
+            } elseif ($desde === 'descontado') {
+                $this->devolverStock($id, $cant);
+            }
+
+            // 2) Aplicar lo que pide el estado nuevo
+            if ($hasta === 'reservado' && !$this->reservarStock($id, $cant)) {
+                return false;
+            }
+            if ($hasta === 'descontado' && !$this->descontarStock($id, $cant)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // ─── DASHBOARD ─────────────────────────────────────────────────────────────
 
     public function resumenDashboard()
     {
@@ -187,7 +270,7 @@ class Pedido extends Conexion
             SUM(CASE WHEN estado = 'pendiente_pago' THEN 1 ELSE 0 END) AS pendientes_pago,
             SUM(CASE WHEN estado = 'pagado' THEN 1 ELSE 0 END) AS pagados,
             SUM(CASE WHEN estado = 'cancelado' THEN 1 ELSE 0 END) AS cancelados,
-            COALESCE(SUM(CASE WHEN estado = 'pagado' THEN total ELSE 0 END), 0) AS total_vendido,
+            COALESCE(SUM(CASE WHEN estado IN ('pagado','entregado') THEN total ELSE 0 END), 0) AS total_vendido,
             COALESCE(SUM(CASE WHEN estado IN ('pendiente_contacto','pendiente_pago') THEN total ELSE 0 END), 0) AS total_pendiente
         FROM pedidos";
 
@@ -214,23 +297,23 @@ class Pedido extends Conexion
     }
 
     public function listarPedidosPorUsuario($id_usuario_cliente)
-{
-    $sql = "SELECT *
-            FROM pedidos
-            WHERE id_usuario_cliente = ?
-            ORDER BY id_pedido DESC";
+    {
+        $sql = "SELECT *
+                FROM pedidos
+                WHERE id_usuario_cliente = ?
+                ORDER BY id_pedido DESC";
 
-    $stmt = $this->db->prepare($sql);
-    $stmt->bind_param("i", $id_usuario_cliente);
-    $stmt->execute();
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $id_usuario_cliente);
+        $stmt->execute();
 
-    return $stmt->get_result();
-}
+        return $stmt->get_result();
+    }
 
- public function listarPaginado(int $pagina = 1, int $porPagina = 20, string $busqueda = ''): array
+    public function listarPaginado(int $pagina = 1, int $porPagina = 20, string $busqueda = ''): array
     {
         $offset = ($pagina - 1) * $porPagina;
- 
+
         if ($busqueda !== '') {
             $like = '%' . $busqueda . '%';
             $sql = "SELECT 
@@ -256,11 +339,11 @@ class Pedido extends Conexion
             $stmt = $this->db->prepare($sql);
             $stmt->bind_param('ii', $porPagina, $offset);
         }
- 
+
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
- 
+
     /**
      * Cuenta el total de pedidos (con búsqueda opcional).
      */
@@ -280,10 +363,12 @@ class Pedido extends Conexion
             $sql  = "SELECT COUNT(*) AS total FROM pedidos";
             $stmt = $this->db->prepare($sql);
         }
- 
+
         $stmt->execute();
         return (int) $stmt->get_result()->fetch_assoc()['total'];
     }
+
+    // ─── TRANSACCIONES ─────────────────────────────────────────────────────────
 
     public function begin()
     {

@@ -68,7 +68,7 @@ class CheckoutController extends Controller
         foreach ($_SESSION['carrito'] as $id_variante => $itemCarrito) {
             $variante = $carritoModel->buscarVarianteDetalle((int)$id_variante);
 
-            if (!$variante || $variante['stock'] < $itemCarrito['cantidad']) {
+            if (!$variante || $variante['disponible'] < $itemCarrito['cantidad']) {
                 $this->redirect(BASE_URL . '/carrito');
             }
 

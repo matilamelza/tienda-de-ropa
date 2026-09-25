@@ -1,27 +1,25 @@
-<a href="index.php?route=admin_pedidos"
-   class="block px-4 py-2 rounded hover:bg-gray-800">
-    Pedidos
-</a><?php
+<?php
 $estados = [
     'pendiente_contacto' => 'Pendiente de contacto',
-    'contactado' => 'Contactado',
-    'pendiente_pago' => 'Pendiente de pago',
-    'pagado' => 'Pagado',
-    'cancelado' => 'Cancelado',
-    'entregado' => 'Entregado'
+    'contactado'         => 'Contactado',
+    'pendiente_pago'     => 'Pendiente de pago',
+    'pagado'             => 'Pagado',
+    'cancelado'          => 'Cancelado',
+    'entregado'          => 'Entregado'
 ];
 
 $telefonoLimpio = preg_replace('/\D/', '', $pedido['telefono'] ?? '');
 
+// Celulares argentinos en WhatsApp: 549 + característica + número
 if (strlen($telefonoLimpio) > 0 && substr($telefonoLimpio, 0, 2) !== '54') {
-    $telefonoLimpio = '54' . $telefonoLimpio;
+    $telefonoLimpio = '549' . ltrim($telefonoLimpio, '0');
 }
 
-$mensaje = "Hola " . ($pedido['nombre'] ?? '') . ", te escribimos por tu pedido #" . $pedido['id_pedido'] . ".%0A";
-$mensaje .= "Total: $" . number_format($pedido['total'], 2, ',', '.') . "%0A";
+$mensaje  = "Hola " . ($pedido['nombre'] ?? '') . ", te escribimos por tu pedido #" . $pedido['id_pedido'] . ".\n";
+$mensaje .= "Total: $" . number_format($pedido['total'], 2, ',', '.') . "\n";
 $mensaje .= "Estado actual: " . ($estados[$pedido['estado']] ?? $pedido['estado']);
 
-$linkWhatsapp = "https://wa.me/" . $telefonoLimpio . "?text=" . $mensaje;
+$linkWhatsapp = "https://wa.me/" . $telefonoLimpio . "?text=" . rawurlencode($mensaje);
 ?>
 
 <div class="mb-6 flex justify-between items-start">
@@ -34,7 +32,7 @@ $linkWhatsapp = "https://wa.me/" . $telefonoLimpio . "?text=" . $mensaje;
         </p>
     </div>
 
-    <a href="index.php?route=admin_pedidos"
+    <a href="<?= BASE_URL ?>/admin/pedidos"
        class="px-4 py-2 rounded-lg border bg-white text-gray-700">
         Volver
     </a>
@@ -87,6 +85,15 @@ $linkWhatsapp = "https://wa.me/" . $telefonoLimpio . "?text=" . $mensaje;
                     </p>
                 </div>
 
+                <?php if (!empty($pedido['observaciones'])): ?>
+                    <div class="md:col-span-2">
+                        <p class="text-gray-500">Observaciones</p>
+                        <p class="font-medium whitespace-pre-line">
+                            <?php echo htmlspecialchars($pedido['observaciones']); ?>
+                        </p>
+                    </div>
+                <?php endif; ?>
+
             </div>
 
         </div>
@@ -99,48 +106,50 @@ $linkWhatsapp = "https://wa.me/" . $telefonoLimpio . "?text=" . $mensaje;
                 </h3>
             </div>
 
-            <table class="w-full text-sm">
-                <thead class="bg-gray-100 text-gray-700">
-                    <tr>
-                        <th class="text-left px-4 py-3">Producto</th>
-                        <th class="text-left px-4 py-3">Talle</th>
-                        <th class="text-left px-4 py-3">Color</th>
-                        <th class="text-center px-4 py-3">Cantidad</th>
-                        <th class="text-right px-4 py-3">Precio</th>
-                        <th class="text-right px-4 py-3">Subtotal</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    <?php while ($i = $items->fetch_assoc()): ?>
-                        <tr class="border-t">
-                            <td class="px-4 py-3 font-medium">
-                                <?php echo htmlspecialchars($i['producto']); ?>
-                            </td>
-
-                            <td class="px-4 py-3">
-                                <?php echo htmlspecialchars($i['talle'] ?? '-'); ?>
-                            </td>
-
-                            <td class="px-4 py-3">
-                                <?php echo htmlspecialchars($i['color'] ?? '-'); ?>
-                            </td>
-
-                            <td class="px-4 py-3 text-center">
-                                <?php echo $i['cantidad']; ?>
-                            </td>
-
-                            <td class="px-4 py-3 text-right">
-                                $<?php echo number_format($i['precio_unitario'], 2, ',', '.'); ?>
-                            </td>
-
-                            <td class="px-4 py-3 text-right font-bold">
-                                $<?php echo number_format($i['subtotal'], 2, ',', '.'); ?>
-                            </td>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-100 text-gray-700">
+                        <tr>
+                            <th class="text-left px-4 py-3">Producto</th>
+                            <th class="text-left px-4 py-3">Talle</th>
+                            <th class="text-left px-4 py-3">Color</th>
+                            <th class="text-center px-4 py-3">Cantidad</th>
+                            <th class="text-right px-4 py-3">Precio</th>
+                            <th class="text-right px-4 py-3">Subtotal</th>
                         </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
+                    </thead>
+
+                    <tbody>
+                        <?php while ($i = $items->fetch_assoc()): ?>
+                            <tr class="border-t">
+                                <td class="px-4 py-3 font-medium">
+                                    <?php echo htmlspecialchars($i['producto']); ?>
+                                </td>
+
+                                <td class="px-4 py-3">
+                                    <?php echo htmlspecialchars($i['talle'] ?? '-'); ?>
+                                </td>
+
+                                <td class="px-4 py-3">
+                                    <?php echo htmlspecialchars($i['color'] ?? '-'); ?>
+                                </td>
+
+                                <td class="px-4 py-3 text-center">
+                                    <?php echo (int) $i['cantidad']; ?>
+                                </td>
+
+                                <td class="px-4 py-3 text-right">
+                                    $<?php echo number_format($i['precio_unitario'], 2, ',', '.'); ?>
+                                </td>
+
+                                <td class="px-4 py-3 text-right font-bold">
+                                    $<?php echo number_format($i['subtotal'], 2, ',', '.'); ?>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
 
         </div>
 
@@ -185,9 +194,23 @@ $linkWhatsapp = "https://wa.me/" . $telefonoLimpio . "?text=" . $mensaje;
                 Cambiar estado
             </h3>
 
-            <form action="index.php?route=admin_pedido_estado" method="POST" class="space-y-4">
+            <?php if (($_GET['error'] ?? '') === 'stock'): ?>
+                <div class="mb-4 px-4 py-3 rounded-lg text-sm bg-red-50 text-red-700 border border-red-200">
+                    No hay stock suficiente de alguno de los productos para este estado. No se hizo ningún cambio.
+                </div>
+            <?php elseif (($_GET['error'] ?? '') === 'general'): ?>
+                <div class="mb-4 px-4 py-3 rounded-lg text-sm bg-red-50 text-red-700 border border-red-200">
+                    Ocurrió un error al actualizar el pedido. No se hizo ningún cambio.
+                </div>
+            <?php elseif (($_GET['ok'] ?? '') === 'estado'): ?>
+                <div class="mb-4 px-4 py-3 rounded-lg text-sm bg-green-50 text-green-700 border border-green-200">
+                    Estado actualizado.
+                </div>
+            <?php endif; ?>
 
-                <input type="hidden" name="id_pedido" value="<?php echo $pedido['id_pedido']; ?>">
+            <form action="<?= BASE_URL ?>/admin/pedido/estado" method="POST" class="space-y-4">
+
+                <input type="hidden" name="id_pedido" value="<?php echo (int) $pedido['id_pedido']; ?>">
 
                 <select name="estado" class="w-full border rounded-lg px-3 py-2 bg-white">
                     <?php foreach ($estados as $key => $label): ?>
@@ -203,6 +226,12 @@ $linkWhatsapp = "https://wa.me/" . $telefonoLimpio . "?text=" . $mensaje;
                     Guardar estado
                 </button>
 
+                <p class="text-xs text-gray-400">
+                    <strong>Pendiente de pago</strong> reserva el stock ·
+                    <strong>Pagado / Entregado</strong> lo descuenta ·
+                    <strong>Cancelado</strong> lo devuelve.
+                </p>
+
             </form>
 
         </div>
@@ -214,7 +243,7 @@ $linkWhatsapp = "https://wa.me/" . $telefonoLimpio . "?text=" . $mensaje;
             </h3>
 
             <?php if (!empty($telefonoLimpio)): ?>
-                <a href="<?php echo $linkWhatsapp; ?>"
+                <a href="<?php echo htmlspecialchars($linkWhatsapp); ?>"
                    target="_blank"
                    class="block text-center w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700">
                     Contactar por WhatsApp
