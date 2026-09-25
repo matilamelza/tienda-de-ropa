@@ -21,4 +21,31 @@
     </main>
 </div>
 
-<?php require __DIR__ . '/footer_admin.php'; ?>
+<script>
+function abrirSidebar() {
+    document.getElementById('sidebar').classList.remove('-translate-x-full');
+    document.getElementById('sidebarOverlay').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function cerrarSidebar() {
+    document.getElementById('sidebar').classList.add('-translate-x-full');
+    document.getElementById('sidebarOverlay').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') cerrarSidebar();
+});
+
+// Si se agranda la pantalla con el menú abierto, dejarlo como en desktop
+window.matchMedia('(min-width: 1024px)').addEventListener('change', function (e) {
+    if (e.matches) {
+        document.getElementById('sidebarOverlay').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+});
+</script>
+
+</body>
+</html>
