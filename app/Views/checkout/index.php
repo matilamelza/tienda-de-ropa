@@ -77,7 +77,7 @@ $politica    = trim($conf['politica_cambios'] ?? '');
             </div>
 
             <div>
-                <div class="bg-gray-50 rounded-3xl p-6 sticky top-28">
+                <div class="bg-gray-50 rounded-3xl p-6 sticky top-36">
 
                     <h2 class="text-xl font-bold text-gray-900 mb-4">Resumen</h2>
 

@@ -70,6 +70,8 @@
 
 <body class="bg-white text-gray-900">
 
+<div class="sticky top-0 z-40">
+
 <!-- ── Barra de anuncio ──────────────────────────────────────── -->
 <?php if (!empty($conf['anuncio_activo']) && $conf['anuncio_activo'] === '1' && !empty($conf['anuncio_texto'])): ?>
     <div class="text-center text-sm py-2 px-4 font-medium"
@@ -79,7 +81,7 @@
     </div>
 <?php endif; ?>
 
-<header class="border-b sticky top-0 z-40"
+<header class="border-b"
         style="background-color: var(--color-header-bg)">
     <div class="max-w-7xl mx-auto px-4">
         <div class="h-16 md:h-20 flex items-center justify-between gap-4">
@@ -168,6 +170,7 @@
         </div>
     </div>
 </header>
+</div>
 
 <!-- ── Menú mobile (drawer) ───────────────────────────────────── -->
 <div id="menuMobile" class="md:hidden fixed inset-0 z-50 invisible" aria-hidden="true">
