@@ -68,7 +68,11 @@ class TiendaController extends Controller
         }
 
         if (!$producto) {
-            $this->redirect('tienda');
+            $this->noEncontrado(
+                'Este producto ya no está disponible',
+                'Puede que se haya agotado o que lo hayamos dado de baja. Mirá lo que tenemos ahora.'
+            );
+            return;
         }
 
         $id       = $producto['id_producto'];
@@ -81,6 +85,20 @@ class TiendaController extends Controller
             'fotos'          => $fotos,
             'categoriasMenu' => $categoriaModel->listarMenu(),
             'config'         => $cfgModel->todas(),
+        ], 'tienda');
+    }
+
+        /** Página 404 con el layout de la tienda. */
+    public function noEncontrado(?string $titulo = null, ?string $mensaje = null): void
+    {
+        http_response_code(404);
+
+        $categoriaModel = new Categoria();
+
+        $this->view('errores/404', [
+            'titulo'         => $titulo,
+            'mensaje'        => $mensaje,
+            'categoriasMenu' => $categoriaModel->listarMenu(),
         ], 'tienda');
     }
 }

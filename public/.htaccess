@@ -95,3 +95,8 @@ RewriteRule ^admin/logout/?$ index.php?route=admin_logout [L,QSA]
 
 # Raíz -> tienda
 RewriteRule ^/?$ index.php?route=tienda [L,QSA]
+
+# Cualquier otra URL que no sea un archivo real -> 404 de la tienda
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php?route=404 [L,QSA]

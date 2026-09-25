@@ -465,6 +465,7 @@ switch ($route) {
 
     default:
         http_response_code(404);
-        echo 'Ruta no encontrada';
+        $controller = new TiendaController();
+        $controller->noEncontrado();
         break;
 }
