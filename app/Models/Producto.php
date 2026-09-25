@@ -416,6 +416,35 @@ class Producto extends Conexion
         return $stmt->get_result();
     }
 
+    /** Problemas del catálogo a resolver (solo productos activos y no eliminados). */
+    public function alertasCatalogo(): array
+    {
+        $row = $this->db->query(
+            "SELECT
+                (SELECT COUNT(*)
+                 FROM producto_variantes pv
+                 INNER JOIN productos p ON p.id_producto = pv.id_producto
+                 WHERE pv.activo = 1 AND p.activo = 1 AND p.eliminado_at IS NULL
+                 AND (pv.stock - pv.stock_reservado) <= 0) AS variantes_sin_stock,
+
+                (SELECT COUNT(*)
+                 FROM productos p
+                 WHERE p.activo = 1 AND p.eliminado_at IS NULL
+                 AND NOT EXISTS (SELECT 1 FROM producto_fotos pf WHERE pf.id_producto = p.id_producto)) AS productos_sin_foto,
+
+                (SELECT COUNT(*)
+                 FROM productos p
+                 WHERE p.activo = 1 AND p.eliminado_at IS NULL
+                 AND p.precio_costo IS NULL) AS productos_sin_costo"
+        )->fetch_assoc();
+
+        return [
+            'variantes_sin_stock' => (int) $row['variantes_sin_stock'],
+            'productos_sin_foto'  => (int) $row['productos_sin_foto'],
+            'productos_sin_costo' => (int) $row['productos_sin_costo'],
+        ];
+    }
+
     /**
      * Busca y filtra productos para la tienda.
      * Soporta: búsqueda por texto, categoría, marca, precio min/max y orden.

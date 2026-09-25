@@ -57,7 +57,7 @@ class Pedido extends Conexion
         return $this->db->insert_id;
     }
 
-        public function agregarItem($id_pedido, $item)
+    public function agregarItem($id_pedido, $item)
     {
         $sql = "INSERT INTO pedido_items
                 (id_pedido, id_variante, producto, talle, color, cantidad, precio_unitario, costo_unitario, subtotal)
@@ -276,6 +276,120 @@ class Pedido extends Conexion
         FROM pedidos";
 
         return $this->db->query($sql)->fetch_assoc();
+    }
+
+    /**
+     * Ventas, pedidos y ganancia de un período.
+     * La ganancia se calcula solo con los ítems que tienen costo cargado.
+     */
+    public function resumenPeriodo(string $desde, string $hasta): array
+    {
+        // Ventas y cantidad de pedidos
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) AS pedidos, COALESCE(SUM(total), 0) AS ventas
+             FROM pedidos
+             WHERE estado IN ('pagado', 'entregado')
+             AND fecha >= ? AND fecha < ?"
+        );
+        $stmt->bind_param("ss", $desde, $hasta);
+        $stmt->execute();
+        $ventas = $stmt->get_result()->fetch_assoc();
+
+        // Ganancia (sobre ítems con costo) y cuántos ítems no tienen costo
+        $stmt = $this->db->prepare(
+            "SELECT
+                COALESCE(SUM((pi.precio_unitario - pi.costo_unitario) * pi.cantidad), 0) AS ganancia,
+                COALESCE(SUM(CASE WHEN pi.costo_unitario IS NOT NULL THEN pi.subtotal END), 0) AS ventas_con_costo,
+                COALESCE(SUM(pi.costo_unitario IS NULL), 0) AS items_sin_costo
+             FROM pedido_items pi
+             INNER JOIN pedidos p ON p.id_pedido = pi.id_pedido
+             WHERE p.estado IN ('pagado', 'entregado')
+             AND p.fecha >= ? AND p.fecha < ?"
+        );
+        $stmt->bind_param("ss", $desde, $hasta);
+        $stmt->execute();
+        $ganancia = $stmt->get_result()->fetch_assoc();
+
+        $pedidos        = (int) $ventas['pedidos'];
+        $totalVentas    = (float) $ventas['ventas'];
+        $ventasConCosto = (float) $ganancia['ventas_con_costo'];
+
+        return [
+            'ventas'          => $totalVentas,
+            'pedidos'         => $pedidos,
+            'ticket_promedio' => $pedidos > 0 ? $totalVentas / $pedidos : 0,
+            'ganancia'        => (float) $ganancia['ganancia'],
+            'margen'          => $ventasConCosto > 0 ? (float) $ganancia['ganancia'] / $ventasConCosto * 100 : null,
+            'items_sin_costo' => (int) $ganancia['items_sin_costo'],
+        ];
+    }
+
+    /** Ventas agrupadas por día (solo los días con ventas). Clave: 'Y-m-d'. */
+    public function ventasPorDia(string $desde, string $hasta): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT DATE(fecha) AS dia, COALESCE(SUM(total), 0) AS total, COUNT(*) AS pedidos
+             FROM pedidos
+             WHERE estado IN ('pagado', 'entregado')
+             AND fecha >= ? AND fecha < ?
+             GROUP BY DATE(fecha)"
+        );
+        $stmt->bind_param("ss", $desde, $hasta);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        $dias = [];
+        while ($row = $res->fetch_assoc()) {
+            $dias[$row['dia']] = [
+                'total'   => (float) $row['total'],
+                'pedidos' => (int) $row['pedidos'],
+            ];
+        }
+
+        return $dias;
+    }
+
+    /** Productos más vendidos del período (por unidades). */
+    public function topProductos(string $desde, string $hasta, int $limite = 5): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT
+                pi.producto,
+                SUM(pi.cantidad) AS unidades,
+                SUM(pi.subtotal) AS ventas,
+                SUM(CASE WHEN pi.costo_unitario IS NOT NULL
+                         THEN (pi.precio_unitario - pi.costo_unitario) * pi.cantidad END) AS ganancia
+             FROM pedido_items pi
+             INNER JOIN pedidos p ON p.id_pedido = pi.id_pedido
+             WHERE p.estado IN ('pagado', 'entregado')
+             AND p.fecha >= ? AND p.fecha < ?
+             GROUP BY pi.producto
+             ORDER BY unidades DESC, ventas DESC
+             LIMIT ?"
+        );
+        $stmt->bind_param("ssi", $desde, $hasta, $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /** Pedidos que requieren acción. */
+    public function alertasPedidos(int $diasPagoVencido = 3): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT
+                COALESCE(SUM(estado = 'pendiente_contacto'), 0) AS pendientes_contacto,
+                COALESCE(SUM(estado = 'pendiente_pago' AND fecha < NOW() - INTERVAL ? DAY), 0) AS pagos_vencidos
+             FROM pedidos"
+        );
+        $stmt->bind_param("i", $diasPagoVencido);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+
+        return [
+            'pendientes_contacto' => (int) $row['pendientes_contacto'],
+            'pagos_vencidos'      => (int) $row['pagos_vencidos'],
+        ];
     }
 
     public function ultimosPedidos($limite = 5)

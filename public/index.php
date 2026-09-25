@@ -1,5 +1,6 @@
 <?php
 
+date_default_timezone_set('America/Argentina/Buenos_Aires');
 // ── Buffer de salida: permite reemplazar una página a medias por la de error ──
 ob_start();
 
