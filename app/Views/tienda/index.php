@@ -7,38 +7,66 @@ function urlFiltro(array $nuevos): string {
 }
 ?>
 
-<?php if (!$hayFiltros): ?>
+<?php if (!$hayFiltros):
+    $heroImg    = !empty($config['hero_imagen']) ? BASE_URL . '/' . $config['hero_imagen'] : '';
+    $heroEstilo = $config['hero_estilo'] ?? '';
+
+    if ($heroEstilo === '') {
+        $heroEstilo = $heroImg ? 'imagen' : 'gradiente';
+    }
+    if ($heroEstilo === 'imagen' && !$heroImg) {
+        $heroEstilo = 'gradiente';
+    }
+
+    $estilosHero = [
+        'imagen'    => "background-image:url('" . htmlspecialchars($heroImg, ENT_QUOTES) . "');background-size:cover;background-position:center;",
+        'gradiente' => 'background:linear-gradient(135deg, var(--color-primario), var(--color-secundario));',
+        'color'     => 'background:var(--color-primario);',
+    ];
+    $heroBg       = $estilosHero[$heroEstilo] ?? $estilosHero['gradiente'];
+    $heroEtiqueta = $config['hero_etiqueta'] ?? 'Nueva colección';
+?>
 <!-- ── Hero (solo sin filtros activos) ─────────────────────────────────────── -->
-<section class="bg-gray-100">
-    <div class="max-w-7xl mx-auto px x-4 py-16 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-        <div>
-            <p class="text-sm uppercase tracking-widest text-gray-500 mb-3">Nueva temporada</p>
-            <h2 class="text-4xl md:text-6xl font-bold text-gray-900 leading-tight">
+<section class="relative overflow-hidden" style="<?= $heroBg ?>">
+
+    <?php if ($heroEstilo === 'imagen'): ?>
+        <div class="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-transparent"></div>
+    <?php else: ?>
+        <!-- Formas decorativas -->
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/10 blur-3xl"></div>
+        <div class="absolute -bottom-32 left-1/3 w-80 h-80 rounded-full bg-white/10 blur-3xl"></div>
+    <?php endif; ?>
+
+    <div class="relative max-w-7xl mx-auto px-4 py-20 md:py-32">
+        <div class="max-w-2xl text-white">
+
+            <?php if (trim($heroEtiqueta) !== ''): ?>
+                <span class="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/25 text-white text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6">
+                    <span class="w-2 h-2 rounded-full animate-pulse" style="background:var(--color-acento)"></span>
+                    <?= htmlspecialchars($heroEtiqueta) ?>
+                </span>
+            <?php endif; ?>
+
+            <h2 class="text-4xl md:text-6xl font-bold leading-tight drop-shadow-sm">
                 <?= htmlspecialchars($config['hero_titulo'] ?? 'Ropa con estilo para todos los días') ?>
             </h2>
-            <p class="mt-4 text-gray-600 max-w-lg">
+
+            <p class="mt-5 text-lg md:text-xl text-white/85 max-w-xl">
                 <?= htmlspecialchars($config['hero_subtitulo'] ?? 'Descubrí prendas seleccionadas, talles disponibles y stock actualizado.') ?>
             </p>
-            <a href="#productos" class="inline-block mt-6 bg-gray-900 text-white px-6 py-3 rounded-full hover:bg-gray-800">
+
+            <a href="#productos"
+               class="inline-flex items-center gap-2 mt-8 bg-white text-gray-900 font-semibold px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition">
                 <?= htmlspecialchars($config['hero_boton_texto'] ?? 'Ver productos') ?>
+                <span aria-hidden="true">→</span>
             </a>
-        </div>
-        <div class="bg-white rounded-3xl shadow p-6">
-            <?php if (!empty($config['hero_imagen'])): ?>
-                <img src="<?= BASE_URL ?>/<?= htmlspecialchars($config['hero_imagen']) ?>"
-                     alt="Banner" class="w-full h-80 rounded-2xl object-cover">
-            <?php else: ?>
-                <div class="h-80 rounded-2xl bg-gradient-to-br from-gray-200 to-gray-400 flex items-center justify-center">
-                    <span class="text-gray-600 font-medium">Banner / imagen principal</span>
-                </div>
-            <?php endif; ?>
         </div>
     </div>
 </section>
 <?php endif; ?>
 
 <!-- ── Sección de productos ─────────────────────────────────────────────────── -->
-<section id="productos" class="max-w-7xl mx-auto px-4 py-10">
+<section id="productos" class="max-w-7xl mx-auto px-4 py-10 scroll-mt-24">
 
     <!-- Barra de filtros -->
     <div class="bg-white border rounded-2xl px-4 py-3 mb-8 flex flex-wrap gap-3 items-center">
@@ -53,7 +81,7 @@ function urlFiltro(array $nuevos): string {
             <input type="text" name="q" value="<?= htmlspecialchars($filtros['q']) ?>"
                    placeholder="Buscar productos…"
                    class="flex-1 border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
-            <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-xl text-sm hover:bg-gray-800">
+            <button type="submit" class="btn-primario px-4 py-2 rounded-xl text-sm">
                 Buscar
             </button>
         </form>
@@ -156,6 +184,7 @@ function urlFiltro(array $nuevos): string {
                     <div class="aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden shadow-sm group-hover:shadow-lg transition">
                         <?php if (!empty($p['foto_principal'])): ?>
                             <img src="<?= BASE_URL ?>/public/uploads/productos/<?= htmlspecialchars($p['foto_principal']) ?>"
+                                 alt="<?= htmlspecialchars($p['nombre']) ?>"
                                  class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                                  loading="lazy">
                         <?php else: ?>
@@ -192,6 +221,8 @@ function urlFiltro(array $nuevos): string {
 </section>
 
 <script>
+document.documentElement.style.scrollBehavior = 'smooth';
+
 function aplicarFiltro(clave, valor) {
     const params = new URLSearchParams(window.location.search);
     if (valor === '' || valor === '0') {
