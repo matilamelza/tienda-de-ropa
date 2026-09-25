@@ -23,7 +23,8 @@ class Categoria extends Conexion
     {
         $sql = "SELECT 
                     c.*,
-                    COUNT(p.id_producto) AS cantidad_productos
+                    COUNT(CASE WHEN p.eliminado_at IS NULL THEN p.id_producto END)     AS cantidad_productos,
+                    COUNT(CASE WHEN p.eliminado_at IS NOT NULL THEN p.id_producto END) AS en_papelera
                 FROM categorias c
                 LEFT JOIN productos p ON p.id_categoria = c.id_categoria
                 GROUP BY c.id_categoria

@@ -102,9 +102,14 @@ class ProductoController extends Controller
 
         $id = (int) ($_POST['id'] ?? 0);
 
-        if ($id > 0) {
-            $productoModel = new Producto();
-            $productoModel->eliminar($id);
+        if ($id <= 0) {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
+
+        $productoModel = new Producto();
+
+        if (!$productoModel->eliminar($id)) {
+            $this->redirect(BASE_URL . '/admin/productos?error=eliminar');
         }
 
         $this->redirect(BASE_URL . '/admin/productos?ok=eliminado');

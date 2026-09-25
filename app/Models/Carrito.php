@@ -26,6 +26,8 @@ class Carrito extends Conexion
                 LEFT JOIN talles t ON t.id_talle = pv.id_talle
                 LEFT JOIN colores c ON c.id_color = pv.id_color
                 WHERE pv.id_variante = ?
+                AND p.activo = 1
+                   AND p.eliminado_at IS NULL
                 LIMIT 1";
 
         $stmt = $this->db->prepare($sql);

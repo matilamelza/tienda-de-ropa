@@ -26,7 +26,8 @@
 <?php if (isset($_GET['error'])): ?>
     <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">
         <?php if ($_GET['error'] === 'tiene_productos'): ?>
-            No podés eliminar esta categoría porque tiene productos asociados.
+            No podés eliminar esta categoría porque tiene productos asociados (activos o eliminados).
+            Si no la querés usar más, desactivala desde "Editar".
         <?php else: ?>
             No se pudo completar la operación.
         <?php endif; ?>
@@ -49,6 +50,10 @@
             <tbody>
                 <?php if ($categorias && $categorias->num_rows > 0): ?>
                     <?php while ($c = $categorias->fetch_assoc()): ?>
+                        <?php
+                        $vivos      = (int) $c['cantidad_productos'];
+                        $eliminados = (int) ($c['en_papelera'] ?? 0);
+                        ?>
                         <tr class="border-t hover:bg-gray-50">
                             <td class="px-4 py-3 font-medium text-gray-900">
                                 <?php echo htmlspecialchars($c['nombre']); ?>
@@ -60,8 +65,13 @@
 
                             <td class="px-4 py-3 text-center">
                                 <span class="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs">
-                                    <?php echo (int) $c['cantidad_productos']; ?>
+                                    <?php echo $vivos; ?>
                                 </span>
+                                <?php if ($eliminados > 0): ?>
+                                    <span class="block text-xs text-gray-400 mt-1">
+                                        +<?php echo $eliminados; ?> eliminado(s)
+                                    </span>
+                                <?php endif; ?>
                             </td>
 
                             <td class="px-4 py-3 text-center">
@@ -79,7 +89,7 @@
                                         Editar
                                     </a>
 
-                                    <?php if ($c['cantidad_productos'] == 0): ?>
+                                    <?php if ($vivos === 0 && $eliminados === 0): ?>
                                         <?= boton_eliminar(
                                             BASE_URL . '/admin/categorias/eliminar',
                                             ['id' => $c['id_categoria']],
@@ -88,7 +98,8 @@
                                             'text-red-500 hover:text-red-700'
                                         ) ?>
                                     <?php else: ?>
-                                        <span class="text-gray-300 cursor-not-allowed" title="Tiene productos asociados">
+                                        <span class="text-gray-300 cursor-not-allowed"
+                                              title="<?php echo $vivos > 0 ? 'Tiene productos asociados' : 'Tiene productos eliminados asociados'; ?>">
                                             Eliminar
                                         </span>
                                     <?php endif; ?>

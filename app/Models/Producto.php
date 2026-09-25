@@ -4,6 +4,8 @@ require_once __DIR__ . '/Conexion.php';
 
 class Producto extends Conexion
 {
+    // ─── PRODUCTOS ─────────────────────────────────────────────────────────────
+
     public function listar()
     {
         $sql = "SELECT 
@@ -20,6 +22,7 @@ class Producto extends Conexion
                 FROM productos p
                 INNER JOIN categorias c ON c.id_categoria = p.id_categoria
                 LEFT JOIN marcas m ON m.id_marca = p.id_marca
+                WHERE p.eliminado_at IS NULL
                 ORDER BY p.id_producto DESC";
 
         return $this->db->query($sql);
@@ -59,7 +62,8 @@ class Producto extends Conexion
                     precio_base  = ?,
                     activo       = ?,
                     destacado    = ?
-                WHERE id_producto = ?";
+                WHERE id_producto = ?
+                AND eliminado_at IS NULL";
 
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param(
@@ -78,11 +82,24 @@ class Producto extends Conexion
         return $stmt->execute();
     }
 
-    public function eliminar($id)
+    /**
+     * Borrado lógico: marca la fecha, lo desactiva y libera el slug.
+     * Variantes, fotos y pedidos quedan intactos.
+     */
+    public function eliminar(int $id_producto): bool
     {
-        $stmt = $this->db->prepare("DELETE FROM productos WHERE id_producto = ?");
-        $stmt->bind_param("i", $id);
-        return $stmt->execute();
+        $sql = "UPDATE productos
+                SET eliminado_at = NOW(),
+                    activo       = 0,
+                    slug         = CONCAT(slug, '--eliminado-', id_producto)
+                WHERE id_producto = ?
+                AND eliminado_at IS NULL";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $id_producto);
+        $stmt->execute();
+
+        return $stmt->affected_rows === 1;
     }
 
     public function buscarPorId($id_producto)
@@ -94,7 +111,8 @@ class Producto extends Conexion
                 FROM productos p
                 INNER JOIN categorias c ON c.id_categoria = p.id_categoria
                 LEFT JOIN marcas m ON m.id_marca = p.id_marca
-                WHERE p.id_producto = ?";
+                WHERE p.id_producto = ?
+                AND p.eliminado_at IS NULL";
 
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("i", $id_producto);
@@ -114,6 +132,7 @@ class Producto extends Conexion
                 LEFT JOIN marcas m ON m.id_marca = p.id_marca
                 WHERE p.slug = ?
                 AND p.activo = 1
+                AND p.eliminado_at IS NULL
                 LIMIT 1";
 
         $stmt = $this->db->prepare($sql);
@@ -122,6 +141,8 @@ class Producto extends Conexion
 
         return $stmt->get_result()->fetch_assoc();
     }
+
+    // ─── VARIANTES ─────────────────────────────────────────────────────────────
 
     public function listarVariantes($id_producto)
     {
@@ -213,6 +234,8 @@ class Producto extends Conexion
         return $stmt->execute();
     }
 
+    // ─── FOTOS ─────────────────────────────────────────────────────────────────
+
     public function guardarFoto($id_producto, $nombreArchivo, $principal = 0)
     {
         $sql = "INSERT INTO producto_fotos (id_producto, imagen, principal)
@@ -235,8 +258,8 @@ class Producto extends Conexion
         if (!$foto) return false;
 
         // Borrar archivo físico
-        $ruta = __DIR__ . '/../../public/uploads/productos/' . $foto['imagen'];
-        if (file_exists($ruta)) {
+        $ruta = __DIR__ . '/../../public/uploads/productos/' . basename($foto['imagen']);
+        if (is_file($ruta)) {
             unlink($ruta);
         }
 
@@ -257,6 +280,8 @@ class Producto extends Conexion
         return $stmt->get_result();
     }
 
+    // ─── TIENDA ────────────────────────────────────────────────────────────────
+
     public function listarPorCategoriaSlug($slug)
     {
         $sql = "SELECT 
@@ -274,6 +299,7 @@ class Producto extends Conexion
                 INNER JOIN categorias c ON c.id_categoria = p.id_categoria
                 LEFT JOIN marcas m ON m.id_marca = p.id_marca
                 WHERE p.activo = 1
+                AND p.eliminado_at IS NULL
                 AND c.slug = ?
                 ORDER BY p.id_producto DESC";
 
@@ -300,6 +326,7 @@ class Producto extends Conexion
                 LEFT JOIN colores c ON c.id_color = pv.id_color
                 WHERE (pv.stock - pv.stock_reservado) <= ?
                 AND pv.activo = 1
+                AND p.eliminado_at IS NULL
                 ORDER BY stock_disponible ASC";
 
         $stmt = $this->db->prepare($sql);
@@ -318,14 +345,14 @@ class Producto extends Conexion
         $q          = trim($filtros['q']          ?? '');
         $categoria  = trim($filtros['categoria']  ?? '');
         $marca      = (int)($filtros['marca']      ?? 0);
-        $precioMin  = $filtros['precio_min'] !== '' ? (float)($filtros['precio_min'] ?? 0) : null;
-        $precioMax  = $filtros['precio_max'] !== '' ? (float)($filtros['precio_max'] ?? 0) : null;
+        $precioMin  = ($filtros['precio_min'] ?? '') !== '' ? (float) $filtros['precio_min'] : null;
+        $precioMax  = ($filtros['precio_max'] ?? '') !== '' ? (float) $filtros['precio_max'] : null;
         $orden      = $filtros['orden'] ?? 'reciente';
- 
-        $where  = ['p.activo = 1'];
+
+        $where  = ['p.activo = 1', 'p.eliminado_at IS NULL'];
         $params = [];
         $types  = '';
- 
+
         if ($q !== '') {
             $like = '%' . $q . '%';
             $where[]  = '(p.nombre LIKE ? OR p.descripcion LIKE ? OR m.nombre LIKE ?)';
@@ -334,38 +361,38 @@ class Producto extends Conexion
             $params[] = $like;
             $types   .= 'sss';
         }
- 
+
         if ($categoria !== '') {
             $where[]  = 'c.slug = ?';
             $params[] = $categoria;
             $types   .= 's';
         }
- 
+
         if ($marca > 0) {
             $where[]  = 'p.id_marca = ?';
             $params[] = $marca;
             $types   .= 'i';
         }
- 
+
         if ($precioMin !== null) {
             $where[]  = 'p.precio_base >= ?';
             $params[] = $precioMin;
             $types   .= 'd';
         }
- 
+
         if ($precioMax !== null && $precioMax > 0) {
             $where[]  = 'p.precio_base <= ?';
             $params[] = $precioMax;
             $types   .= 'd';
         }
- 
+
         switch ($orden) {
             case 'precio_asc':  $orderBy = 'p.precio_base ASC';  break;
             case 'precio_desc': $orderBy = 'p.precio_base DESC'; break;
             case 'nombre':      $orderBy = 'p.nombre ASC';       break;
             default:            $orderBy = 'p.id_producto DESC'; break;
         }
- 
+
         $sql = "SELECT 
                     p.*,
                     c.nombre AS categoria,
@@ -383,17 +410,17 @@ class Producto extends Conexion
                 LEFT JOIN marcas m ON m.id_marca = p.id_marca
                 WHERE " . implode(' AND ', $where) . "
                 ORDER BY " . $orderBy;
- 
+
         $stmt = $this->db->prepare($sql);
- 
+
         if (!empty($params)) {
             $stmt->bind_param($types, ...$params);
         }
- 
+
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
- 
+
     /**
      * Devuelve todas las marcas que tienen al menos un producto activo.
      */
@@ -402,12 +429,14 @@ class Producto extends Conexion
         $sql = "SELECT DISTINCT m.id_marca, m.nombre
                 FROM marcas m
                 INNER JOIN productos p ON p.id_marca = m.id_marca
-                WHERE p.activo = 1 AND m.activo = 1
+                WHERE p.activo = 1
+                AND p.eliminado_at IS NULL
+                AND m.activo = 1
                 ORDER BY m.nombre ASC";
- 
+
         return $this->db->query($sql)->fetch_all(MYSQLI_ASSOC);
     }
- 
+
     /**
      * Devuelve el precio mínimo y máximo de productos activos.
      */
@@ -415,9 +444,11 @@ class Producto extends Conexion
     {
         $row = $this->db->query(
             "SELECT MIN(precio_base) AS minimo, MAX(precio_base) AS maximo
-             FROM productos WHERE activo = 1"
+             FROM productos
+             WHERE activo = 1
+             AND eliminado_at IS NULL"
         )->fetch_assoc();
- 
+
         return [
             'min' => (float)($row['minimo'] ?? 0),
             'max' => (float)($row['maximo'] ?? 0),

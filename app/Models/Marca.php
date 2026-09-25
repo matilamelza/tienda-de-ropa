@@ -9,11 +9,12 @@ class Marca extends Conexion
         return $this->db->query("SELECT * FROM marcas WHERE activo = 1 ORDER BY nombre ASC");
     }
 
-    public function listarTodas()
+        public function listarTodas()
     {
         $sql = "SELECT 
                     m.*,
-                    COUNT(p.id_producto) AS cantidad_productos
+                    COUNT(CASE WHEN p.eliminado_at IS NULL THEN p.id_producto END)     AS cantidad_productos,
+                    COUNT(CASE WHEN p.eliminado_at IS NOT NULL THEN p.id_producto END) AS en_papelera
                 FROM marcas m
                 LEFT JOIN productos p ON p.id_marca = m.id_marca
                 GROUP BY m.id_marca
