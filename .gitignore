@@ -1,0 +1,10 @@
+# Credenciales por entorno
+config/database.php
+
+# Fotos subidas desde el admin
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Archivos de prueba
+public/debug.php
+public/hash.php
