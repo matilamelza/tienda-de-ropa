@@ -18,7 +18,7 @@
 
 <?php if (isset($_GET['error'])): ?>
     <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm max-w-2xl">
-        Completá nombre, categoría y precio base.
+        Completá nombre, categoría y precio de venta.
     </div>
 <?php endif; ?>
 
@@ -78,15 +78,41 @@
                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-gray-200"><?php echo htmlspecialchars($producto['descripcion'] ?? ''); ?></textarea>
     </div>
 
-    <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Precio base *</label>
-        <input type="number"
-               name="precio_base"
-               step="0.01"
-               min="0"
-               required
-               value="<?php echo htmlspecialchars((string) ($producto['precio_base'] ?? '')); ?>"
-               class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-gray-200">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Precio de venta *</label>
+            <input type="number"
+                   name="precio_base"
+                   id="precioVenta"
+                   step="0.01"
+                   min="0"
+                   required
+                   value="<?php echo htmlspecialchars((string) ($producto['precio_base'] ?? '')); ?>"
+                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-gray-200">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                Precio de costo <span class="text-gray-400 font-normal">(solo lo ves vos)</span>
+            </label>
+            <input type="number"
+                   name="precio_costo"
+                   id="precioCosto"
+                   step="0.01"
+                   min="0"
+                   value="<?php echo htmlspecialchars((string) ($producto['precio_costo'] ?? '')); ?>"
+                   placeholder="Opcional"
+                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-gray-200">
+        </div>
+    </div>
+
+    <!-- Ganancia calculada en vivo -->
+    <div id="cajaGanancia" class="hidden rounded-lg border px-4 py-3 text-sm">
+        <div class="flex flex-wrap gap-x-6 gap-y-1">
+            <span>Ganancia: <strong id="gananciaMonto"></strong></span>
+            <span>Margen: <strong id="gananciaMargen"></strong></span>
+            <span>Recargo sobre costo: <strong id="gananciaRecargo"></strong></span>
+        </div>
     </div>
 
     <div class="flex gap-6">
@@ -131,3 +157,41 @@
         </a>
     </div>
 <?php endif; ?>
+
+<script>
+(function () {
+    const venta   = document.getElementById('precioVenta');
+    const costo   = document.getElementById('precioCosto');
+    const caja    = document.getElementById('cajaGanancia');
+    const monto   = document.getElementById('gananciaMonto');
+    const margen  = document.getElementById('gananciaMargen');
+    const recargo = document.getElementById('gananciaRecargo');
+
+    const pesos = n => '$' + n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const pct   = n => n.toLocaleString('es-AR', { maximumFractionDigits: 1 }) + '%';
+
+    function calcular() {
+        const v = parseFloat(venta.value);
+        const c = parseFloat(costo.value);
+
+        if (isNaN(v) || isNaN(c) || costo.value === '') {
+            caja.classList.add('hidden');
+            return;
+        }
+
+        const g = v - c;
+
+        monto.textContent   = pesos(g);
+        margen.textContent  = v > 0 ? pct(g / v * 100) : '—';
+        recargo.textContent = c > 0 ? pct(g / c * 100) : '—';
+
+        caja.className = 'rounded-lg border px-4 py-3 text-sm ' +
+            (g < 0 ? 'bg-red-50 border-red-200 text-red-700'
+                   : 'bg-green-50 border-green-200 text-green-800');
+    }
+
+    venta.addEventListener('input', calcular);
+    costo.addEventListener('input', calcular);
+    calcular();
+})();
+</script>

@@ -89,6 +89,7 @@ class CheckoutController extends Controller
                 'color'           => $variante['color'],
                 'cantidad'        => $cantidad,
                 'precio_unitario' => $precio,
+                'costo_unitario'  => $variante['precio_costo'] !== null ? (float) $variante['precio_costo'] : null,
                 'subtotal'        => $subtotal
             ];
 

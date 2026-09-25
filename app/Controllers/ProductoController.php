@@ -121,6 +121,7 @@ class ProductoController extends Controller
         $nombre       = trim($_POST['nombre'] ?? '');
         $id_categoria = (int) ($_POST['id_categoria'] ?? 0);
         $precioRaw    = $_POST['precio_base'] ?? '';
+        $costoRaw     = trim($_POST['precio_costo'] ?? '');
 
         if ($nombre === '' || $id_categoria <= 0 || $precioRaw === '' || (float) $precioRaw < 0) {
             return null;
@@ -133,6 +134,7 @@ class ProductoController extends Controller
             'slug'         => generarSlug($nombre),
             'descripcion'  => trim($_POST['descripcion'] ?? ''),
             'precio_base'  => (float) $precioRaw,
+            'precio_costo' => $costoRaw !== '' && (float) $costoRaw >= 0 ? (float) $costoRaw : null,
             'activo'       => isset($_POST['activo']) ? 1 : 0,
             'destacado'    => isset($_POST['destacado']) ? 1 : 0
         ];

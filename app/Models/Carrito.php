@@ -11,6 +11,7 @@ class Carrito extends Conexion
                     (pv.stock - pv.stock_reservado) AS disponible,
                     p.nombre AS producto,
                     p.precio_base,
+                    p.precio_costo,
                     p.id_producto,
                     t.nombre AS talle,
                     c.nombre AS color,

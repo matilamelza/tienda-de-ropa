@@ -28,21 +28,22 @@ class Producto extends Conexion
         return $this->db->query($sql);
     }
 
-    public function guardar($data)
+        public function guardar($data)
     {
         $sql = "INSERT INTO productos 
-                (id_categoria, id_marca, nombre, slug, descripcion, precio_base, activo, destacado)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                (id_categoria, id_marca, nombre, slug, descripcion, precio_base, precio_costo, activo, destacado)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param(
-            "iisssdii",
+            "iisssddii",
             $data['id_categoria'],
             $data['id_marca'],
             $data['nombre'],
             $data['slug'],
             $data['descripcion'],
             $data['precio_base'],
+            $data['precio_costo'],
             $data['activo'],
             $data['destacado']
         );
@@ -60,6 +61,7 @@ class Producto extends Conexion
                     slug         = ?,
                     descripcion  = ?,
                     precio_base  = ?,
+                    precio_costo = ?,
                     activo       = ?,
                     destacado    = ?
                 WHERE id_producto = ?
@@ -67,13 +69,14 @@ class Producto extends Conexion
 
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param(
-            "iisssdiii",
+            "iisssddiii",
             $data['id_categoria'],
             $data['id_marca'],
             $data['nombre'],
             $data['slug'],
             $data['descripcion'],
             $data['precio_base'],
+            $data['precio_costo'],
             $data['activo'],
             $data['destacado'],
             $id
@@ -81,6 +84,8 @@ class Producto extends Conexion
 
         return $stmt->execute();
     }
+
+    
 
     /**
      * Borrado lógico: marca la fecha, lo desactiva y libera el slug.

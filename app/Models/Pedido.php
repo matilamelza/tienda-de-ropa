@@ -57,16 +57,16 @@ class Pedido extends Conexion
         return $this->db->insert_id;
     }
 
-    public function agregarItem($id_pedido, $item)
+        public function agregarItem($id_pedido, $item)
     {
         $sql = "INSERT INTO pedido_items
-                (id_pedido, id_variante, producto, talle, color, cantidad, precio_unitario, subtotal)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                (id_pedido, id_variante, producto, talle, color, cantidad, precio_unitario, costo_unitario, subtotal)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->db->prepare($sql);
 
         $stmt->bind_param(
-            "iisssidd",
+            "iisssiddd",
             $id_pedido,
             $item['id_variante'],
             $item['producto'],
@@ -74,6 +74,7 @@ class Pedido extends Conexion
             $item['color'],
             $item['cantidad'],
             $item['precio_unitario'],
+            $item['costo_unitario'],
             $item['subtotal']
         );
 
