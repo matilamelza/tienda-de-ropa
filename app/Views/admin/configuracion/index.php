@@ -190,6 +190,15 @@ function h(string $str): string {
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
+            <div class="md:col-span-2">
+                <label class="label">Etiqueta sobre el título <span class="text-gray-400 font-normal">(opcional)</span></label>
+                <input type="text" name="hero_etiqueta" maxlength="40"
+                       value="<?= h($config['hero_etiqueta'] ?? '') ?>"
+                       placeholder="Ej: Hot Sale, Liquidación, Envíos gratis"
+                       class="input">
+                <p class="text-xs text-gray-400 mt-1">Dejalo vacío para no mostrar ninguna etiqueta.</p>
+            </div>
+
             <div>
                 <label class="label">Título principal</label>
                 <input type="text" name="hero_titulo"
@@ -211,6 +220,7 @@ function h(string $str): string {
             <div>
                 <label class="label">Estilo del hero</label>
                 <select name="hero_estilo" class="input">
+                    <option value="ninguno"   <?= ($config['hero_estilo'] ?? '') === 'ninguno'   ? 'selected' : '' ?>>Sin banner (no mostrar)</option>
                     <option value="gradiente" <?= ($config['hero_estilo'] ?? '') === 'gradiente' ? 'selected' : '' ?>>Gradiente (sin imagen)</option>
                     <option value="imagen"    <?= ($config['hero_estilo'] ?? '') === 'imagen'    ? 'selected' : '' ?>>Imagen de fondo</option>
                     <option value="color"     <?= ($config['hero_estilo'] ?? '') === 'color'     ? 'selected' : '' ?>>Color sólido</option>
@@ -229,7 +239,7 @@ function h(string $str): string {
                     </div>
                 <?php endif; ?>
                 <input type="file" name="hero_imagen" accept="image/*" class="input-file">
-                <p class="text-xs text-gray-400 mt-1">Recomendado: 1400×600 px. JPG o WebP.</p>
+                <p class="text-xs text-gray-400 mt-1">Recomendado: 1920×800 px, horizontal, con el motivo principal hacia la derecha. JPG o WebP.</p>
             </div>
 
         </div>

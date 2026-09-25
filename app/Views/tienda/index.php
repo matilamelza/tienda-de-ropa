@@ -7,7 +7,7 @@ function urlFiltro(array $nuevos): string {
 }
 ?>
 
-<?php if (!$hayFiltros):
+<?php if (!$hayFiltros && ($config['hero_estilo'] ?? '') !== 'ninguno'):
     $heroImg    = !empty($config['hero_imagen']) ? BASE_URL . '/' . $config['hero_imagen'] : '';
     $heroEstilo = $config['hero_estilo'] ?? '';
 
@@ -24,7 +24,7 @@ function urlFiltro(array $nuevos): string {
         'color'     => 'background:var(--color-primario);',
     ];
     $heroBg       = $estilosHero[$heroEstilo] ?? $estilosHero['gradiente'];
-    $heroEtiqueta = $config['hero_etiqueta'] ?? 'Nueva colección';
+    $heroEtiqueta = $config['hero_etiqueta'] ?? '';
 ?>
 <!-- ── Hero (solo sin filtros activos) ─────────────────────────────────────── -->
 <section class="relative overflow-hidden" style="<?= $heroBg ?>">
