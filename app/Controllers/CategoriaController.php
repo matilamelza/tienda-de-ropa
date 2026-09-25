@@ -26,7 +26,7 @@ class CategoriaController extends Controller
 
         $nombre = trim($_POST['nombre'] ?? '');
 
-        if (empty($nombre)) {
+        if ($nombre === '') {
             $this->redirect(BASE_URL . '/admin/categorias/crear?error=nombre');
         }
 
@@ -47,7 +47,7 @@ class CategoriaController extends Controller
         $id = (int) ($_GET['id'] ?? 0);
 
         $categoriaModel = new Categoria();
-        $categoria = $categoriaModel->buscarPorId($id);
+        $categoria      = $categoriaModel->buscarPorId($id);
 
         if (!$categoria) {
             $this->redirect(BASE_URL . '/admin/categorias');
@@ -67,7 +67,7 @@ class CategoriaController extends Controller
         $id     = (int) ($_POST['id_categoria'] ?? 0);
         $nombre = trim($_POST['nombre'] ?? '');
 
-        if (empty($nombre)) {
+        if ($nombre === '') {
             $this->redirect(BASE_URL . '/admin/categorias/editar?id=' . $id . '&error=nombre');
         }
 
@@ -85,7 +85,15 @@ class CategoriaController extends Controller
 
     public function eliminar()
     {
-        $id = (int) ($_GET['id'] ?? 0);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/categorias');
+        }
+
+        $id = (int) ($_POST['id'] ?? 0);
+
+        if ($id <= 0) {
+            $this->redirect(BASE_URL . '/admin/categorias');
+        }
 
         $categoriaModel = new Categoria();
 

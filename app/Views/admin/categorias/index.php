@@ -27,75 +27,83 @@
     <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">
         <?php if ($_GET['error'] === 'tiene_productos'): ?>
             No podés eliminar esta categoría porque tiene productos asociados.
+        <?php else: ?>
+            No se pudo completar la operación.
         <?php endif; ?>
     </div>
 <?php endif; ?>
 
 <div class="bg-white rounded-lg shadow overflow-hidden">
-    <table class="w-full text-sm">
-        <thead class="bg-gray-100 text-gray-700">
-            <tr>
-                <th class="text-left px-4 py-3">Nombre</th>
-                <th class="text-left px-4 py-3">Slug</th>
-                <th class="text-center px-4 py-3">Productos</th>
-                <th class="text-center px-4 py-3">Estado</th>
-                <th class="text-right px-4 py-3">Acciones</th>
-            </tr>
-        </thead>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="text-left px-4 py-3">Nombre</th>
+                    <th class="text-left px-4 py-3">Slug</th>
+                    <th class="text-center px-4 py-3">Productos</th>
+                    <th class="text-center px-4 py-3">Estado</th>
+                    <th class="text-right px-4 py-3">Acciones</th>
+                </tr>
+            </thead>
 
-        <tbody>
-            <?php if ($categorias && $categorias->num_rows > 0): ?>
-                <?php while ($c = $categorias->fetch_assoc()): ?>
-                    <tr class="border-t hover:bg-gray-50">
-                        <td class="px-4 py-3 font-medium text-gray-900">
-                            <?php echo htmlspecialchars($c['nombre']); ?>
-                        </td>
+            <tbody>
+                <?php if ($categorias && $categorias->num_rows > 0): ?>
+                    <?php while ($c = $categorias->fetch_assoc()): ?>
+                        <tr class="border-t hover:bg-gray-50">
+                            <td class="px-4 py-3 font-medium text-gray-900">
+                                <?php echo htmlspecialchars($c['nombre']); ?>
+                            </td>
 
-                        <td class="px-4 py-3 text-gray-500 font-mono text-xs">
-                            <?php echo htmlspecialchars($c['slug']); ?>
-                        </td>
+                            <td class="px-4 py-3 text-gray-500 font-mono text-xs">
+                                <?php echo htmlspecialchars($c['slug']); ?>
+                            </td>
 
-                        <td class="px-4 py-3 text-center">
-                            <span class="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs">
-                                <?php echo $c['cantidad_productos']; ?>
-                            </span>
-                        </td>
-
-                        <td class="px-4 py-3 text-center">
-                            <?php if ($c['activo'] == 1): ?>
-                                <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-700">Activa</span>
-                            <?php else: ?>
-                                <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-700">Inactiva</span>
-                            <?php endif; ?>
-                        </td>
-
-                        <td class="px-4 py-3 text-right space-x-3">
-                            <a href="<?= BASE_URL ?>/admin/categorias/editar?id=<?php echo $c['id_categoria']; ?>"
-                               class="text-gray-600 hover:text-gray-900">
-                                Editar
-                            </a>
-
-                            <?php if ($c['cantidad_productos'] == 0): ?>
-                                <a href="<?= BASE_URL ?>/admin/categorias/eliminar?id=<?php echo $c['id_categoria']; ?>"
-                                   class="text-red-500 hover:text-red-700"
-                                   onclick="return confirm('¿Seguro que querés eliminar esta categoría?')">
-                                    Eliminar
-                                </a>
-                            <?php else: ?>
-                                <span class="text-gray-300 cursor-not-allowed" title="Tiene productos asociados">
-                                    Eliminar
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs">
+                                    <?php echo (int) $c['cantidad_productos']; ?>
                                 </span>
-                            <?php endif; ?>
+                            </td>
+
+                            <td class="px-4 py-3 text-center">
+                                <?php if ($c['activo'] == 1): ?>
+                                    <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-700">Activa</span>
+                                <?php else: ?>
+                                    <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-700">Inactiva</span>
+                                <?php endif; ?>
+                            </td>
+
+                            <td class="px-4 py-3 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center gap-3">
+                                    <a href="<?= BASE_URL ?>/admin/categorias/editar?id=<?php echo (int) $c['id_categoria']; ?>"
+                                       class="text-gray-600 hover:text-gray-900">
+                                        Editar
+                                    </a>
+
+                                    <?php if ($c['cantidad_productos'] == 0): ?>
+                                        <?= boton_eliminar(
+                                            BASE_URL . '/admin/categorias/eliminar',
+                                            ['id' => $c['id_categoria']],
+                                            '¿Seguro que querés eliminar esta categoría?',
+                                            'Eliminar',
+                                            'text-red-500 hover:text-red-700'
+                                        ) ?>
+                                    <?php else: ?>
+                                        <span class="text-gray-300 cursor-not-allowed" title="Tiene productos asociados">
+                                            Eliminar
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                            No hay categorías cargadas.
                         </td>
                     </tr>
-                <?php endwhile; ?>
-            <?php else: ?>
-                <tr>
-                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">
-                        No hay categorías cargadas.
-                    </td>
-                </tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
 </div>

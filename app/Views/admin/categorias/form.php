@@ -27,8 +27,10 @@
           method="POST"
           class="bg-white rounded-lg shadow p-6 space-y-5">
 
+        <?= csrf_field() ?>
+
         <?php if ($editando): ?>
-            <input type="hidden" name="id_categoria" value="<?php echo $categoria['id_categoria']; ?>">
+            <input type="hidden" name="id_categoria" value="<?php echo (int) $categoria['id_categoria']; ?>">
         <?php endif; ?>
 
         <div>
