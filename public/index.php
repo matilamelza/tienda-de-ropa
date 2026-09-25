@@ -1,10 +1,17 @@
 <?php
 
-// ── Entorno: errores visibles solo en local ──────────────────────────────────
+// ── Buffer de salida: permite reemplazar una página a medias por la de error ──
+ob_start();
+
+// ── Manejo de errores (lo antes posible) ─────────────────────────────────────
+require_once __DIR__ . '/../app/Core/errores.php';
+
+// ── Entorno ──────────────────────────────────────────────────────────────────
 $esLocal = in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1'], true)
         || str_starts_with($_SERVER['HTTP_HOST'] ?? '', 'localhost:');
 
-ini_set('display_errors', $esLocal ? '1' : '0');
+// Los errores nunca se imprimen crudos: los maneja errores.php
+ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 error_reporting(E_ALL);
 
@@ -19,6 +26,9 @@ session_set_cookie_params([
     'samesite' => 'Lax',
 ]);
 session_start();
+
+// ── ¿Mostrar el detalle del error? En local siempre; en producción solo admin + ?debug=1
+define('MOSTRAR_ERRORES', $esLocal || ( ($_GET['debug'] ?? '') === '1'));
 
 define('BASE_URL', '');
 
