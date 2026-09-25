@@ -2,6 +2,13 @@
 
 class ProductoController extends Controller
 {
+    private const FOTO_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+    private const FOTO_MIMES     = [
+        'image/jpeg' => 'jpg',
+        'image/png'  => 'png',
+        'image/webp' => 'webp',
+    ];
+
     // ─── PRODUCTOS ─────────────────────────────────────────────────────────────
 
     public function index()
@@ -31,21 +38,14 @@ class ProductoController extends Controller
             $this->redirect(BASE_URL . '/admin/productos');
         }
 
-        $nombre = trim($_POST['nombre'] ?? '');
+        $data = $this->datosProductoDesdePost();
 
-        $data = [
-            'id_categoria' => (int) $_POST['id_categoria'],
-            'id_marca'     => !empty($_POST['id_marca']) ? (int) $_POST['id_marca'] : null,
-            'nombre'       => $nombre,
-            'slug'         => generarSlug($nombre),
-            'descripcion'  => trim($_POST['descripcion'] ?? ''),
-            'precio_base'  => (float) $_POST['precio_base'],
-            'activo'       => isset($_POST['activo']) ? 1 : 0,
-            'destacado'    => isset($_POST['destacado']) ? 1 : 0
-        ];
+        if ($data === null) {
+            $this->redirect(BASE_URL . '/admin/productos/crear?error=datos');
+        }
 
         $productoModel = new Producto();
-        $id = $productoModel->guardar($data);
+        $productoModel->guardar($data);
 
         $this->redirect(BASE_URL . '/admin/productos?ok=creado');
     }
@@ -77,19 +77,16 @@ class ProductoController extends Controller
             $this->redirect(BASE_URL . '/admin/productos');
         }
 
-        $id     = (int) ($_POST['id_producto'] ?? 0);
-        $nombre = trim($_POST['nombre'] ?? '');
+        $id   = (int) ($_POST['id_producto'] ?? 0);
+        $data = $this->datosProductoDesdePost();
 
-        $data = [
-            'id_categoria' => (int) $_POST['id_categoria'],
-            'id_marca'     => !empty($_POST['id_marca']) ? (int) $_POST['id_marca'] : null,
-            'nombre'       => $nombre,
-            'slug'         => generarSlug($nombre),
-            'descripcion'  => trim($_POST['descripcion'] ?? ''),
-            'precio_base'  => (float) $_POST['precio_base'],
-            'activo'       => isset($_POST['activo']) ? 1 : 0,
-            'destacado'    => isset($_POST['destacado']) ? 1 : 0
-        ];
+        if ($id <= 0) {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
+
+        if ($data === null) {
+            $this->redirect(BASE_URL . '/admin/productos/editar?id=' . $id . '&error=datos');
+        }
 
         $productoModel = new Producto();
         $productoModel->actualizar($id, $data);
@@ -99,12 +96,41 @@ class ProductoController extends Controller
 
     public function eliminar()
     {
-        $id = (int) ($_GET['id'] ?? 0);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
 
-        $productoModel = new Producto();
-        $productoModel->eliminar($id);
+        $id = (int) ($_POST['id'] ?? 0);
+
+        if ($id > 0) {
+            $productoModel = new Producto();
+            $productoModel->eliminar($id);
+        }
 
         $this->redirect(BASE_URL . '/admin/productos?ok=eliminado');
+    }
+
+    /** Arma y valida los datos del producto. Devuelve null si falta algo obligatorio. */
+    private function datosProductoDesdePost(): ?array
+    {
+        $nombre       = trim($_POST['nombre'] ?? '');
+        $id_categoria = (int) ($_POST['id_categoria'] ?? 0);
+        $precioRaw    = $_POST['precio_base'] ?? '';
+
+        if ($nombre === '' || $id_categoria <= 0 || $precioRaw === '' || (float) $precioRaw < 0) {
+            return null;
+        }
+
+        return [
+            'id_categoria' => $id_categoria,
+            'id_marca'     => !empty($_POST['id_marca']) ? (int) $_POST['id_marca'] : null,
+            'nombre'       => $nombre,
+            'slug'         => generarSlug($nombre),
+            'descripcion'  => trim($_POST['descripcion'] ?? ''),
+            'precio_base'  => (float) $precioRaw,
+            'activo'       => isset($_POST['activo']) ? 1 : 0,
+            'destacado'    => isset($_POST['destacado']) ? 1 : 0
+        ];
     }
 
     // ─── VARIANTES ─────────────────────────────────────────────────────────────
@@ -113,24 +139,21 @@ class ProductoController extends Controller
     {
         $id_producto = (int) ($_GET['id'] ?? 0);
 
-        if ($id_producto <= 0) {
+        $productoModel = new Producto();
+        $producto      = $productoModel->buscarPorId($id_producto);
+
+        if (!$producto) {
             $this->redirect(BASE_URL . '/admin/productos');
         }
 
-        $productoModel = new Producto();
-        $talleModel    = new Talle();
-        $colorModel    = new Color();
-
-        $producto  = $productoModel->buscarPorId($id_producto);
-        $variantes = $productoModel->listarVariantes($id_producto);
-        $talles    = $talleModel->listarActivos();
-        $colores   = $colorModel->listarActivos();
+        $talleModel = new Talle();
+        $colorModel = new Color();
 
         $this->view('productos/variantes', [
             'producto'  => $producto,
-            'variantes' => $variantes,
-            'talles'    => $talles,
-            'colores'   => $colores
+            'variantes' => $productoModel->listarVariantes($id_producto),
+            'talles'    => $talleModel->listarActivos(),
+            'colores'   => $colorModel->listarActivos()
         ]);
     }
 
@@ -140,15 +163,19 @@ class ProductoController extends Controller
             $this->redirect(BASE_URL . '/admin/productos');
         }
 
-        $id_producto = (int) $_POST['id_producto'];
+        $id_producto = (int) ($_POST['id_producto'] ?? 0);
+
+        if ($id_producto <= 0) {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
 
         $data = [
             'id_producto' => $id_producto,
             'id_talle'    => !empty($_POST['id_talle']) ? (int) $_POST['id_talle'] : null,
             'id_color'    => !empty($_POST['id_color']) ? (int) $_POST['id_color'] : null,
             'sku'         => trim($_POST['sku'] ?? ''),
-            'precio'      => $_POST['precio'] !== '' ? (float) $_POST['precio'] : null,
-            'stock'       => (int) $_POST['stock'],
+            'precio'      => ($_POST['precio'] ?? '') !== '' ? (float) $_POST['precio'] : null,
+            'stock'       => max(0, (int) ($_POST['stock'] ?? 0)),
             'activo'      => isset($_POST['activo']) ? 1 : 0
         ];
 
@@ -163,22 +190,19 @@ class ProductoController extends Controller
         $id_variante = (int) ($_GET['id'] ?? 0);
 
         $productoModel = new Producto();
-        $talleModel    = new Talle();
-        $colorModel    = new Color();
-
-        $variante = $productoModel->buscarVariantePorId($id_variante);
+        $variante      = $productoModel->buscarVariantePorId($id_variante);
 
         if (!$variante) {
             $this->redirect(BASE_URL . '/admin/productos');
         }
 
-        $talles  = $talleModel->listarActivos();
-        $colores = $colorModel->listarActivos();
+        $talleModel = new Talle();
+        $colorModel = new Color();
 
         $this->view('productos/variante_form', [
             'variante' => $variante,
-            'talles'   => $talles,
-            'colores'  => $colores
+            'talles'   => $talleModel->listarActivos(),
+            'colores'  => $colorModel->listarActivos()
         ]);
     }
 
@@ -188,19 +212,29 @@ class ProductoController extends Controller
             $this->redirect(BASE_URL . '/admin/productos');
         }
 
-        $id_variante = (int) $_POST['id_variante'];
-        $id_producto = (int) $_POST['id_producto'];
+        $id_variante = (int) ($_POST['id_variante'] ?? 0);
+        $id_producto = (int) ($_POST['id_producto'] ?? 0);
+
+        $productoModel = new Producto();
+        $variante      = $productoModel->buscarVariantePorId($id_variante);
+
+        if (!$variante) {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
+
+        // El stock nunca puede quedar por debajo de lo reservado
+        $reservado = (int) ($variante['stock_reservado'] ?? 0);
+        $stock     = max($reservado, (int) ($_POST['stock'] ?? 0));
 
         $data = [
             'id_talle' => !empty($_POST['id_talle']) ? (int) $_POST['id_talle'] : null,
             'id_color' => !empty($_POST['id_color']) ? (int) $_POST['id_color'] : null,
             'sku'      => trim($_POST['sku'] ?? ''),
-            'precio'   => $_POST['precio'] !== '' ? (float) $_POST['precio'] : null,
-            'stock'    => (int) $_POST['stock'],
+            'precio'   => ($_POST['precio'] ?? '') !== '' ? (float) $_POST['precio'] : null,
+            'stock'    => $stock,
             'activo'   => isset($_POST['activo']) ? 1 : 0
         ];
 
-        $productoModel = new Producto();
         $productoModel->actualizarVariante($id_variante, $data);
 
         $this->redirect(BASE_URL . '/admin/productos/variantes?id=' . $id_producto . '&ok=actualizada');
@@ -208,11 +242,17 @@ class ProductoController extends Controller
 
     public function eliminarVariante()
     {
-        $id_variante = (int) ($_GET['id'] ?? 0);
-        $id_producto = (int) ($_GET['id_producto'] ?? 0);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
 
-        $productoModel = new Producto();
-        $productoModel->eliminarVariante($id_variante);
+        $id_variante = (int) ($_POST['id'] ?? 0);
+        $id_producto = (int) ($_POST['id_producto'] ?? 0);
+
+        if ($id_variante > 0) {
+            $productoModel = new Producto();
+            $productoModel->eliminarVariante($id_variante);
+        }
 
         $this->redirect(BASE_URL . '/admin/productos/variantes?id=' . $id_producto . '&ok=eliminada');
     }
@@ -224,47 +264,78 @@ class ProductoController extends Controller
         $id_producto = (int) ($_GET['id'] ?? 0);
 
         $productoModel = new Producto();
+        $producto      = $productoModel->buscarPorId($id_producto);
+
+        if (!$producto) {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
 
         $this->view('productos/fotos', [
-            'producto' => $productoModel->buscarPorId($id_producto),
+            'producto' => $producto,
             'fotos'    => $productoModel->listarFotos($id_producto)
         ]);
     }
 
     public function subirFoto()
     {
-        $id_producto = (int) $_POST['id_producto'];
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
 
-        if (!isset($_FILES['foto']) || $_FILES['foto']['error'] !== 0) {
-            $this->redirect(BASE_URL . '/admin/productos/fotos?id=' . $id_producto);
+        $id_producto = (int) ($_POST['id_producto'] ?? 0);
+        $volver      = BASE_URL . '/admin/productos/fotos?id=' . $id_producto;
+
+        if ($id_producto <= 0) {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
+
+        if (!isset($_FILES['foto']) || $_FILES['foto']['error'] !== UPLOAD_ERR_OK) {
+            $error = ($_FILES['foto']['error'] ?? null) === UPLOAD_ERR_INI_SIZE ? 'tamano' : 'subida';
+            $this->redirect($volver . '&error=' . $error);
         }
 
         $archivo = $_FILES['foto'];
-        $ext     = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
 
-        // Solo imágenes
-        $permitidos = ['jpg', 'jpeg', 'png', 'webp'];
-        if (!in_array($ext, $permitidos)) {
-            $this->redirect(BASE_URL . '/admin/productos/fotos?id=' . $id_producto . '&error=formato');
+        if ($archivo['size'] > self::FOTO_MAX_BYTES) {
+            $this->redirect($volver . '&error=tamano');
         }
 
-        $nombre = uniqid('prod_') . '.' . $ext;
+        // Verificar que sea una imagen real, no solo la extensión
+        $info = @getimagesize($archivo['tmp_name']);
+        $mime = $info['mime'] ?? '';
+
+        if (!isset(self::FOTO_MIMES[$mime])) {
+            $this->redirect($volver . '&error=formato');
+        }
+
+        $nombre = uniqid('prod_', true) . '.' . self::FOTO_MIMES[$mime];
+        $nombre = str_replace('.', '', substr($nombre, 0, strrpos($nombre, '.'))) . '.' . self::FOTO_MIMES[$mime];
         $ruta   = __DIR__ . '/../../public/uploads/productos/' . $nombre;
 
-        move_uploaded_file($archivo['tmp_name'], $ruta);
+        if (!move_uploaded_file($archivo['tmp_name'], $ruta)) {
+            $this->redirect($volver . '&error=subida');
+        }
 
         $productoModel = new Producto();
         $productoModel->guardarFoto($id_producto, $nombre);
 
-        $this->redirect(BASE_URL . '/admin/productos/fotos?id=' . $id_producto . '&ok=subida');
+        $this->redirect($volver . '&ok=subida');
     }
 
     public function eliminarFoto()
     {
-        $id_foto = (int) ($_GET['id'] ?? 0);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
+
+        $id_foto = (int) ($_POST['id'] ?? 0);
 
         $productoModel = new Producto();
         $id_producto   = $productoModel->eliminarFoto($id_foto);
+
+        if (!$id_producto) {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
 
         $this->redirect(BASE_URL . '/admin/productos/fotos?id=' . $id_producto . '&ok=eliminada');
     }

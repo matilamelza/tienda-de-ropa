@@ -3,7 +3,8 @@ config/database.php
 
 # Fotos subidas desde el admin
 public/uploads/*
-!public/uploads/.gitkeep
+!public/uploads/.gitkeep]
+!public/uploads/.htaccess
 
 # Archivos de prueba
 public/debug.php

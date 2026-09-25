@@ -16,12 +16,20 @@
     </a>
 </div>
 
+<?php if (isset($_GET['error'])): ?>
+    <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm max-w-2xl">
+        Completá nombre, categoría y precio base.
+    </div>
+<?php endif; ?>
+
 <form action="<?= BASE_URL ?>/admin/productos/<?php echo $editando ? 'actualizar' : 'guardar'; ?>"
       method="POST"
       class="bg-white rounded-lg shadow p-6 space-y-5 max-w-2xl">
 
+    <?= csrf_field() ?>
+
     <?php if ($editando): ?>
-        <input type="hidden" name="id_producto" value="<?php echo $producto['id_producto']; ?>">
+        <input type="hidden" name="id_producto" value="<?php echo (int) $producto['id_producto']; ?>">
     <?php endif; ?>
 
     <div>
@@ -40,7 +48,7 @@
                     class="w-full border rounded-lg px-3 py-2 bg-white">
                 <option value="">Seleccionar</option>
                 <?php while ($cat = $categorias->fetch_assoc()): ?>
-                    <option value="<?php echo $cat['id_categoria']; ?>"
+                    <option value="<?php echo (int) $cat['id_categoria']; ?>"
                         <?php echo ($editando && $producto['id_categoria'] == $cat['id_categoria']) ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars($cat['nombre']); ?>
                     </option>
@@ -54,7 +62,7 @@
                     class="w-full border rounded-lg px-3 py-2 bg-white">
                 <option value="">Sin marca</option>
                 <?php while ($marca = $marcas->fetch_assoc()): ?>
-                    <option value="<?php echo $marca['id_marca']; ?>"
+                    <option value="<?php echo (int) $marca['id_marca']; ?>"
                         <?php echo ($editando && $producto['id_marca'] == $marca['id_marca']) ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars($marca['nombre']); ?>
                     </option>
@@ -77,7 +85,7 @@
                step="0.01"
                min="0"
                required
-               value="<?php echo $producto['precio_base'] ?? ''; ?>"
+               value="<?php echo htmlspecialchars((string) ($producto['precio_base'] ?? '')); ?>"
                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring focus:ring-gray-200">
     </div>
 
@@ -113,11 +121,11 @@
 
 <?php if ($editando): ?>
     <div class="mt-6 flex gap-3 max-w-2xl">
-        <a href="<?= BASE_URL ?>/admin/productos/variantes?id=<?php echo $producto['id_producto']; ?>"
+        <a href="<?= BASE_URL ?>/admin/productos/variantes?id=<?php echo (int) $producto['id_producto']; ?>"
            class="px-4 py-2 rounded-lg border text-blue-700 bg-blue-50 hover:bg-blue-100">
             Gestionar variantes →
         </a>
-        <a href="<?= BASE_URL ?>/admin/productos/fotos?id=<?php echo $producto['id_producto']; ?>"
+        <a href="<?= BASE_URL ?>/admin/productos/fotos?id=<?php echo (int) $producto['id_producto']; ?>"
            class="px-4 py-2 rounded-lg border text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
             Gestionar fotos →
         </a>
