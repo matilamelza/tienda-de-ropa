@@ -295,6 +295,7 @@ class ProductoController extends Controller
         }
 
         if (!isset($_FILES['foto']) || $_FILES['foto']['error'] !== UPLOAD_ERR_OK) {
+            error_log('subirFoto: error de subida PHP código ' . ($_FILES['foto']['error'] ?? 'sin archivo'));
             $error = ($_FILES['foto']['error'] ?? null) === UPLOAD_ERR_INI_SIZE ? 'tamano' : 'subida';
             $this->redirect($volver . '&error=' . $error);
         }
@@ -313,11 +314,19 @@ class ProductoController extends Controller
             $this->redirect($volver . '&error=formato');
         }
 
-        $nombre = uniqid('prod_', true) . '.' . self::FOTO_MIMES[$mime];
-        $nombre = str_replace('.', '', substr($nombre, 0, strrpos($nombre, '.'))) . '.' . self::FOTO_MIMES[$mime];
-        $ruta   = __DIR__ . '/../../public/uploads/productos/' . $nombre;
+        // Carpeta de destino: se crea si no existe (ej: después de clonar el repo)
+        $carpeta = __DIR__ . '/../../public/uploads/productos';
+
+        if (!is_dir($carpeta) && !mkdir($carpeta, 0755, true)) {
+            error_log('subirFoto: no se pudo crear la carpeta ' . $carpeta);
+            $this->redirect($volver . '&error=subida');
+        }
+
+        $nombre = 'prod_' . bin2hex(random_bytes(10)) . '.' . self::FOTO_MIMES[$mime];
+        $ruta   = $carpeta . '/' . $nombre;
 
         if (!move_uploaded_file($archivo['tmp_name'], $ruta)) {
+            error_log('subirFoto: move_uploaded_file falló hacia ' . $ruta . ' (¿permisos de la carpeta?)');
             $this->redirect($volver . '&error=subida');
         }
 
