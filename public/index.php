@@ -339,6 +339,12 @@ switch ($route) {
         $controller->eliminar();
         break;
 
+    case 'talles_crear_ajax':
+        requireAdmin();
+        $controller = new TalleController();
+        $controller->crearAjax();
+        break;
+
     // ─── COLORES ───────────────────────────────────────────────────────────────
 
     case 'colores':
@@ -375,6 +381,12 @@ switch ($route) {
         requireAdmin();
         $controller = new ColorController();
         $controller->eliminar();
+        break;
+
+    case 'colores_crear_ajax':
+        requireAdmin();
+        $controller = new ColorController();
+        $controller->crearAjax();
         break;
 
     // ─── CONFIGURACIÓN ─────────────────────────────────────────────────────────

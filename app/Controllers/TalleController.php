@@ -117,4 +117,42 @@ class TalleController extends Controller
 
         $this->redirect(BASE_URL . '/admin/talles?ok=eliminado');
     }
+
+        /**
+     * AJAX: crea un talle desde el form de variantes.
+     * Responde: { ok: true, id, nombre } o { ok: false, error }
+     */
+    public function crearAjax()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+
+        $talleModel = new Talle();
+        $nombre     = trim($_POST['nombre'] ?? '');
+
+        if ($nombre === '') {
+            $this->json(['ok' => false, 'error' => 'Escribí el nombre del talle.'], 400);
+        }
+
+        if (mb_strlen($nombre) > 20) {
+            $this->json(['ok' => false, 'error' => 'Máximo 20 caracteres.'], 400);
+        }
+
+        if ($talleModel->existeNombre($nombre)) {
+            $this->json(['ok' => false, 'error' => 'Ya existe un talle con ese nombre.'], 409);
+        }
+
+        $id = $talleModel->crear([
+            'nombre' => $nombre,
+            'orden'  => $talleModel->siguienteOrden(),
+            'activo' => 1,
+        ]);
+
+        if ($id <= 0) {
+            $this->json(['ok' => false, 'error' => 'No se pudo crear el talle.'], 500);
+        }
+
+        $this->json(['ok' => true, 'id' => $id, 'nombre' => $nombre]);
+    }
 }

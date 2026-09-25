@@ -62,12 +62,12 @@ class Color extends Conexion
         return $stmt->get_result()->num_rows > 0;
     }
 
-    public function crear(array $data): bool
+    public function crear(array $data): int
     {
         $stmt = $this->db->prepare("INSERT INTO colores (nombre, codigo_hex, activo) VALUES (?, ?, ?)");
         $stmt->bind_param("ssi", $data['nombre'], $data['codigo_hex'], $data['activo']);
 
-        return $stmt->execute();
+        return $stmt->execute() ? (int) $this->db->insert_id : 0;
     }
 
     public function actualizar(int $id, array $data): bool

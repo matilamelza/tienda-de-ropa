@@ -91,6 +91,7 @@ RewriteRule ^admin/talles/guardar/?$    index.php?route=talles_guardar     [L,QS
 RewriteRule ^admin/talles/editar/?$     index.php?route=talles_editar      [L,QSA]
 RewriteRule ^admin/talles/actualizar/?$ index.php?route=talles_actualizar  [L,QSA]
 RewriteRule ^admin/talles/eliminar/?$   index.php?route=talles_eliminar    [L,QSA]
+RewriteRule ^admin/talles/crear-ajax/?$ index.php?route=talles_crear_ajax  [L,QSA]
 
 # Colores
 RewriteRule ^admin/colores/?$            index.php?route=colores            [L,QSA]
@@ -99,6 +100,7 @@ RewriteRule ^admin/colores/guardar/?$    index.php?route=colores_guardar    [L,Q
 RewriteRule ^admin/colores/editar/?$     index.php?route=colores_editar     [L,QSA]
 RewriteRule ^admin/colores/actualizar/?$ index.php?route=colores_actualizar [L,QSA]
 RewriteRule ^admin/colores/eliminar/?$   index.php?route=colores_eliminar   [L,QSA]
+RewriteRule ^admin/colores/crear-ajax/?$ index.php?route=colores_crear_ajax [L,QSA]
 
 # Configuración
 RewriteRule ^admin/configuracion/?$                 index.php?route=admin_configuracion                  [L,QSA]

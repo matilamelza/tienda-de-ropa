@@ -128,4 +128,44 @@ class ColorController extends Controller
 
         return preg_match('/^[0-9A-F]{6}$/', $hex) ? '#' . $hex : null;
     }
+
+        /**
+     * AJAX: crea un color desde el form de variantes.
+     * Responde: { ok: true, id, nombre, codigo_hex } o { ok: false, error }
+     */
+    public function crearAjax()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+
+        $colorModel = new Color();
+        $nombre     = trim($_POST['nombre'] ?? '');
+
+        if ($nombre === '') {
+            $this->json(['ok' => false, 'error' => 'Escribí el nombre del color.'], 400);
+        }
+
+        if (mb_strlen($nombre) > 50) {
+            $this->json(['ok' => false, 'error' => 'Máximo 50 caracteres.'], 400);
+        }
+
+        if ($colorModel->existeNombre($nombre)) {
+            $this->json(['ok' => false, 'error' => 'Ya existe un color con ese nombre.'], 409);
+        }
+
+        $hex = $this->hexDesdePost();
+
+        $id = $colorModel->crear([
+            'nombre'     => $nombre,
+            'codigo_hex' => $hex,
+            'activo'     => 1,
+        ]);
+
+        if ($id <= 0) {
+            $this->json(['ok' => false, 'error' => 'No se pudo crear el color.'], 500);
+        }
+
+        $this->json(['ok' => true, 'id' => $id, 'nombre' => $nombre, 'codigo_hex' => $hex]);
+    }
 }

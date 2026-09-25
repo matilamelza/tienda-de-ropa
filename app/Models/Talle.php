@@ -69,12 +69,12 @@ class Talle extends Conexion
         return (int) $row['siguiente'];
     }
 
-    public function crear(array $data): bool
+    public function crear(array $data): int
     {
         $stmt = $this->db->prepare("INSERT INTO talles (nombre, orden, activo) VALUES (?, ?, ?)");
         $stmt->bind_param("sii", $data['nombre'], $data['orden'], $data['activo']);
 
-        return $stmt->execute();
+        return $stmt->execute() ? (int) $this->db->insert_id : 0;
     }
 
     public function actualizar(int $id, array $data): bool
