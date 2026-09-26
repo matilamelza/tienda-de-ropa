@@ -425,62 +425,109 @@ class Pedido extends Conexion
         return $stmt->get_result();
     }
 
-    public function listarPaginado(int $pagina = 1, int $porPagina = 20, string $busqueda = ''): array
+        public const ESTADOS = [
+        'pendiente_contacto', 'contactado', 'pendiente_pago',
+        'pagado', 'entregado', 'cancelado',
+    ];
+
+    /** Filtro especial: pendientes de pago con más de N días. */
+    public const DIAS_PAGO_VENCIDO = 3;
+
+    /**
+     * Arma el WHERE según búsqueda y estado.
+     * $estado: '' (todos), uno de ESTADOS, o 'vencidos'.
+     */
+    private function filtroPedidos(string $busqueda, string $estado): array
     {
-        $offset = ($pagina - 1) * $porPagina;
+        $where  = [];
+        $params = [];
+        $types  = '';
 
         if ($busqueda !== '') {
-            $like = '%' . $busqueda . '%';
-            $sql = "SELECT 
-                        p.*,
-                        c.nombre, c.apellido, c.telefono, c.email
-                    FROM pedidos p
-                    LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
-                    WHERE c.nombre LIKE ? OR c.apellido LIKE ?
-                       OR c.telefono LIKE ? OR c.email LIKE ?
-                       OR p.id_pedido LIKE ?
-                    ORDER BY p.id_pedido DESC
-                    LIMIT ? OFFSET ?";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bind_param('sssssii', $like, $like, $like, $like, $like, $porPagina, $offset);
-        } else {
-            $sql = "SELECT 
-                        p.*,
-                        c.nombre, c.apellido, c.telefono, c.email
-                    FROM pedidos p
-                    LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
-                    ORDER BY p.id_pedido DESC
-                    LIMIT ? OFFSET ?";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bind_param('ii', $porPagina, $offset);
+            $like     = '%' . $busqueda . '%';
+            $where[]  = '(c.nombre LIKE ? OR c.apellido LIKE ? OR c.telefono LIKE ? OR c.email LIKE ? OR p.id_pedido LIKE ?)';
+            $params   = array_merge($params, [$like, $like, $like, $like, $like]);
+            $types   .= 'sssss';
         }
 
+        if ($estado === 'vencidos') {
+            $where[]  = "p.estado = 'pendiente_pago' AND p.fecha < NOW() - INTERVAL ? DAY";
+            $params[] = self::DIAS_PAGO_VENCIDO;
+            $types   .= 'i';
+        } elseif (in_array($estado, self::ESTADOS, true)) {
+            $where[]  = 'p.estado = ?';
+            $params[] = $estado;
+            $types   .= 's';
+        }
+
+        $sqlWhere = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        return [$sqlWhere, $params, $types];
+    }
+
+    public function listarPaginado(int $pagina = 1, int $porPagina = 20, string $busqueda = '', string $estado = ''): array
+    {
+        [$where, $params, $types] = $this->filtroPedidos($busqueda, $estado);
+
+        $offset   = ($pagina - 1) * $porPagina;
+        $params[] = $porPagina;
+        $params[] = $offset;
+        $types   .= 'ii';
+
+        $sql = "SELECT p.*, c.nombre, c.apellido, c.telefono, c.email
+                FROM pedidos p
+                LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
+                $where
+                ORDER BY p.id_pedido DESC
+                LIMIT ? OFFSET ?";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
+
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    /**
-     * Cuenta el total de pedidos (con búsqueda opcional).
-     */
-    public function contarPedidos(string $busqueda = ''): int
+    public function contarPedidos(string $busqueda = '', string $estado = ''): int
     {
-        if ($busqueda !== '') {
-            $like = '%' . $busqueda . '%';
-            $sql = "SELECT COUNT(*) AS total
-                    FROM pedidos p
-                    LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
-                    WHERE c.nombre LIKE ? OR c.apellido LIKE ?
-                       OR c.telefono LIKE ? OR c.email LIKE ?
-                       OR p.id_pedido LIKE ?";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bind_param('sssss', $like, $like, $like, $like, $like);
-        } else {
-            $sql  = "SELECT COUNT(*) AS total FROM pedidos";
-            $stmt = $this->db->prepare($sql);
+        [$where, $params, $types] = $this->filtroPedidos($busqueda, $estado);
+
+        $sql = "SELECT COUNT(*) AS total
+                FROM pedidos p
+                LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
+                $where";
+
+        $stmt = $this->db->prepare($sql);
+        if ($params) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+
+        return (int) $stmt->get_result()->fetch_assoc()['total'];
+    }
+
+    /** Cantidad de pedidos por estado (para las pestañas). Incluye 'vencidos'. */
+    public function contarPorEstado(): array
+    {
+        $conteo = array_fill_keys(self::ESTADOS, 0);
+
+        $res = $this->db->query("SELECT estado, COUNT(*) AS total FROM pedidos GROUP BY estado");
+        while ($row = $res->fetch_assoc()) {
+            $conteo[$row['estado']] = (int) $row['total'];
         }
 
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) AS total FROM pedidos
+             WHERE estado = 'pendiente_pago' AND fecha < NOW() - INTERVAL ? DAY"
+        );
+        $dias = self::DIAS_PAGO_VENCIDO;
+        $stmt->bind_param("i", $dias);
         $stmt->execute();
-        return (int) $stmt->get_result()->fetch_assoc()['total'];
+        $conteo['vencidos'] = (int) $stmt->get_result()->fetch_assoc()['total'];
+
+        $conteo['todos'] = array_sum(array_intersect_key($conteo, array_flip(self::ESTADOS)));
+
+        return $conteo;
     }
 
     // ─── TRANSACCIONES ─────────────────────────────────────────────────────────

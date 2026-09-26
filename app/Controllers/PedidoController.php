@@ -16,11 +16,16 @@ class PedidoController extends Controller
         $porPagina = 20;
         $pagina    = max(1, (int)($_GET['pagina'] ?? 1));
         $busqueda  = trim($_GET['q'] ?? '');
+        $estado    = $_GET['estado'] ?? '';
+
+        if ($estado !== 'vencidos' && !in_array($estado, Pedido::ESTADOS, true)) {
+            $estado = '';
+        }
 
         $pedidoModel = new Pedido();
 
-        $total        = $pedidoModel->contarPedidos($busqueda);
-        $pedidos      = $pedidoModel->listarPaginado($pagina, $porPagina, $busqueda);
+        $total        = $pedidoModel->contarPedidos($busqueda, $estado);
+        $pedidos      = $pedidoModel->listarPaginado($pagina, $porPagina, $busqueda, $estado);
         $totalPaginas = (int) ceil($total / $porPagina);
 
         $this->view('admin/pedidos/index', [
@@ -29,6 +34,8 @@ class PedidoController extends Controller
             'totalPaginas' => $totalPaginas,
             'total'        => $total,
             'busqueda'     => $busqueda,
+            'estado'       => $estado,
+            'conteo'       => $pedidoModel->contarPorEstado(),
         ]);
     }
 

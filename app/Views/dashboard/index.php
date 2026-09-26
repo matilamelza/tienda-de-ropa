@@ -142,7 +142,7 @@ $totalAlertas = $alertasPedidos['pendientes_contacto'] + $alertasPedidos['pagos_
             <ul class="space-y-2 text-sm">
                 <?php if ($alertasPedidos['pendientes_contacto'] > 0): ?>
                     <li>
-                        <a href="<?= BASE_URL ?>/admin/pedidos" class="flex items-center justify-between p-3 rounded-lg bg-yellow-50 hover:bg-yellow-100">
+                        <a href="<?= BASE_URL ?>/admin/pedidos?estado=pendiente_contacto" class="flex items-center justify-between p-3 rounded-lg bg-yellow-50 hover:bg-yellow-100">
                             <span>📞 Pedidos esperando contacto</span>
                             <strong><?= $alertasPedidos['pendientes_contacto'] ?></strong>
                         </a>
@@ -151,7 +151,7 @@ $totalAlertas = $alertasPedidos['pendientes_contacto'] + $alertasPedidos['pagos_
 
                 <?php if ($alertasPedidos['pagos_vencidos'] > 0): ?>
                     <li>
-                        <a href="<?= BASE_URL ?>/admin/pedidos" class="flex items-center justify-between p-3 rounded-lg bg-orange-50 hover:bg-orange-100">
+                        <a href="<?= BASE_URL ?>/admin/pedidos?estado=vencidos" class="flex items-center justify-between p-3 rounded-lg bg-orange-50 hover:bg-orange-100">
                             <span>⏰ Sin pagar hace +3 días <span class="block text-xs text-orange-700">Tienen stock reservado</span></span>
                             <strong><?= $alertasPedidos['pagos_vencidos'] ?></strong>
                         </a>
