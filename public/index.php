@@ -75,6 +75,7 @@ require_once __DIR__ . '/../app/Models/ConfiguracionTienda.php';
 
 // ── Controllers ──────────────────────────────────────────────────────────────
 require_once __DIR__ . '/../app/Controllers/DashboardController.php';
+require_once __DIR__ . '/../app/Controllers/EstadisticasController.php';
 require_once __DIR__ . '/../app/Controllers/ProductoController.php';
 require_once __DIR__ . '/../app/Controllers/CategoriaController.php';
 require_once __DIR__ . '/../app/Controllers/MarcaController.php';
@@ -135,6 +136,12 @@ switch ($route) {
     case 'dashboard':
         requireAdmin();
         $controller = new DashboardController();
+        $controller->index();
+        break;
+
+    case 'admin_estadisticas':
+        requireAdmin();
+        $controller = new EstadisticasController();
         $controller->index();
         break;
 

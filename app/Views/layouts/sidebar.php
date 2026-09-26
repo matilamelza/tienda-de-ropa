@@ -15,6 +15,7 @@ $cantResets = (new UsuarioCliente())->contarResetsPendientes();
 $menu = [
     'Tienda' => [
         ['/admin',           'Dashboard', '📊', true],
+        ['/admin/estadisticas', 'Estadísticas', '📈', false],
         ['/admin/pedidos',   'Pedidos',   '🧾', false],
         ['/admin/clientes',  'Clientes',  '👥', false],
     ],

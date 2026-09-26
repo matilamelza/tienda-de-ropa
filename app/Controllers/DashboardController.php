@@ -2,7 +2,7 @@
 
 class DashboardController extends Controller
 {
-    private const PERIODOS = [
+    public const PERIODOS = [
         'mes'        => 'Este mes',
         'mes_pasado' => 'Mes pasado',
         '30d'        => 'Últimos 30 días',
@@ -13,6 +13,7 @@ class DashboardController extends Controller
     {
         $pedidoModel   = new Pedido();
         $productoModel = new Producto();
+        $visitaModel   = new Visita();
 
         // ── Período elegido ────────────────────────────────────────────────────
         $periodo = $_GET['periodo'] ?? 'mes';
@@ -20,28 +21,41 @@ class DashboardController extends Controller
             $periodo = 'mes';
         }
 
-        [$desde, $hasta, $antDesde, $antHasta] = $this->rangos($periodo);
+        [$desde, $hasta, $antDesde, $antHasta] = self::rangos($periodo);
+
+        $d = $desde->format('Y-m-d H:i:s');
+        $h = $hasta->format('Y-m-d H:i:s');
 
         // ── Números principales + comparación con el período anterior ──────────
-        $resumen  = $pedidoModel->resumenPeriodo($desde->format('Y-m-d H:i:s'), $hasta->format('Y-m-d H:i:s'));
+        $resumen  = $pedidoModel->resumenPeriodo($d, $h);
         $anterior = $antDesde
             ? $pedidoModel->resumenPeriodo($antDesde->format('Y-m-d H:i:s'), $antHasta->format('Y-m-d H:i:s'))
             : null;
 
         $variaciones = [
-            'ventas'          => $anterior ? $this->variacion($resumen['ventas'], $anterior['ventas']) : null,
-            'ganancia'        => $anterior ? $this->variacion($resumen['ganancia'], $anterior['ganancia']) : null,
-            'pedidos'         => $anterior ? $this->variacion($resumen['pedidos'], $anterior['pedidos']) : null,
-            'ticket_promedio' => $anterior ? $this->variacion($resumen['ticket_promedio'], $anterior['ticket_promedio']) : null,
+            'ventas'          => $anterior ? self::variacion($resumen['ventas'], $anterior['ventas']) : null,
+            'ganancia'        => $anterior ? self::variacion($resumen['ganancia'], $anterior['ganancia']) : null,
+            'pedidos'         => $anterior ? self::variacion($resumen['pedidos'], $anterior['pedidos']) : null,
+            'ticket_promedio' => $anterior ? self::variacion($resumen['ticket_promedio'], $anterior['ticket_promedio']) : null,
         ];
+
+        // ── Visitantes (tarjeta que lleva a Estadísticas) ──────────────────────
+        $visitas         = $visitaModel->resumen($d, $h);
+        $visitasAnterior = $antDesde
+            ? $visitaModel->resumen($antDesde->format('Y-m-d H:i:s'), $antHasta->format('Y-m-d H:i:s'))
+            : null;
+
+        $variaciones['visitantes'] = $visitasAnterior
+            ? self::variacion($visitas['visitantes'], $visitasAnterior['visitantes'])
+            : null;
 
         // ── Gráfico de ventas por día ──────────────────────────────────────────
         // En "Todo" se grafican los últimos 30 días (si no, serían cientos de barras)
         [$gDesde, $gHasta] = $periodo === 'todo'
-            ? $this->rangos('30d')
+            ? self::rangos('30d')
             : [$desde, $hasta];
 
-        $grafico = $this->armarGrafico(
+        $grafico = self::armarGrafico(
             $pedidoModel->ventasPorDia($gDesde->format('Y-m-d H:i:s'), $gHasta->format('Y-m-d H:i:s')),
             $gDesde,
             $gHasta
@@ -53,9 +67,10 @@ class DashboardController extends Controller
             'periodos'        => self::PERIODOS,
             'resumen'         => $resumen,
             'variaciones'     => $variaciones,
+            'visitas'         => $visitas,
             'grafico'         => $grafico,
             'graficoTitulo'   => $periodo === 'todo' ? 'Ventas de los últimos 30 días' : 'Ventas por día',
-            'topProductos'    => $pedidoModel->topProductos($desde->format('Y-m-d H:i:s'), $hasta->format('Y-m-d H:i:s'), 5),
+            'topProductos'    => $pedidoModel->topProductos($d, $h, 5),
             'alertasPedidos'  => $pedidoModel->alertasPedidos(3),
             'alertasCatalogo' => $productoModel->alertasCatalogo(),
             'ultimosPedidos'  => $pedidoModel->ultimosPedidos(6),
@@ -68,7 +83,7 @@ class DashboardController extends Controller
      * Rangos semiabiertos: desde <= fecha < hasta.
      * En "todo" no hay período anterior (null).
      */
-    private function rangos(string $periodo): array
+    public static function rangos(string $periodo): array
     {
         $hoy    = new DateTimeImmutable('today');
         $manana = $hoy->modify('+1 day');
@@ -95,7 +110,7 @@ class DashboardController extends Controller
     }
 
     /** % de cambio respecto del anterior. null si el anterior es 0 (no se puede comparar). */
-    private function variacion(float $actual, float $anterior): ?float
+    public static function variacion(float $actual, float $anterior): ?float
     {
         if ($anterior == 0) {
             return null;
@@ -105,10 +120,10 @@ class DashboardController extends Controller
     }
 
     /**
-     * Completa todos los días del rango (los sin ventas en 0).
+     * Completa todos los días del rango (los sin datos en 0).
      * No incluye días futuros: en "Este mes" el gráfico llega hasta hoy.
      */
-    private function armarGrafico(array $ventasPorDia, DateTimeImmutable $desde, DateTimeImmutable $hasta): array
+    public static function armarGrafico(array $porDia, DateTimeImmutable $desde, DateTimeImmutable $hasta): array
     {
         $limite = min($hasta, new DateTimeImmutable('tomorrow'));
         $dias   = [];
@@ -118,8 +133,8 @@ class DashboardController extends Controller
             $dias[] = [
                 'fecha'   => $clave,
                 'label'   => $d->format('d/m'),
-                'total'   => $ventasPorDia[$clave]['total'] ?? 0,
-                'pedidos' => $ventasPorDia[$clave]['pedidos'] ?? 0,
+                'total'   => $porDia[$clave]['total'] ?? 0,
+                'pedidos' => $porDia[$clave]['pedidos'] ?? 0,
             ];
         }
 

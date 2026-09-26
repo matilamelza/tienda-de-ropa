@@ -93,6 +93,25 @@ $totalAlertas = $alertasPedidos['pendientes_contacto'] + $alertasPedidos['pagos_
     </p>
 <?php endif; ?>
 
+<!-- Visitantes → Estadísticas -->
+<a href="<?= BASE_URL ?>/admin/estadisticas?periodo=<?= $periodo ?>"
+   class="flex items-center justify-between bg-white rounded-lg shadow px-5 py-4 mb-6 hover:bg-gray-50">
+    <div class="flex items-center gap-3">
+        <span class="text-2xl">👥</span>
+        <div>
+            <p class="font-semibold text-gray-900">
+                <?= number_format($visitas['visitantes'], 0, ',', '.') ?> visitantes
+                <span class="text-sm font-normal text-gray-500">· <?= number_format($visitas['vistas'], 0, ',', '.') ?> páginas vistas</span>
+            </p>
+            <p class="text-xs text-gray-400">Ver qué miran, qué buscan y de dónde llegan</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-3">
+        <?= $badgeVariacion($variaciones['visitantes']) ?>
+        <span class="text-gray-400">→</span>
+    </div>
+</a>
+
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
 
     <!-- ── Gráfico de ventas ────────────────────────────────────── -->
