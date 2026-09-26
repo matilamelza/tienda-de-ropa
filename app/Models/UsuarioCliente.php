@@ -79,7 +79,7 @@ class UsuarioCliente extends Conexion
  
         // Generar token seguro
         $token    = bin2hex(random_bytes(32));
-        $expira   = date('Y-m-d H:i:s', strtotime('+1 hour'));
+        $expira   = date('Y-m-d H:i:s', strtotime('+24 hour'));
  
         $stmt = $this->db->prepare(
             "INSERT INTO password_resets (email, token, expira_en) VALUES (?, ?, ?)"
@@ -135,5 +135,33 @@ class UsuarioCliente extends Conexion
         $stmt->execute();
  
         return true;
+    }
+
+        /** Pedidos de recuperación vigentes (no usados y sin vencer), con datos del cliente. */
+    public function listarResetsPendientes(): array
+    {
+        $sql = "SELECT pr.email, pr.token, pr.expira_en,
+                       uc.nombre, uc.apellido, uc.telefono
+                FROM password_resets pr
+                LEFT JOIN usuarios_clientes uc ON uc.email = pr.email
+                WHERE pr.usado = 0 AND pr.expira_en > NOW()
+                ORDER BY pr.expira_en DESC";
+
+        return $this->db->query($sql)->fetch_all(MYSQLI_ASSOC);
+    }
+
+    public function contarResetsPendientes(): int
+    {
+        $row = $this->db->query(
+            "SELECT COUNT(*) AS total FROM password_resets WHERE usado = 0 AND expira_en > NOW()"
+        )->fetch_assoc();
+
+        return (int) $row['total'];
+    }
+
+    /** Descarta todos los pedidos pendientes (botón "Limpiar lista"). */
+    public function descartarResetsPendientes(): void
+    {
+        $this->db->query("UPDATE password_resets SET usado = 1 WHERE usado = 0");
     }
 }

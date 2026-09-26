@@ -43,6 +43,14 @@ class ClienteAdminController extends Controller
 
     public function resets()
     {
-        $this->view('admin/resets/index', []);
+        $usuarioModel = new UsuarioCliente();
+
+        $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        $base  = ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . BASE_URL;
+
+        $this->view('admin/resets/index', [
+            'resets'   => $usuarioModel->listarResetsPendientes(),
+            'baseLink' => $base . '/nueva-password?token=',
+        ]);
     }
 }

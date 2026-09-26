@@ -10,7 +10,7 @@ $claseLink = function (string $ruta, bool $exacta = false) use ($rutaActual): st
          . ($activo ? 'bg-white/10 text-white font-semibold' : 'text-gray-300 hover:bg-white/5 hover:text-white');
 };
 
-$cantResets = count($_SESSION['admin_resets_pendientes'] ?? []);
+$cantResets = (new UsuarioCliente())->contarResetsPendientes();
 
 $menu = [
     'Tienda' => [

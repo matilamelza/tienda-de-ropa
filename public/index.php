@@ -463,7 +463,7 @@ switch ($route) {
     case 'admin_resets_limpiar':
         requireAdmin();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            unset($_SESSION['admin_resets_pendientes']);
+            (new UsuarioCliente())->descartarResetsPendientes();
         }
         header('Location: ' . BASE_URL . '/admin/resets');
         exit;

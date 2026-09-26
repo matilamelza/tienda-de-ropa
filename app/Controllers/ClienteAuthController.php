@@ -215,7 +215,7 @@ class ClienteAuthController extends Controller
         $cuerpo .= "Recibimos una solicitud para restablecer la contraseña de tu cuenta.\n\n";
         $cuerpo .= "Hacé click en el siguiente link para crear una nueva contraseña:\n";
         $cuerpo .= $link . "\n\n";
-        $cuerpo .= "Este link es válido por 1 hora.\n\n";
+        $cuerpo .= "Este link es válido por 24 hora.\n\n";
         $cuerpo .= "Si no solicitaste este cambio, ignorá este mensaje.\n\n";
         $cuerpo .= "— " . ($config['smtp_nombre'] ?? 'Mi Tienda');
 
