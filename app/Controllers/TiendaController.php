@@ -41,6 +41,19 @@ class TiendaController extends Controller
         // ── Productos ────────────────────────────────────────────────────────
         $productos = $productoModel->buscarFiltrado($filtros);
 
+        // ── Estadísticas ─────────────────────────────────────────────────────
+        if ($filtros['q'] !== '') {
+            registrar_visita('busqueda', null, $filtros['q'], count($productos));
+        } elseif ($categoriaActual) {
+            registrar_visita('categoria', (int) $categoriaActual['id_categoria']);
+        } elseif ($filtros['marca'] > 0) {
+            registrar_visita('marca', $filtros['marca']);
+        } elseif (!$hayFiltros) {
+            registrar_visita('inicio');
+        } else {
+            registrar_visita('otra');
+        }
+
         $this->view('tienda/index', [
             'productos'      => $productos,
             'categoriasMenu' => $categoriasMenu,
@@ -67,7 +80,8 @@ class TiendaController extends Controller
             $producto = $productoModel->buscarPorId($id);
         }
 
-        if (!$producto) {
+        // No existe, fue eliminado o está desactivado → 404
+        if (!$producto || (int) $producto['activo'] !== 1) {
             $this->noEncontrado(
                 'Este producto ya no está disponible',
                 'Puede que se haya agotado o que lo hayamos dado de baja. Mirá lo que tenemos ahora.'
@@ -75,7 +89,9 @@ class TiendaController extends Controller
             return;
         }
 
-        $id       = $producto['id_producto'];
+        registrar_visita('producto', (int) $producto['id_producto']);
+
+        $id        = $producto['id_producto'];
         $variantes = $productoModel->listarVariantes($id);
         $fotos     = $productoModel->listarFotos($id);
 
@@ -88,7 +104,7 @@ class TiendaController extends Controller
         ], 'tienda');
     }
 
-        /** Página 404 con el layout de la tienda. */
+    /** Página 404 con el layout de la tienda. */
     public function noEncontrado(?string $titulo = null, ?string $mensaje = null): void
     {
         http_response_code(404);

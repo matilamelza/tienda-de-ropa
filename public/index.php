@@ -39,6 +39,7 @@ require_once __DIR__ . '/../app/Core/helpers.php';
 require_once __DIR__ . '/../app/Core/auth.php';
 require_once __DIR__ . '/../app/Core/csrf.php';
 require_once __DIR__ . '/../app/Core/imagenes.php';
+require_once __DIR__ . '/../app/Core/visitas.php';
 
 // ── CSRF: todo POST tiene que traer el token de la sesión ────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_valido()) {
@@ -69,6 +70,7 @@ require_once __DIR__ . '/../app/Models/UsuarioCliente.php';
 require_once __DIR__ . '/../app/Models/Cliente.php';
 require_once __DIR__ . '/../app/Models/UsuarioAdmin.php';
 require_once __DIR__ . '/../app/Models/LoginIntento.php';
+require_once __DIR__ . '/../app/Models/Visita.php';
 require_once __DIR__ . '/../app/Models/ConfiguracionTienda.php';
 
 // ── Controllers ──────────────────────────────────────────────────────────────

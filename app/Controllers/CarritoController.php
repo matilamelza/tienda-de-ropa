@@ -4,6 +4,8 @@ class CarritoController extends Controller
 {
     public function index()
     {
+        registrar_visita('carrito');
+
         $categoriaModel = new Categoria();
         $categoriasMenu = $categoriaModel->listarMenu();
 
