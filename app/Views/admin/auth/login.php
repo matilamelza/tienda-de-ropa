@@ -22,7 +22,10 @@
                     Email o contraseña incorrectos.
                 <?php elseif ($_GET['error'] === 'campos'): ?>
                     Completá todos los campos.
-                <?php endif; ?>
+                <?php elseif ($_GET['error'] === 'bloqueado'): ?>
+                    Demasiados intentos fallidos. Probá de nuevo en
+                    <?= max(1, (int) ($_GET['min'] ?? 15)) ?> minuto(s).
+                 <?php endif; ?>
             </div>
         <?php endif; ?>
 

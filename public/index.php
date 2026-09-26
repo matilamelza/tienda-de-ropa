@@ -68,6 +68,7 @@ require_once __DIR__ . '/../app/Models/Pedido.php';
 require_once __DIR__ . '/../app/Models/UsuarioCliente.php';
 require_once __DIR__ . '/../app/Models/Cliente.php';
 require_once __DIR__ . '/../app/Models/UsuarioAdmin.php';
+require_once __DIR__ . '/../app/Models/LoginIntento.php';
 require_once __DIR__ . '/../app/Models/ConfiguracionTienda.php';
 
 // ── Controllers ──────────────────────────────────────────────────────────────

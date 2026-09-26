@@ -5,7 +5,13 @@
 
     <?php if (isset($_GET['error'])): ?>
         <div class="bg-red-50 text-red-700 rounded-xl p-4 mb-4 text-sm">
-            Email o contraseña incorrectos.
+            <?php if ($_GET['error'] === 'bloqueado'): ?>
+                Demasiados intentos fallidos. Probá de nuevo en
+                <?= max(1, (int) ($_GET['min'] ?? 15)) ?> minuto(s),
+                o <a href="<?= BASE_URL ?>/olvide-mi-password" class="underline">recuperá tu contraseña</a>.
+            <?php else: ?>
+                Email o contraseña incorrectos.
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 
