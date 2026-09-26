@@ -164,4 +164,26 @@ class UsuarioCliente extends Conexion
     {
         $this->db->query("UPDATE password_resets SET usado = 1 WHERE usado = 0");
     }
+
+        /** El admin le pone una contraseña nueva a un cliente. Invalida los links de recuperación pendientes. */
+    public function actualizarPasswordPorId(int $id_usuario_cliente, string $nuevaPassword): bool
+    {
+        $hash = password_hash($nuevaPassword, PASSWORD_DEFAULT);
+
+        $stmt = $this->db->prepare("UPDATE usuarios_clientes SET password = ? WHERE id_usuario_cliente = ?");
+        $stmt->bind_param("si", $hash, $id_usuario_cliente);
+        $ok = $stmt->execute();
+
+        // Si tenía un "olvidé mi contraseña" pendiente, ya no hace falta
+        $stmt = $this->db->prepare(
+            "UPDATE password_resets pr
+             INNER JOIN usuarios_clientes uc ON uc.email = pr.email
+             SET pr.usado = 1
+             WHERE uc.id_usuario_cliente = ? AND pr.usado = 0"
+        );
+        $stmt->bind_param("i", $id_usuario_cliente);
+        $stmt->execute();
+
+        return $ok;
+    }
 }

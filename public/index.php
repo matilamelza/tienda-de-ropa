@@ -480,6 +480,12 @@ switch ($route) {
         $controller->cambiarPassword();
         break;
 
+    case 'admin_cliente_password':
+        requireAdmin();
+        $controller = new ClienteAdminController();
+        $controller->cambiarPassword();
+        break;
+
     // ─── TIENDA ────────────────────────────────────────────────────────────────
 
     case 'tienda':
