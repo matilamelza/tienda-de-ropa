@@ -160,7 +160,7 @@ $totalAlertas = $alertasPedidos['pendientes_contacto'] + $alertasPedidos['pagos_
 
                 <?php if ($alertasCatalogo['variantes_sin_stock'] > 0): ?>
                     <li>
-                        <a href="<?= BASE_URL ?>/admin/productos" class="flex items-center justify-between p-3 rounded-lg bg-red-50 hover:bg-red-100">
+                        <a href="<?= BASE_URL ?>/admin/productos?estado=activos&problema=faltantes" class="flex items-center justify-between p-3 rounded-lg bg-red-50 hover:bg-red-100">
                             <span>📦 Variantes sin stock</span>
                             <strong><?= $alertasCatalogo['variantes_sin_stock'] ?></strong>
                         </a>
@@ -169,7 +169,7 @@ $totalAlertas = $alertasPedidos['pendientes_contacto'] + $alertasPedidos['pagos_
 
                 <?php if ($alertasCatalogo['productos_sin_foto'] > 0): ?>
                     <li>
-                        <a href="<?= BASE_URL ?>/admin/productos" class="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100">
+                        <a href="<?= BASE_URL ?>/admin/productos?estado=activos&problema=sin_foto" class="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100">
                             <span>🖼️ Productos sin foto</span>
                             <strong><?= $alertasCatalogo['productos_sin_foto'] ?></strong>
                         </a>
@@ -178,7 +178,7 @@ $totalAlertas = $alertasPedidos['pendientes_contacto'] + $alertasPedidos['pagos_
 
                 <?php if ($alertasCatalogo['productos_sin_costo'] > 0): ?>
                     <li>
-                        <a href="<?= BASE_URL ?>/admin/productos" class="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100">
+                       <a href="<?= BASE_URL ?>/admin/productos?estado=activos&problema=sin_costo" class="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100">
                             <span>💲 Productos sin costo cargado</span>
                             <strong><?= $alertasCatalogo['productos_sin_costo'] ?></strong>
                         </a>

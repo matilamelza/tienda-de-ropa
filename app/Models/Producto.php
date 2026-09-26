@@ -6,26 +6,112 @@ class Producto extends Conexion
 {
     // ─── PRODUCTOS ─────────────────────────────────────────────────────────────
 
-    public function listar()
+       /**
+     * Arma el WHERE del listado del admin.
+     * Filtros: q, categoria (id), estado ('activos'|'inactivos'),
+     *          problema ('agotados'|'faltantes'|'sin_foto'|'sin_costo')
+     */
+    private function filtroAdmin(array $f): array
     {
-        $sql = "SELECT 
+        $where  = ['p.eliminado_at IS NULL'];
+        $params = [];
+        $types  = '';
+
+        $q = trim($f['q'] ?? '');
+        if ($q !== '') {
+            $like     = '%' . $q . '%';
+            $where[]  = '(p.nombre LIKE ? OR m.nombre LIKE ?)';
+            $params[] = $like;
+            $params[] = $like;
+            $types   .= 'ss';
+        }
+
+        $categoria = (int) ($f['categoria'] ?? 0);
+        if ($categoria > 0) {
+            $where[]  = 'p.id_categoria = ?';
+            $params[] = $categoria;
+            $types   .= 'i';
+        }
+
+        switch ($f['estado'] ?? '') {
+            case 'activos':   $where[] = 'p.activo = 1'; break;
+            case 'inactivos': $where[] = 'p.activo = 0'; break;
+        }
+
+        switch ($f['problema'] ?? '') {
+            case 'agotados':    // ningún talle con stock
+                $where[] = 'NOT EXISTS (SELECT 1 FROM producto_variantes pv
+                                        WHERE pv.id_producto = p.id_producto AND pv.activo = 1
+                                        AND (pv.stock - pv.stock_reservado) > 0)';
+                break;
+            case 'faltantes':   // al menos un talle agotado
+                $where[] = 'EXISTS (SELECT 1 FROM producto_variantes pv
+                                    WHERE pv.id_producto = p.id_producto AND pv.activo = 1
+                                    AND (pv.stock - pv.stock_reservado) <= 0)';
+                break;
+            case 'sin_foto':
+                $where[] = 'NOT EXISTS (SELECT 1 FROM producto_fotos pf WHERE pf.id_producto = p.id_producto)';
+                break;
+            case 'sin_costo':
+                $where[] = 'p.precio_costo IS NULL';
+                break;
+        }
+
+        return ['WHERE ' . implode(' AND ', $where), $params, $types];
+    }
+
+    /** Listado del admin con filtros y paginación. */
+    public function listarAdmin(array $filtros, int $pagina = 1, int $porPagina = 25): array
+    {
+        [$where, $params, $types] = $this->filtroAdmin($filtros);
+
+        $params[] = $porPagina;
+        $params[] = ($pagina - 1) * $porPagina;
+        $types   .= 'ii';
+
+        $sql = "SELECT
                     p.*,
                     c.nombre AS categoria,
                     m.nombre AS marca,
-                    (
-                        SELECT pf.imagen 
-                        FROM producto_fotos pf 
-                        WHERE pf.id_producto = p.id_producto 
-                        ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC 
-                        LIMIT 1
-                    ) AS foto_principal
+                    (SELECT pf.imagen FROM producto_fotos pf
+                     WHERE pf.id_producto = p.id_producto
+                     ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC
+                     LIMIT 1) AS foto_principal,
+                    (SELECT COALESCE(SUM(GREATEST(pv.stock - pv.stock_reservado, 0)), 0)
+                     FROM producto_variantes pv
+                     WHERE pv.id_producto = p.id_producto AND pv.activo = 1) AS stock_disponible,
+                    (SELECT COUNT(*) FROM producto_variantes pv
+                     WHERE pv.id_producto = p.id_producto AND pv.activo = 1) AS cant_variantes
                 FROM productos p
                 INNER JOIN categorias c ON c.id_categoria = p.id_categoria
                 LEFT JOIN marcas m ON m.id_marca = p.id_marca
-                WHERE p.eliminado_at IS NULL
-                ORDER BY p.id_producto DESC";
+                $where
+                ORDER BY p.id_producto DESC
+                LIMIT ? OFFSET ?";
 
-        return $this->db->query($sql);
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    public function contarAdmin(array $filtros): int
+    {
+        [$where, $params, $types] = $this->filtroAdmin($filtros);
+
+        $sql = "SELECT COUNT(*) AS total
+                FROM productos p
+                LEFT JOIN marcas m ON m.id_marca = p.id_marca
+                $where";
+
+        $stmt = $this->db->prepare($sql);
+        if ($params) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+
+        return (int) $stmt->get_result()->fetch_assoc()['total'];
     }
 
     public function guardar($data)

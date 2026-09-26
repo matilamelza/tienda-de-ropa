@@ -12,15 +12,32 @@ class ProductoController extends Controller
 
     // ─── PRODUCTOS ─────────────────────────────────────────────────────────────
 
-    public function index()
+        public function index()
     {
-        $productoModel = new Producto();
+        $porPagina = 25;
+        $pagina    = max(1, (int) ($_GET['pagina'] ?? 1));
+
+        $filtros = [
+            'q'         => trim($_GET['q'] ?? ''),
+            'categoria' => (int) ($_GET['categoria'] ?? 0),
+            'estado'    => in_array($_GET['estado'] ?? '', ['activos', 'inactivos'], true) ? $_GET['estado'] : '',
+            'problema'  => in_array($_GET['problema'] ?? '', ['agotados', 'faltantes', 'sin_foto', 'sin_costo'], true) ? $_GET['problema'] : '',
+        ];
+
+        $productoModel  = new Producto();
+        $categoriaModel = new Categoria();
+
+        $total = $productoModel->contarAdmin($filtros);
 
         $this->view('productos/index', [
-            'productos' => $productoModel->listar()
+            'productos'    => $productoModel->listarAdmin($filtros, $pagina, $porPagina),
+            'total'        => $total,
+            'pagina'       => $pagina,
+            'totalPaginas' => (int) ceil($total / $porPagina),
+            'filtros'      => $filtros,
+            'categorias'   => $categoriaModel->listarActivas(),
         ]);
     }
-
     public function crear()
     {
         $categoriaModel = new Categoria();
