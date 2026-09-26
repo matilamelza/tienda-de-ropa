@@ -112,6 +112,8 @@ RewriteRule ^admin/configuracion/eliminar-imagen/?$ index.php?route=admin_config
 RewriteRule ^admin/login/?$ index.php?route=admin_login [L,QSA]
 RewriteRule ^admin/ingresar/?$ index.php?route=admin_ingresar [L,QSA]
 RewriteRule ^admin/logout/?$ index.php?route=admin_logout [L,QSA]
+RewriteRule ^admin/cuenta/?$            index.php?route=admin_cuenta           [L,QSA]
+RewriteRule ^admin/cuenta/password/?$   index.php?route=admin_cuenta_password  [L,QSA]
 
 # Raíz -> tienda
 RewriteRule ^/?$ index.php?route=tienda [L,QSA]

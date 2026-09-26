@@ -62,4 +62,50 @@ class AdminAuthController extends Controller
 
         $this->redirect(BASE_URL . '/admin/login');
     }
+
+        // GET /admin/cuenta
+    public function cuenta()
+    {
+        $this->view('admin/cuenta/index', [
+            'admin' => $_SESSION['admin'],
+        ]);
+    }
+
+    // POST /admin/cuenta/password
+    public function cambiarPassword()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/cuenta');
+        }
+
+        $actual   = $_POST['actual']   ?? '';
+        $nueva    = $_POST['nueva']    ?? '';
+        $confirma = $_POST['confirma'] ?? '';
+
+        $adminModel = new UsuarioAdmin();
+        $admin      = $adminModel->buscarPorId((int) $_SESSION['admin']['id_admin']);
+
+        if (!$admin || !password_verify($actual, $admin['password'])) {
+            $this->redirect(BASE_URL . '/admin/cuenta?error=actual');
+        }
+
+        if (strlen($nueva) < 8) {
+            $this->redirect(BASE_URL . '/admin/cuenta?error=corta');
+        }
+
+        if ($nueva !== $confirma) {
+            $this->redirect(BASE_URL . '/admin/cuenta?error=distintas');
+        }
+
+        if (password_verify($nueva, $admin['password'])) {
+            $this->redirect(BASE_URL . '/admin/cuenta?error=igual');
+        }
+
+        $adminModel->actualizarPassword((int) $admin['id_admin'], $nueva);
+
+        // Nuevo id de sesión después de cambiar credenciales
+        session_regenerate_id(true);
+
+        $this->redirect(BASE_URL . '/admin/cuenta?ok=1');
+    }
 }

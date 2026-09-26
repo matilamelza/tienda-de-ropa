@@ -33,4 +33,23 @@ class UsuarioAdmin extends Conexion
 
         return $usuario;
     }
+
+    public function buscarPorId(int $id_admin)
+    {
+        $stmt = $this->db->prepare("SELECT * FROM usuarios_admin WHERE id_admin = ? LIMIT 1");
+        $stmt->bind_param("i", $id_admin);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_assoc();
+    }
+
+    public function actualizarPassword(int $id_admin, string $nuevaPassword): bool
+    {
+        $hash = password_hash($nuevaPassword, PASSWORD_DEFAULT);
+
+        $stmt = $this->db->prepare("UPDATE usuarios_admin SET password = ? WHERE id_admin = ?");
+        $stmt->bind_param("si", $hash, $id_admin);
+
+        return $stmt->execute();
+    }
 }

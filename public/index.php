@@ -468,6 +468,18 @@ switch ($route) {
         header('Location: ' . BASE_URL . '/admin/resets');
         exit;
 
+    case 'admin_cuenta':
+        requireAdmin();
+        $controller = new AdminAuthController();
+        $controller->cuenta();
+        break;
+
+    case 'admin_cuenta_password':
+        requireAdmin();
+        $controller = new AdminAuthController();
+        $controller->cambiarPassword();
+        break;
+
     // ─── TIENDA ────────────────────────────────────────────────────────────────
 
     case 'tienda':

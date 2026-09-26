@@ -28,6 +28,7 @@ $menu = [
     'Ajustes' => [
         ['/admin/configuracion', 'Personalización', '⚙️', false],
         ['/admin/resets',        'Recuperar contraseñas', '🔑', false],
+        ['/admin/cuenta',        'Mi cuenta', '👤', false],
     ],
 ];
 ?>
