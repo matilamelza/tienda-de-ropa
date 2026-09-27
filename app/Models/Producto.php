@@ -690,4 +690,65 @@ class Producto extends Conexion
 
         return $stmt->get_result()->num_rows > 0;
     }
+
+        /** Combinaciones talle-color que ya tiene el producto. Claves: "idTalle-idColor". */
+    public function combinacionesExistentes(int $id_producto): array
+    {
+        $stmt = $this->db->prepare("SELECT id_talle, id_color FROM producto_variantes WHERE id_producto = ?");
+        $stmt->bind_param("i", $id_producto);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        $claves = [];
+        while ($row = $res->fetch_assoc()) {
+            $claves[(int) $row['id_talle'] . '-' . (int) $row['id_color']] = true;
+        }
+
+        return $claves;
+    }
+
+    /**
+     * Crea varias variantes de una vez (en una transacción).
+     * $combos: [['id_talle' => , 'id_color' => , 'stock' => ], ...]
+     * Devuelve [creadas, omitidas] — se omiten las combinaciones que ya existían.
+     */
+    public function crearVariantesMasivo(int $id_producto, array $combos, ?float $precio, int $activo): array
+    {
+        $existentes = $this->combinacionesExistentes($id_producto);
+        $creadas    = 0;
+        $omitidas   = 0;
+        $sku        = '';
+
+        try {
+            $this->db->begin_transaction();
+
+            $stmt = $this->db->prepare(
+                "INSERT INTO producto_variantes (id_producto, id_talle, id_color, sku, precio, stock, activo)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)"
+            );
+
+            foreach ($combos as $c) {
+                $clave = $c['id_talle'] . '-' . $c['id_color'];
+
+                if (isset($existentes[$clave])) {
+                    $omitidas++;
+                    continue;
+                }
+
+                $stmt->bind_param("iiisdii", $id_producto, $c['id_talle'], $c['id_color'], $sku, $precio, $c['stock'], $activo);
+                $stmt->execute();
+
+                $existentes[$clave] = true;   // por si vino repetida en el mismo envío
+                $creadas++;
+            }
+
+            $this->db->commit();
+
+        } catch (Throwable $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+
+        return [$creadas, $omitidas];
+    }
 }

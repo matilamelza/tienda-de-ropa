@@ -90,6 +90,7 @@ RewriteRule ^admin/productos/crear/?$               index.php?route=productos_cr
 RewriteRule ^admin/productos/guardar/?$             index.php?route=productos_guardar             [L,QSA]
 RewriteRule ^admin/productos/variantes/?$           index.php?route=productos_variantes           [L,QSA]
 RewriteRule ^admin/productos/guardar-variante/?$    index.php?route=productos_guardar_variante    [L,QSA]
+RewriteRule ^admin/productos/guardar-variantes/?$   index.php?route=productos_guardar_variantes   [L,QSA]
 RewriteRule ^admin/productos/editar-variante/?$     index.php?route=productos_editar_variante     [L,QSA]
 RewriteRule ^admin/productos/actualizar-variante/?$ index.php?route=productos_actualizar_variante [L,QSA]
 RewriteRule ^admin/productos/eliminar-variante/?$   index.php?route=productos_eliminar_variante   [L,QSA]

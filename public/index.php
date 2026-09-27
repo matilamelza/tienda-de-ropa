@@ -256,6 +256,11 @@ switch ($route) {
         $controller->subirFotoAjax();
         break;
 
+    case 'productos_guardar_variantes':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->guardarVariantesMasivo();
+        break;
     // ─── CATEGORÍAS ────────────────────────────────────────────────────────────
 
     case 'categorias':

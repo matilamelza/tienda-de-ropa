@@ -171,14 +171,12 @@ class ProductoController extends Controller
             $this->redirect(BASE_URL . '/admin/productos');
         }
 
-        $talleModel = new Talle();
-        $colorModel = new Color();
-
         $this->view('productos/variantes', [
-            'producto'  => $producto,
-            'variantes' => $productoModel->listarVariantes($id_producto),
-            'talles'    => $talleModel->listarActivos(),
-            'colores'   => $colorModel->listarActivos()
+            'producto'    => $producto,
+            'variantes'   => $productoModel->listarVariantes($id_producto),
+            'talles'      => (new Talle())->listarActivos()->fetch_all(MYSQLI_ASSOC),
+            'colores'     => (new Color())->listarActivos()->fetch_all(MYSQLI_ASSOC),
+            'existentes'  => $productoModel->combinacionesExistentes($id_producto),
         ]);
     }
 
@@ -208,6 +206,54 @@ class ProductoController extends Controller
         $productoModel->guardarVariante($data);
 
         $this->redirect(BASE_URL . '/admin/productos/variantes?id=' . $id_producto . '&ok=creada');
+    }
+
+        public function guardarVariantesMasivo()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
+
+        $id_producto   = (int) ($_POST['id_producto'] ?? 0);
+        $productoModel = new Producto();
+
+        if (!$productoModel->buscarPorId($id_producto)) {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
+
+        $volver = BASE_URL . '/admin/productos/variantes?id=' . $id_producto;
+
+        // Talles y colores válidos (activos)
+        $tallesValidos  = array_column((new Talle())->listarActivos()->fetch_all(MYSQLI_ASSOC), 'id_talle');
+        $coloresValidos = array_column((new Color())->listarActivos()->fetch_all(MYSQLI_ASSOC), 'id_color');
+
+        $combos = [];
+        foreach ((array) ($_POST['combos'] ?? []) as $c) {
+            $idTalle = (int) ($c['talle'] ?? 0);
+            $idColor = (int) ($c['color'] ?? 0);
+
+            if (!in_array($idTalle, array_map('intval', $tallesValidos), true)
+                || !in_array($idColor, array_map('intval', $coloresValidos), true)) {
+                continue;
+            }
+
+            $combos[] = [
+                'id_talle' => $idTalle,
+                'id_color' => $idColor,
+                'stock'    => max(0, (int) ($c['stock'] ?? 0)),
+            ];
+        }
+
+        if (empty($combos)) {
+            $this->redirect($volver . '&error=sin_combinaciones');
+        }
+
+        $precio = ($_POST['precio'] ?? '') !== '' ? max(0, (float) $_POST['precio']) : null;
+        $activo = isset($_POST['activo']) ? 1 : 0;
+
+        [$creadas, $omitidas] = $productoModel->crearVariantesMasivo($id_producto, $combos, $precio, $activo);
+
+        $this->redirect($volver . '&ok=masivo&c=' . $creadas . '&o=' . $omitidas);
     }
 
     public function editarVariante()
