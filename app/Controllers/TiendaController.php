@@ -54,6 +54,9 @@ class TiendaController extends Controller
             registrar_visita('otra');
         }
 
+                // Destacados: solo en el inicio, sin filtros ni búsqueda
+        $destacados = $hayFiltros ? [] : $productoModel->listarDestacados(8);
+
         $this->view('tienda/index', [
             'productos'      => $productos,
             'categoriasMenu' => $categoriasMenu,
@@ -64,6 +67,7 @@ class TiendaController extends Controller
             'marcas'         => $marcas,
             'rangoPrecio'    => $rangoPrecio,
             'hayFiltros'     => $hayFiltros,
+            'destacados'     => $destacados,
         ], 'tienda');
     }
 

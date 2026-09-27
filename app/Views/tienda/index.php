@@ -65,6 +65,43 @@ function urlFiltro(array $nuevos): string {
 </section>
 <?php endif; ?>
 
+<?php if (!empty($destacados)): ?>
+<!-- ── Destacados ──────────────────────────────────────────────────────────── -->
+<section class="max-w-7xl mx-auto px-4 pt-10">
+    <div class="flex items-end justify-between mb-5">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-900">Destacados</h2>
+        <a href="#productos" class="text-sm text-gray-500 hover:text-gray-900">Ver todo →</a>
+    </div>
+
+    <!-- Mobile: se desliza de costado · Desktop: grilla -->
+    <div class="flex md:grid md:grid-cols-4 gap-4 md:gap-8 overflow-x-auto md:overflow-visible snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 pb-2">
+        <?php foreach ($destacados as $d): ?>
+            <a href="<?= BASE_URL ?>/producto/<?= htmlspecialchars($d['slug']) ?>"
+               class="group block shrink-0 w-[70%] sm:w-[45%] md:w-auto snap-start">
+                <div class="relative aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden shadow-sm group-hover:shadow-lg transition">
+                    <?php if (!empty($d['foto_principal'])): ?>
+                        <img src="<?= BASE_URL ?>/public/uploads/productos/<?= htmlspecialchars($d['foto_principal']) ?>"
+                             alt="<?= htmlspecialchars($d['nombre']) ?>"
+                             class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                             loading="lazy">
+                    <?php else: ?>
+                        <div class="w-full h-full flex items-center justify-center text-gray-400 text-sm">Sin imagen</div>
+                    <?php endif; ?>
+                    <span class="absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm"
+                          style="background: var(--color-acento); color: var(--color-boton-texto)">★ Destacado</span>
+                </div>
+                <div class="mt-3">
+                    <p class="text-xs text-gray-400">
+                        <?= htmlspecialchars($d['categoria']) ?><?= !empty($d['marca']) ? ' · ' . htmlspecialchars($d['marca']) : '' ?>
+                    </p>
+                    <h3 class="font-semibold text-gray-900 mt-1 line-clamp-2"><?= htmlspecialchars($d['nombre']) ?></h3>
+                    <p class="font-bold mt-1">$<?= number_format($d['precio_base'], 2, ',', '.') ?></p>
+                </div>
+            </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
 <!-- ── Sección de productos ─────────────────────────────────────────────────── -->
 <section id="productos" class="max-w-7xl mx-auto px-4 py-10 scroll-mt-24">
 
@@ -181,15 +218,20 @@ function urlFiltro(array $nuevos): string {
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <?php foreach ($productos as $p): ?>
                 <a href="<?= BASE_URL ?>/producto/<?= htmlspecialchars($p['slug']) ?>" class="group block">
-                    <div class="aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden shadow-sm group-hover:shadow-lg transition">
+                    <div class="relative aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden shadow-sm group-hover:shadow-lg transition">
                         <?php if (!empty($p['foto_principal'])): ?>
                             <img src="<?= BASE_URL ?>/public/uploads/productos/<?= htmlspecialchars($p['foto_principal']) ?>"
                                  alt="<?= htmlspecialchars($p['nombre']) ?>"
                                  class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                                  loading="lazy">
                         <?php else: ?>
+                            <?php if (!empty($p['destacado'])): ?>
+                            <span class="absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm"
+                                  style="background: var(--color-acento); color: var(--color-boton-texto)">★ Destacado</span>
+                        <?php endif; ?>
                             <div class="w-full h-full flex items-center justify-center text-gray-400 text-sm">Sin imagen</div>
                         <?php endif; ?>
+                        
                     </div>
                     <div class="mt-4">
                         <p class="text-xs text-gray-400">

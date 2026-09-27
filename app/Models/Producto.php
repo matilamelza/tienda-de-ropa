@@ -572,6 +572,36 @@ class Producto extends Conexion
         return $stmt->get_result();
     }
 
+        /** Productos destacados para el inicio: activos y con stock. */
+    public function listarDestacados(int $limite = 8): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT
+                p.*,
+                c.nombre AS categoria,
+                m.nombre AS marca,
+                (SELECT pf.imagen FROM producto_fotos pf
+                 WHERE pf.id_producto = p.id_producto
+                 ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC
+                 LIMIT 1) AS foto_principal
+             FROM productos p
+             INNER JOIN categorias c ON c.id_categoria = p.id_categoria
+             LEFT JOIN marcas m ON m.id_marca = p.id_marca
+             WHERE p.destacado = 1
+             AND p.activo = 1
+             AND p.eliminado_at IS NULL
+             AND EXISTS (SELECT 1 FROM producto_variantes pv
+                         WHERE pv.id_producto = p.id_producto AND pv.activo = 1
+                         AND (pv.stock - pv.stock_reservado) > 0)
+             ORDER BY p.id_producto DESC
+             LIMIT ?"
+        );
+        $stmt->bind_param("i", $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
     public function productosStockBajo($limiteStock = 3)
     {
         $sql = "SELECT 
@@ -681,7 +711,7 @@ class Producto extends Conexion
             case 'precio_asc':  $orderBy = 'p.precio_base ASC';  break;
             case 'precio_desc': $orderBy = 'p.precio_base DESC'; break;
             case 'nombre':      $orderBy = 'p.nombre ASC';       break;
-            default:            $orderBy = 'p.id_producto DESC'; break;
+            default:            $orderBy = 'p.destacado DESC, p.id_producto DESC'; break;
         }
 
         $sql = "SELECT 

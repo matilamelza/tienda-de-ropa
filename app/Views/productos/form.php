@@ -132,7 +132,10 @@
             <input type="checkbox"
                    name="destacado"
                    <?php echo ($editando && $producto['destacado'] == 1) ? 'checked' : ''; ?>>
-            <span class="text-sm">Destacado</span>
+            <span class="text-sm">
+                ★ Destacado
+                <span class="block text-xs text-gray-400">Aparece en "Destacados" del inicio y primero en el catálogo</span>
+            </span>
         </label>
     </div>
 
