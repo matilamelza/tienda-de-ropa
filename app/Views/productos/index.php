@@ -381,6 +381,13 @@ $actividad = function (array $p) use ($num): string {
                                     <a href="<?= BASE_URL ?>/admin/productos/editar?id=<?= $idp ?>" class="text-gray-600 hover:text-gray-900">Editar</a>
                                     <a href="<?= BASE_URL ?>/admin/productos/variantes?id=<?= $idp ?>" class="text-blue-600 hover:text-blue-800">Variantes</a>
                                     <a href="<?= BASE_URL ?>/admin/productos/fotos?id=<?= $idp ?>" class="text-indigo-600 hover:text-indigo-800">Fotos</a>
+                                    <?= boton_eliminar(
+                                        BASE_URL . '/admin/productos/duplicar',
+                                        ['id' => $idp],
+                                        '¿Duplicar este producto? La copia queda inactiva, sin fotos y con stock en 0.',
+                                        'Duplicar',
+                                        'text-gray-500 hover:text-gray-900'
+                                    ) ?>
                                     <?php if ((int) $p['activo'] === 1): ?>
                                         <a href="<?= BASE_URL ?>/producto/<?= htmlspecialchars($p['slug']) ?>" target="_blank"
                                            class="text-gray-400 hover:text-gray-900" title="Ver en la tienda">↗</a>
@@ -431,7 +438,6 @@ $actividad = function (array $p) use ($num): string {
     <p class="text-center text-xs text-gray-400 mt-2">Página <?= $pagina ?> de <?= $totalPaginas ?></p>
 <?php endif; ?>
 
-
 <!-- ── Modal: ficha del producto ────────────────────────────── -->
 <div id="modalProducto" class="hidden fixed inset-0 z-50">
     <div class="absolute inset-0 bg-black/50" onclick="cerrarModalProducto()"></div>
@@ -442,11 +448,11 @@ $actividad = function (array $p) use ($num): string {
     </div>
 </div>
 
-
 <script>
 (function () {
     const CSRF         = <?= json_encode(csrf_token()) ?>;
     const URL_TOGGLE   = '<?= BASE_URL ?>/admin/productos/toggle';
+    const URL_MODAL    = '<?= BASE_URL ?>/admin/productos/modal';
     const TOTAL_FILTRO = <?= (int) $total ?>;
     const $     = id => document.getElementById(id);
     const barra = $('barraAcciones');
@@ -456,7 +462,9 @@ $actividad = function (array $p) use ($num): string {
         sel.addEventListener('change', () => sel.form.submit());
     });
 
-    // ── Interruptores Activo / ★ Destacado (con un toque) ───────
+    // ══════════════════════════════════════════════════════════════
+    // INTERRUPTORES Activo / ★ Destacado (con un toque)
+    // ══════════════════════════════════════════════════════════════
     function pintarToggle(btn, valor) {
         btn.dataset.valor = valor;
         if (btn.dataset.campo === 'activo') {
@@ -501,31 +509,19 @@ $actividad = function (array $p) use ($num): string {
         }
     });
 
-    // ── Selección ───────────────────────────────────────────────
-    let todoElFiltro = false;
-
-    function idsSeleccionados() {
-        return [...new Set([...document.querySelectorAll('.sel-prod:checked')].map(c => c.value))];
-    }
-
-    function datosSeleccionados() {
-        const vistos = {};
-        document.querySelectorAll('.sel-prod:checked').forEach(c => { vistos[c.value] = c.dataset; });
-        return Object.values(vistos);
-    }
-
-        // ── Modal: ficha completa del producto ──────────────────────
+    // ══════════════════════════════════════════════════════════════
+    // MODAL: ficha completa del producto
+    // ══════════════════════════════════════════════════════════════
     const modal          = $('modalProducto');
     const modalContenido = $('modalProductoContenido');
-    const cargando       = '<div class="p-16 text-center text-gray-400">Cargando…</div>';
 
     async function abrirModalProducto(id) {
-        modalContenido.innerHTML = cargando;
+        modalContenido.innerHTML = '<div class="p-16 text-center text-gray-400">Cargando…</div>';
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
 
         try {
-            const resp = await fetch('<?= BASE_URL ?>/admin/productos/modal?id=' + encodeURIComponent(id), { credentials: 'same-origin' });
+            const resp = await fetch(URL_MODAL + '?id=' + encodeURIComponent(id), { credentials: 'same-origin' });
             modalContenido.innerHTML = await resp.text();
         } catch (e) {
             modalContenido.innerHTML = '<p class="p-10 text-center text-red-600">No se pudo cargar. Probá de nuevo.</p>';
@@ -542,13 +538,28 @@ $actividad = function (array $p) use ($num): string {
     document.addEventListener('click', e => {
         const fila = e.target.closest('[data-abrir-producto]');
         if (!fila) return;
-        if (e.target.closest('a, button, input, select, label, textarea')) return;
+        if (e.target.closest('a, button, input, select, label, textarea, form')) return;
         abrirModalProducto(fila.dataset.abrirProducto);
     });
 
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && !modal.classList.contains('hidden')) cerrarModalProducto();
     });
+
+    // ══════════════════════════════════════════════════════════════
+    // SELECCIÓN
+    // ══════════════════════════════════════════════════════════════
+    let todoElFiltro = false;
+
+    function idsSeleccionados() {
+        return [...new Set([...document.querySelectorAll('.sel-prod:checked')].map(c => c.value))];
+    }
+
+    function datosSeleccionados() {
+        const vistos = {};
+        document.querySelectorAll('.sel-prod:checked').forEach(c => { vistos[c.value] = c.dataset; });
+        return Object.values(vistos);
+    }
 
     function revisar() {
         const n = idsSeleccionados().length;
@@ -583,7 +594,9 @@ $actividad = function (array $p) use ($num): string {
         revisar();
     };
 
-    // ── Acciones masivas ────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════
+    // ACCIONES MASIVAS
+    // ══════════════════════════════════════════════════════════════
     const textos = {
         activar: 'activar', desactivar: 'desactivar', destacar: 'destacar',
         quitar_destacado: 'quitarle el destacado a', categoria: 'cambiar la categoría de',
@@ -606,7 +619,9 @@ $actividad = function (array $p) use ($num): string {
         enviar(accion);
     };
 
-    // ── Precios ─────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════
+    // PRECIOS
+    // ══════════════════════════════════════════════════════════════
     window.togglePrecios = function () {
         $('panelPrecios').classList.toggle('hidden');
         previewPrecios();

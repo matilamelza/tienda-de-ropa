@@ -222,6 +222,12 @@ $estados = [
         <a href="<?= BASE_URL ?>/producto/<?= htmlspecialchars($producto['slug']) ?>" target="_blank"
            class="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50 text-sm">↗ Ver en tienda</a>
     <?php endif; ?>
+        <form method="POST" action="<?= BASE_URL ?>/admin/productos/duplicar"
+          onsubmit="return confirm('¿Duplicar este producto? La copia queda inactiva, sin fotos y con stock en 0.')">
+        <?= csrf_field() ?>
+        <input type="hidden" name="id" value="<?= $idp ?>">
+        <button class="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50 text-sm">⧉ Duplicar</button>
+    </form>
     <a href="<?= BASE_URL ?>/admin/productos/fotos?id=<?= $idp ?>" class="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50 text-sm">Fotos</a>
     <a href="<?= BASE_URL ?>/admin/productos/variantes?id=<?= $idp ?>" class="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-50 text-sm">Variantes</a>
     <a href="<?= BASE_URL ?>/admin/productos/editar?id=<?= $idp ?>" class="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 text-sm">Editar</a>

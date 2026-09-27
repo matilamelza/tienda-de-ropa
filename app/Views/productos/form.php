@@ -21,6 +21,19 @@
     </div>
 <?php endif; ?>
 
+<?php if (($_GET['ok'] ?? '') === 'duplicado'): ?>
+    <div class="bg-blue-50 border border-blue-200 text-blue-800 rounded-xl px-4 py-3 mb-4 text-sm max-w-2xl">
+        <p class="font-semibold mb-1">⧉ Copia creada</p>
+        <p>Está <strong>inactiva</strong>, sin fotos y con stock en 0. Antes de activarla:</p>
+        <ol class="list-decimal ml-5 mt-1 space-y-0.5">
+            <li>Cambiale el <strong>nombre</strong> (sacale "(copia)") y revisá precio y descripción.</li>
+            <li>Subí las <strong>fotos</strong> en la pestaña Fotos.</li>
+            <li>Cargá el <strong>stock</strong> en la pestaña Variantes.</li>
+            <li>Tildá <strong>Activo</strong> y guardá.</li>
+        </ol>
+    </div>
+<?php endif; ?>
+
 <?php if (isset($_GET['error'])): ?>
     <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm max-w-2xl">
         Completá nombre, categoría y precio de venta.

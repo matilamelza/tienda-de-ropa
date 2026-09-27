@@ -297,6 +297,12 @@ switch ($route) {
         $controller = new ProductoController();
         $controller->modal();
         break;
+
+    case 'productos_duplicar':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->duplicar();
+        break;
     // ─── CATEGORÍAS ────────────────────────────────────────────────────────────
 
     case 'categorias':

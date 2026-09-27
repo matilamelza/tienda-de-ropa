@@ -175,6 +175,22 @@ class ProductoController extends Controller
         exit;
     }
 
+        public function duplicar()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(url_listado_productos());
+        }
+
+        $idNuevo = (new Producto())->duplicar((int) ($_POST['id'] ?? 0));
+
+        if ($idNuevo <= 0) {
+            $_SESSION['productos_msg'] = ['error', 'No se pudo duplicar el producto.'];
+            $this->redirect(url_listado_productos());
+        }
+
+        $this->redirect(BASE_URL . '/admin/productos/editar?id=' . $idNuevo . '&ok=duplicado');
+    }
+
     /** Arma y valida los datos del producto. Devuelve null si falta algo obligatorio. */
     private function datosProductoDesdePost(): ?array
     {

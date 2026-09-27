@@ -106,6 +106,7 @@ RewriteRule ^admin/productos/color-variantes/?$    index.php?route=productos_col
 RewriteRule ^admin/productos/masivo/?$              index.php?route=productos_masivo              [L,QSA]
 RewriteRule ^admin/productos/toggle/?$              index.php?route=productos_toggle              [L,QSA]
 RewriteRule ^admin/productos/modal/?$               index.php?route=productos_modal               [L,QSA]
+RewriteRule ^admin/productos/duplicar/?$            index.php?route=productos_duplicar            [L,QSA]
 
 # Talles
 RewriteRule ^admin/talles/?$            index.php?route=talles             [L,QSA]

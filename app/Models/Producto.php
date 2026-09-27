@@ -686,6 +686,60 @@ class Producto extends Conexion
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
+        /**
+     * Duplica un producto: mismos datos y variantes activas (stock 0, sin SKU),
+     * inactivo, sin fotos y sin destacar. Devuelve el id nuevo (0 si falla).
+     */
+    public function duplicar(int $id_producto): int
+    {
+        $original = $this->buscarPorId($id_producto);
+
+        if (!$original) {
+            return 0;
+        }
+
+        $nombre = mb_substr($original['nombre'] . ' (copia)', 0, 150);
+        $slug   = $this->slugUnico(generarSlug($nombre));
+
+        try {
+            $this->db->begin_transaction();
+
+            $stmt = $this->db->prepare(
+                "INSERT INTO productos
+                 (id_categoria, id_marca, nombre, slug, descripcion, precio_base, precio_costo, activo, destacado)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0)"
+            );
+            $idMarca = $original['id_marca'] !== null ? (int) $original['id_marca'] : null;
+            $costo   = $original['precio_costo'] !== null ? (float) $original['precio_costo'] : null;
+            $idCat   = (int) $original['id_categoria'];
+            $desc    = $original['descripcion'];
+            $precio  = (float) $original['precio_base'];
+
+            $stmt->bind_param("iisssdd", $idCat, $idMarca, $nombre, $slug, $desc, $precio, $costo);
+            $stmt->execute();
+
+            $idNuevo = (int) $this->db->insert_id;
+
+            // Variantes activas: mismo talle, color y precio especial; stock 0 y sin SKU
+            $stmt = $this->db->prepare(
+                "INSERT INTO producto_variantes (id_producto, id_talle, id_color, sku, precio, stock, activo)
+                 SELECT ?, id_talle, id_color, '', precio, 0, 1
+                 FROM producto_variantes
+                 WHERE id_producto = ? AND activo = 1"
+            );
+            $stmt->bind_param("ii", $idNuevo, $id_producto);
+            $stmt->execute();
+
+            $this->db->commit();
+
+        } catch (Throwable $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+
+        return $idNuevo;
+    }
+
     /** Problemas del catálogo a resolver (solo productos activos y no eliminados). */
     public function alertasCatalogo(): array
     {
