@@ -9,3 +9,9 @@ function generarSlug($texto)
 
     return $texto;
 }
+
+/** "42 / Negro", o solo "42" si no tiene color (o solo el color si no tiene talle). */
+function variante_texto(?string $talle, ?string $color): string
+{
+    return implode(' / ', array_filter([trim((string) $talle), trim((string) $color)], 'strlen'));
+}

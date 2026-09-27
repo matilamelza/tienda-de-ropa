@@ -41,7 +41,7 @@
                     <tr class="border-t">
                         <td><?php echo $i['producto']; ?></td>
                         <td><?php echo $i['talle']; ?></td>
-                        <td><?php echo $i['color']; ?></td>
+                        <td><?= htmlspecialchars($i['color'] ?: '—') ?></td>
                         <td><?php echo $i['cantidad']; ?></td>
                         <td>$<?php echo number_format($i['subtotal'], 2, ',', '.'); ?></td>
                     </tr>

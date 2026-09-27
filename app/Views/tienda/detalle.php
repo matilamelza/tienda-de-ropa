@@ -11,6 +11,10 @@ while ($v = $variantes->fetch_assoc()) {
     $variantesArray[] = $v;
 }
 
+// Solo variantes activas, y si el producto maneja colores o no
+$variantesArray = array_values(array_filter($variantesArray, fn($v) => (int) $v['activo'] === 1));
+$hayColores     = count(array_filter(array_column($variantesArray, 'color'))) > 0;
+
 $metodosPago = trim($conf['metodos_pago'] ?? '');
 $politica    = trim($conf['politica_cambios'] ?? '');
 ?>
@@ -93,7 +97,7 @@ $politica    = trim($conf['politica_cambios'] ?? '');
                 </div>
 
                 <!-- COLOR -->
-                <div>
+                <div id="bloqueColor" class="<?= $hayColores ? '' : 'hidden' ?>">
                     <div class="flex justify-between mb-2">
                         <label class="font-semibold text-gray-800">Color</label>
                         <span class="text-sm text-gray-400">Disponible según talle</span>
@@ -175,7 +179,8 @@ $politica    = trim($conf['politica_cambios'] ?? '');
 </section>
 
 <script>
-const variantes = <?php echo json_encode($variantesArray, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+const variantes   = <?php echo json_encode($variantesArray, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+const HAY_COLORES = <?= $hayColores ? 'true' : 'false' ?>;
 
 let talleSeleccionado    = null;
 let colorSeleccionado    = null;
@@ -191,6 +196,28 @@ function cambiarImagen(imagen) {
     document.getElementById('imagenPrincipal').src = '<?= BASE_URL ?>/public/uploads/productos/' + imagen;
 }
 
+/** Elegir un talle: si tiene un solo color (o ninguno), se elige solo. */
+function seleccionarTalle(talle) {
+    talleSeleccionado    = talle;
+    colorSeleccionado    = null;
+    varianteSeleccionada = null;
+    cantidadInput.value  = 1;
+
+    const delTalle = variantes.filter(v => v.talle === talle);
+    const colores  = [...new Set(delTalle.map(v => v.color).filter(Boolean))];
+
+    if (colores.length === 0) {
+        varianteSeleccionada = delTalle[0] || null;           // sin color
+    } else if (colores.length === 1) {
+        colorSeleccionado    = colores[0];                    // un solo color: ya elegido
+        varianteSeleccionada = delTalle.find(v => v.color === colores[0]);
+    }
+
+    cargarTalles();
+    cargarColores();
+    actualizarStock();
+}
+
 function cargarTalles() {
     const talles = [...new Set(variantes.map(v => v.talle).filter(Boolean))];
 
@@ -200,23 +227,10 @@ function cargarTalles() {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.textContent = talle;
-        btn.className = 'px-5 py-3 rounded-full border text-sm hover:border-gray-900';
-
-        btn.onclick = () => {
-            talleSeleccionado    = talle;
-            colorSeleccionado    = null;
-            varianteSeleccionada = null;
-            cantidadInput.value  = 1;
-
-            cargarTalles();
-            cargarColores();
-            actualizarStock();
-        };
-
-        if (talleSeleccionado === talle) {
-            btn.className = 'px-5 py-3 rounded-full border text-sm bg-gray-900 text-white border-gray-900';
-        }
-
+        btn.className = talleSeleccionado === talle
+            ? 'px-5 py-3 rounded-full border text-sm bg-gray-900 text-white border-gray-900'
+            : 'px-5 py-3 rounded-full border text-sm hover:border-gray-900';
+        btn.onclick = () => seleccionarTalle(talle);
         tallesBox.appendChild(btn);
     });
 }
@@ -224,22 +238,29 @@ function cargarTalles() {
 function cargarColores() {
     coloresBox.innerHTML = '';
 
+    if (!HAY_COLORES) return;
+
     if (!talleSeleccionado) {
         coloresBox.innerHTML = '<p class="text-sm text-gray-400">Primero seleccioná un talle.</p>';
         return;
     }
 
-    const colores = variantes
-        .filter(v => v.talle === talleSeleccionado)
-        .map(v => v.color)
-        .filter(Boolean);
+    const delTalle = variantes.filter(v => v.talle === talleSeleccionado && v.color);
+    const colores  = [...new Set(delTalle.map(v => v.color))];
 
-    [...new Set(colores)].forEach(color => {
-        const variante = variantes.find(v => v.talle === talleSeleccionado && v.color === color);
+    if (colores.length === 0) {
+        coloresBox.innerHTML = '<p class="text-sm text-gray-400">Este talle viene en un solo color.</p>';
+        return;
+    }
+
+    colores.forEach(color => {
+        const variante = delTalle.find(v => v.color === color);
 
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'flex items-center gap-2 px-4 py-3 rounded-full border text-sm hover:border-gray-900';
+        btn.className = colorSeleccionado === color
+            ? 'flex items-center gap-2 px-4 py-3 rounded-full border text-sm bg-gray-900 text-white border-gray-900'
+            : 'flex items-center gap-2 px-4 py-3 rounded-full border text-sm hover:border-gray-900';
 
         const muestra = document.createElement('span');
         muestra.className = 'w-4 h-4 rounded-full border';
@@ -255,26 +276,25 @@ function cargarColores() {
             colorSeleccionado    = color;
             varianteSeleccionada = variante;
             cantidadInput.value  = 1;
-
             cargarColores();
             actualizarStock();
         };
-
-        if (colorSeleccionado === color) {
-            btn.className = 'flex items-center gap-2 px-4 py-3 rounded-full border text-sm bg-gray-900 text-white border-gray-900';
-        }
 
         coloresBox.appendChild(btn);
     });
 }
 
 function actualizarStock() {
+    const idInput = document.getElementById('id_variante');
+
     if (!varianteSeleccionada) {
-        document.getElementById('id_variante').value = '';
+        idInput.value = '';
         stockBox.className = 'hidden';
         btnAgregar.disabled = true;
         btnAgregar.className = 'w-full bg-gray-300 text-white py-4 rounded-full font-semibold cursor-not-allowed';
-        btnAgregar.textContent = 'Seleccioná talle y color';
+        btnAgregar.textContent = !talleSeleccionado
+            ? (HAY_COLORES ? 'Seleccioná talle y color' : 'Seleccioná un talle')
+            : 'Seleccioná un color';
         return;
     }
 
@@ -283,13 +303,13 @@ function actualizarStock() {
     stockBox.className = 'rounded-2xl border p-4 text-sm';
 
     if (stock <= 0) {
-        document.getElementById('id_variante').value = '';
+        idInput.value = '';
         stockBox.innerHTML = '<strong class="text-red-600">Sin stock disponible</strong>';
         btnAgregar.disabled = true;
         btnAgregar.className = 'w-full bg-gray-300 text-white py-4 rounded-full font-semibold cursor-not-allowed';
         btnAgregar.textContent = 'Sin stock';
     } else {
-        document.getElementById('id_variante').value = varianteSeleccionada.id_variante;
+        idInput.value = varianteSeleccionada.id_variante;
 
         stockBox.innerHTML = stock <= 3
             ? `<strong class="text-orange-600">¡Últimas ${stock} unidades!</strong>`
@@ -316,4 +336,10 @@ function cambiarCantidad(valor) {
 cargarTalles();
 cargarColores();
 actualizarStock();
+
+// Si el producto tiene un solo talle, se elige solo
+const tallesUnicos = [...new Set(variantes.map(v => v.talle).filter(Boolean))];
+if (tallesUnicos.length === 1) {
+    seleccionarTalle(tallesUnicos[0]);
+}
 </script>

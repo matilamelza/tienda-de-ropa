@@ -94,7 +94,7 @@
             <!-- COLORES -->
             <div>
                 <div class="flex items-center justify-between mb-2">
-                    <label class="text-sm font-medium text-gray-700">Colores</label>
+                    <label class="text-sm font-medium text-gray-700">Colores <span class="text-gray-400 font-normal">(opcional)</span></label>
                     <div class="flex gap-3 text-xs">
                         <button type="button" class="text-gray-500 hover:underline" onclick="marcarTodos('color', false)">Ninguno</button>
                         <button type="button" class="text-blue-600 hover:underline" onclick="toggleNuevo('color')">+ Nuevo</button>
@@ -347,7 +347,7 @@
         btnCrear.className = 'w-full py-2.5 rounded-lg font-semibold ' +
             (nuevas === 0 ? 'bg-gray-300 text-white cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800');
         btnCrear.textContent = nuevas === 0
-            ? (previewLista.children.length ? 'Todas ya existen' : 'Elegí talles y colores')
+            ? (previewLista.children.length ? 'Todas ya existen' : 'Elegí al menos un talle')
             : `Crear ${nuevas} variante${nuevas !== 1 ? 's' : ''} (${total} unidades)`;
     }
 
@@ -356,8 +356,9 @@
         hidden.innerHTML       = '';
 
         let i = 0;
+        const colores = ordenados('color').length ? ordenados('color') : ['0'];   // '0' = sin color
 
-        ordenados('color').forEach(idColor => {
+        colores.forEach(idColor => {
             ordenados('talle').forEach(idTalle => {
                 const clave  = idTalle + '-' + idColor;
                 const existe = EXISTENTES.includes(clave);
@@ -366,7 +367,7 @@
                 const fila = document.createElement('div');
                 fila.className = 'flex items-center justify-between px-3 py-2 ' + (existe ? 'bg-gray-50 text-gray-400' : '');
                 fila.innerHTML = `
-                    <span>${escapar(nombreDe('talle', idTalle))} · ${escapar(nombreDe('color', idColor))}</span>
+                    <span>${escapar(nombreDe('talle', idTalle))}${idColor !== '0' ? ' · ' + escapar(nombreDe('color', idColor)) : ''}</span>
                     ${existe
                         ? '<span class="text-xs">ya existe</span>'
                         : `<input type="number" min="0" data-clave="${clave}" data-i="${i}" value="${stock}"

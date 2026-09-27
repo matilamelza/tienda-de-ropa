@@ -223,23 +223,24 @@ class ProductoController extends Controller
 
         $volver = BASE_URL . '/admin/productos/variantes?id=' . $id_producto;
 
-        // Talles y colores válidos (activos)
-        $tallesValidos  = array_column((new Talle())->listarActivos()->fetch_all(MYSQLI_ASSOC), 'id_talle');
-        $coloresValidos = array_column((new Color())->listarActivos()->fetch_all(MYSQLI_ASSOC), 'id_color');
+        $tallesValidos  = array_map('intval', $tallesValidos);
+        $coloresValidos = array_map('intval', $coloresValidos);
 
         $combos = [];
         foreach ((array) ($_POST['combos'] ?? []) as $c) {
             $idTalle = (int) ($c['talle'] ?? 0);
-            $idColor = (int) ($c['color'] ?? 0);
+            $idColor = (int) ($c['color'] ?? 0);   // 0 = sin color
 
-            if (!in_array($idTalle, array_map('intval', $tallesValidos), true)
-                || !in_array($idColor, array_map('intval', $coloresValidos), true)) {
+            if (!in_array($idTalle, $tallesValidos, true)) {
+                continue;
+            }
+            if ($idColor !== 0 && !in_array($idColor, $coloresValidos, true)) {
                 continue;
             }
 
             $combos[] = [
                 'id_talle' => $idTalle,
-                'id_color' => $idColor,
+                'id_color' => $idColor ?: null,
                 'stock'    => max(0, (int) ($c['stock'] ?? 0)),
             ];
         }

@@ -86,7 +86,7 @@ class CheckoutController extends Controller
                 'id_variante'     => (int)$id_variante,
                 'producto'        => $variante['producto'],
                 'talle'           => $variante['talle'],
-                'color'           => $variante['color'],
+                'color'           => $variante['color'] ?? '',
                 'cantidad'        => $cantidad,
                 'precio_unitario' => $precio,
                 'costo_unitario'  => $variante['precio_costo'] !== null ? (float) $variante['precio_costo'] : null,
@@ -144,7 +144,7 @@ class CheckoutController extends Controller
 
                 foreach ($items as $item) {
                     $mensaje .= "- " . $item['producto'] . " ";
-                    $mensaje .= "(" . $item['talle'] . " / " . $item['color'] . ") ";
+                    $mensaje .= "(" . variante_texto($item['talle'], $item['color']) . ") ";
                     $mensaje .= "x" . $item['cantidad'] . " - $";
                     $mensaje .= number_format($item['subtotal'], 2, ',', '.') . "\n";
                 }

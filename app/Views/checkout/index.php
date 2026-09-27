@@ -91,9 +91,7 @@ $politica    = trim($conf['politica_cambios'] ?? '');
                                         <?php echo htmlspecialchars($v['producto']); ?>
                                     </p>
                                     <p class="text-gray-500">
-                                        <?php echo htmlspecialchars($v['talle']); ?> /
-                                        <?php echo htmlspecialchars($v['color']); ?> x
-                                        <?php echo (int) $item['cantidad']; ?>
+                                         <?= htmlspecialchars(variante_texto($v['talle'], $v['color'])) ?> x <?= (int) $item['cantidad'] ?>
                                     </p>
                                 </div>
 

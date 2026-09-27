@@ -728,7 +728,7 @@ class Producto extends Conexion
             );
 
             foreach ($combos as $c) {
-                $clave = $c['id_talle'] . '-' . $c['id_color'];
+                $clave = $c['id_talle'] . '-' . (int) $c['id_color'];   // sin color → "42-0"
 
                 if (isset($existentes[$clave])) {
                     $omitidas++;

@@ -48,7 +48,7 @@
 
                                         <p class="text-sm text-gray-500 mt-1">
                                             Talle: <?php echo htmlspecialchars($v['talle']); ?> ·
-                                            Color: <?php echo htmlspecialchars($v['color']); ?>
+                                            <?php if (!empty($v['color'])): ?>Color: <?php echo htmlspecialchars($v['color']); ?><?php endif; ?>
                                         </p>
 
                                         <p class="text-sm text-gray-400 mt-1">
