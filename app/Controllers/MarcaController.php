@@ -97,10 +97,11 @@ class MarcaController extends Controller
 
         $marcaModel = new Marca();
 
-        if ($marcaModel->tieneProductos($id)) {
+        if ($marcaModel->tieneProductosVivos($id)) {
             $this->redirect(BASE_URL . '/admin/marcas?error=tiene_productos');
         }
 
+        $marcaModel->desvincularProductosEliminados($id);
         $marcaModel->eliminar($id);
 
         $this->redirect(BASE_URL . '/admin/marcas?ok=eliminada');

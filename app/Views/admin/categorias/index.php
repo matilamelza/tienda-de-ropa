@@ -26,8 +26,8 @@
 <?php if (isset($_GET['error'])): ?>
     <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">
         <?php if ($_GET['error'] === 'tiene_productos'): ?>
-            No podés eliminar esta categoría porque tiene productos asociados (activos o eliminados).
-            Si no la querés usar más, desactivala desde "Editar".
+            No podés eliminar esta categoría porque tiene productos activos.
+            Mové esos productos a otra categoría o desactivala desde "Editar".
         <?php else: ?>
             No se pudo completar la operación.
         <?php endif; ?>
@@ -89,7 +89,7 @@
                                         Editar
                                     </a>
 
-                                    <?php if ($vivos === 0 && $eliminados === 0): ?>
+                                    <?php if ($vivos === 0): ?>
                                         <?= boton_eliminar(
                                             BASE_URL . '/admin/categorias/eliminar',
                                             ['id' => $c['id_categoria']],

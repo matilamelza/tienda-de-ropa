@@ -83,7 +83,7 @@ class CategoriaController extends Controller
         $this->redirect(BASE_URL . '/admin/categorias?ok=actualizada');
     }
 
-    public function eliminar()
+        public function eliminar()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect(BASE_URL . '/admin/categorias');
@@ -97,10 +97,11 @@ class CategoriaController extends Controller
 
         $categoriaModel = new Categoria();
 
-        if ($categoriaModel->tieneProdutos($id)) {
+        if ($categoriaModel->tieneProductosVivos($id)) {
             $this->redirect(BASE_URL . '/admin/categorias?error=tiene_productos');
         }
 
+        $categoriaModel->archivarProductosEliminados($id);
         $categoriaModel->eliminar($id);
 
         $this->redirect(BASE_URL . '/admin/categorias?ok=eliminada');

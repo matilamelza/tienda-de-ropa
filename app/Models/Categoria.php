@@ -90,4 +90,50 @@ class Categoria extends Conexion
         $row = $stmt->get_result()->fetch_assoc();
         return $row['total'] > 0;
     }
+
+        /** true si la categoría tiene productos NO eliminados. */
+    public function tieneProductosVivos(int $id): bool
+    {
+        $stmt = $this->db->prepare(
+            "SELECT 1 FROM productos WHERE id_categoria = ? AND eliminado_at IS NULL LIMIT 1"
+        );
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+
+        return $stmt->get_result()->num_rows > 0;
+    }
+
+    /**
+     * Pasa los productos eliminados de esta categoría a la categoría interna "Archivo",
+     * para poder borrar la categoría sin romper el historial.
+     */
+    public function archivarProductosEliminados(int $id): void
+    {
+        $slugArchivo = 'archivo-productos-eliminados';
+
+        $stmt = $this->db->prepare("SELECT id_categoria FROM categorias WHERE slug = ? LIMIT 1");
+        $stmt->bind_param("s", $slugArchivo);
+        $stmt->execute();
+        $archivo = $stmt->get_result()->fetch_assoc();
+
+        if ($archivo) {
+            $idArchivo = (int) $archivo['id_categoria'];
+        } else {
+            $nombre = 'Archivo (productos eliminados)';
+            $stmt = $this->db->prepare("INSERT INTO categorias (nombre, slug, activo) VALUES (?, ?, 0)");
+            $stmt->bind_param("ss", $nombre, $slugArchivo);
+            $stmt->execute();
+            $idArchivo = (int) $this->db->insert_id;
+        }
+
+        if ($idArchivo === $id) {
+            return;   // no se archiva el archivo en sí mismo
+        }
+
+        $stmt = $this->db->prepare(
+            "UPDATE productos SET id_categoria = ? WHERE id_categoria = ? AND eliminado_at IS NOT NULL"
+        );
+        $stmt->bind_param("ii", $idArchivo, $id);
+        $stmt->execute();
+    }
 }

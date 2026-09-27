@@ -65,4 +65,26 @@ class Marca extends Conexion
         $row = $stmt->get_result()->fetch_assoc();
         return $row['total'] > 0;
     }
+
+        /** true si la marca tiene productos NO eliminados. */
+    public function tieneProductosVivos(int $id): bool
+    {
+        $stmt = $this->db->prepare(
+            "SELECT 1 FROM productos WHERE id_marca = ? AND eliminado_at IS NULL LIMIT 1"
+        );
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+
+        return $stmt->get_result()->num_rows > 0;
+    }
+
+    /** Les quita la marca a los productos eliminados, para poder borrarla. */
+    public function desvincularProductosEliminados(int $id): void
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE productos SET id_marca = NULL WHERE id_marca = ? AND eliminado_at IS NOT NULL"
+        );
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+    }
 }
