@@ -4,14 +4,19 @@
     <div class="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 mb-4 text-sm">
         <?php
         if ($_GET['ok'] === 'masivo') {
-            $c = (int) ($_GET['c'] ?? 0);
+            $n = (int) ($_GET['c'] ?? 0);
             $o = (int) ($_GET['o'] ?? 0);
-            echo "Se crearon $c variante(s)." . ($o > 0 ? " Se omitieron $o que ya existían." : '');
+            echo "Se crearon $n variante(s)." . ($o > 0 ? " Se omitieron $o que ya existían." : '');
         } elseif ($_GET['ok'] === 'eliminadas') {
             $e = (int) ($_GET['e'] ?? 0);
             $d = (int) ($_GET['d'] ?? 0);
             echo "Se eliminaron $e variante(s)."
                . ($d > 0 ? " $d se desactivaron en vez de borrarse porque ya tienen pedidos." : '');
+        } elseif ($_GET['ok'] === 'color') {
+            $n = (int) ($_GET['c'] ?? 0);
+            $o = (int) ($_GET['o'] ?? 0);
+            echo "Se cambió el color de $n variante(s)."
+               . ($o > 0 ? " $o no se cambiaron porque ya existía una variante con ese talle y color." : '');
         } else {
             $msgs = [
                 'producto_creado' => 'Producto creado. Ahora cargale los talles y colores.',
@@ -104,12 +109,12 @@
                 </div>
 
                 <div id="chipsColor" class="flex flex-wrap gap-2">
-                    <?php foreach ($colores as $c): ?>
+                    <?php foreach ($colores as $col): ?>
                         <button type="button" class="chip" data-tipo="color"
-                                data-id="<?= (int) $c['id_color'] ?>" data-nombre="<?= htmlspecialchars($c['nombre']) ?>">
+                                data-id="<?= (int) $col['id_color'] ?>" data-nombre="<?= htmlspecialchars($col['nombre']) ?>">
                             <span class="w-3 h-3 rounded-full border inline-block align-middle mr-1"
-                                  style="background: <?= htmlspecialchars($c['codigo_hex'] ?: '#fff') ?>"></span>
-                            <?= htmlspecialchars($c['nombre']) ?>
+                                  style="background: <?= htmlspecialchars($col['codigo_hex'] ?: '#fff') ?>"></span>
+                            <?= htmlspecialchars($col['nombre']) ?>
                         </button>
                     <?php endforeach; ?>
                 </div>
@@ -192,6 +197,14 @@
                 <div id="idsEliminar"></div>
             </form>
 
+            <!-- Cambiar color de las seleccionadas (form aparte) -->
+            <form id="formColor" method="POST" action="<?= BASE_URL ?>/admin/productos/color-variantes" class="hidden">
+                <?= csrf_field() ?>
+                <input type="hidden" name="id_producto" value="<?= (int) $producto['id_producto'] ?>">
+                <input type="hidden" name="id_color" id="colorDestino">
+                <div id="idsColor"></div>
+            </form>
+
             <!-- Barra de acciones (aparece al seleccionar) -->
             <div id="barraAcciones" class="hidden flex-wrap items-center gap-2 px-4 py-3 border-b bg-blue-50 text-sm">
                 <span class="font-medium text-blue-900 mr-2"><span id="cantSel">0</span> seleccionada(s)</span>
@@ -205,6 +218,17 @@
                     <input type="number" id="accPrecio" min="0" step="0.01" placeholder="Precio" class="w-24 border rounded px-2 py-1">
                     <button type="button" onclick="aplicar('precio')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Poner precio</button>
                     <button type="button" onclick="aplicar('precio_base')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Usar precio base</button>
+                </div>
+
+                <div class="flex items-center gap-1">
+                    <select id="accColor" class="border rounded px-2 py-1 bg-white">
+                        <option value="">Color…</option>
+                        <option value="0">Sin color</option>
+                        <?php foreach ($colores as $col): ?>
+                            <option value="<?= (int) $col['id_color'] ?>"><?= htmlspecialchars($col['nombre']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" onclick="cambiarColor()" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Cambiar color</button>
                 </div>
 
                 <button type="button" onclick="aplicar('activar')"    class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Activar</button>
@@ -487,6 +511,11 @@
                 : '') + escapar(json.nombre);
             $(c.chips).appendChild(ch);
 
+            // Si es un color, sumarlo también al select de "Cambiar color"
+            if (tipo === 'color') {
+                $('accColor').add(new Option(json.nombre, json.id));
+            }
+
             elegidos[tipo].add(String(json.id));
             $(c.caja).classList.add('hidden');
             pintar();
@@ -547,6 +576,13 @@
         inp.addEventListener('change', revisar);
     });
 
+    /** true si hay cambios en la tabla sin guardar (avisa y frena). */
+    function hayCambiosSinGuardar(accion) {
+        if (btnGuardar.disabled) return false;
+        alert(`Tenés cambios sin guardar en la tabla. Guardalos primero y después ${accion}.`);
+        return true;
+    }
+
     // ── Selección ───────────────────────────────────────────────
     function seleccionadas() {
         return [...document.querySelectorAll('.sel-var:checked')].map(c => c.closest('.fila-var'));
@@ -595,15 +631,37 @@
         revisar();
     };
 
+    // ── Acciones que van directo al servidor ────────────────────
+    function enviarIds(contenedor, sel) {
+        $(contenedor).innerHTML = sel
+            .map(f => `<input type="hidden" name="ids[]" value="${f.dataset.id}">`)
+            .join('');
+    }
+
+    window.cambiarColor = function () {
+        const sel   = seleccionadas();
+        const color = $('accColor').value;
+
+        if (!sel.length) return;
+        if (color === '') { $('accColor').focus(); return; }
+        if (hayCambiosSinGuardar('cambiá el color')) return;
+
+        const nombre = $('accColor').selectedOptions[0].textContent.trim();
+        if (!confirm(`¿Cambiar a "${nombre}" el color de ${sel.length} variante(s)?`)) return;
+
+        $('colorDestino').value = color;
+        enviarIds('idsColor', sel);
+        $('formColor').submit();
+    };
+
     window.eliminarSeleccionadas = function () {
         const sel = seleccionadas();
         if (!sel.length) return;
+        if (hayCambiosSinGuardar('eliminá')) return;
 
         if (!confirm(`¿Eliminar ${sel.length} variante(s)? Las que ya tienen pedidos se van a desactivar en vez de borrarse.`)) return;
 
-        $('idsEliminar').innerHTML = sel
-            .map(f => `<input type="hidden" name="ids[]" value="${f.dataset.id}">`)
-            .join('');
+        enviarIds('idsEliminar', sel);
         $('formEliminar').submit();
     };
 

@@ -857,4 +857,58 @@ class Producto extends Conexion
 
         return $stmt->get_result()->num_rows > 0;
     }
+
+        /**
+     * Cambia el color de varias variantes de un producto.
+     * Saltea las que quedarían duplicadas (mismo talle y color que otra variante).
+     * $id_color null = sin color. Devuelve [cambiadas, omitidas].
+     */
+    public function cambiarColorMasivo(int $id_producto, array $ids, ?int $id_color): array
+    {
+        $cambiadas = 0;
+        $omitidas  = 0;
+
+        $buscar = $this->db->prepare(
+            "SELECT id_talle FROM producto_variantes WHERE id_variante = ? AND id_producto = ? LIMIT 1"
+        );
+        $actualizar = $this->db->prepare(
+            "UPDATE producto_variantes SET id_color = ? WHERE id_variante = ? AND id_producto = ?"
+        );
+
+        try {
+            $this->db->begin_transaction();
+
+            foreach ($ids as $id) {
+                $id = (int) $id;
+
+                $buscar->bind_param("ii", $id, $id_producto);
+                $buscar->execute();
+                $fila = $buscar->get_result()->fetch_assoc();
+
+                if (!$fila) {
+                    continue;
+                }
+
+                $id_talle = $fila['id_talle'] !== null ? (int) $fila['id_talle'] : null;
+
+                // Se chequea contra lo ya actualizado en esta misma vuelta
+                if ($this->existeCombinacion($id_producto, $id_talle, $id_color, $id)) {
+                    $omitidas++;
+                    continue;
+                }
+
+                $actualizar->bind_param("iii", $id_color, $id, $id_producto);
+                $actualizar->execute();
+                $cambiadas++;
+            }
+
+            $this->db->commit();
+
+        } catch (Throwable $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+
+        return [$cambiadas, $omitidas];
+    }
 }

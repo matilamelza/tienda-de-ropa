@@ -273,6 +273,12 @@ switch ($route) {
         $controller = new ProductoController();
         $controller->eliminarVariantesMasivo();
         break;
+
+    case 'productos_color_variantes':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->cambiarColorVariantes();
+        break;
     // ─── CATEGORÍAS ────────────────────────────────────────────────────────────
 
     case 'categorias':

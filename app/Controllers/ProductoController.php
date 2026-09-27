@@ -578,4 +578,30 @@ class ProductoController extends Controller
 
         $this->redirect(BASE_URL . '/admin/productos/variantes?id=' . $id_producto . '&ok=eliminadas&e=' . $e . '&d=' . $d);
     }
+
+        public function cambiarColorVariantes()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
+
+        $id_producto = (int) ($_POST['id_producto'] ?? 0);
+        $ids         = array_filter(array_map('intval', (array) ($_POST['ids'] ?? [])));
+        $id_color    = (int) ($_POST['id_color'] ?? 0);
+        $volver      = BASE_URL . '/admin/productos/variantes?id=' . $id_producto;
+
+        // 0 = sin color. Si viene un color, tiene que ser uno activo.
+        if ($id_color > 0) {
+            $activos = array_map('intval', array_column((new Color())->listarActivos()->fetch_all(MYSQLI_ASSOC), 'id_color'));
+            if (!in_array($id_color, $activos, true)) {
+                $this->redirect($volver);
+            }
+        }
+
+        [$c, $o] = $ids
+            ? (new Producto())->cambiarColorMasivo($id_producto, $ids, $id_color ?: null)
+            : [0, 0];
+
+        $this->redirect($volver . '&ok=color&c=' . $c . '&o=' . $o);
+    }
 }
