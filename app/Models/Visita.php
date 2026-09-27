@@ -89,7 +89,9 @@ class Visita extends Conexion
                  AND pe.fecha >= ? AND pe.fecha < ?) AS vendidas
              FROM visitas v
              INNER JOIN productos p ON p.id_producto = v.id_ref
-             WHERE v.tipo = 'producto' AND v.fecha >= ? AND v.fecha < ?
+             WHERE v.tipo = 'producto'
+             AND p.eliminado_at IS NULL
+             AND v.fecha >= ? AND v.fecha < ?
              GROUP BY v.id_ref, p.nombre
              ORDER BY vistas DESC
              LIMIT ?"
@@ -101,11 +103,13 @@ class Visita extends Conexion
     }
 
     /**
-     * Categorías más vistas: suma las visitas a la página de la categoría
-     * y las visitas a productos de esa categoría.
+     * Categorías más vistas: visitas a la página de la categoría + visitas a productos de esa categoría.
+     * No cuenta productos eliminados ni la categoría interna de archivo.
      */
     public function topCategorias(string $desde, string $hasta, int $limite = 8): array
     {
+        $archivo = Categoria::SLUG_ARCHIVO;
+
         $stmt = $this->db->prepare(
             "SELECT c.id_categoria, c.nombre, COUNT(*) AS vistas
              FROM visitas v
@@ -113,18 +117,20 @@ class Visita extends Conexion
              INNER JOIN categorias c ON c.id_categoria =
                    CASE WHEN v.tipo = 'categoria' THEN v.id_ref ELSE p.id_categoria END
              WHERE v.tipo IN ('categoria', 'producto')
+             AND (v.tipo = 'categoria' OR p.eliminado_at IS NULL)
+             AND c.slug <> ?
              AND v.fecha >= ? AND v.fecha < ?
              GROUP BY c.id_categoria, c.nombre
              ORDER BY vistas DESC
              LIMIT ?"
         );
-        $stmt->bind_param("ssi", $desde, $hasta, $limite);
+        $stmt->bind_param("sssi", $archivo, $desde, $hasta, $limite);
         $stmt->execute();
 
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    /** Marcas más vistas: filtro por marca + visitas a productos de esa marca. */
+    /** Marcas más vistas: filtro por marca + visitas a productos de esa marca (sin eliminados). */
     public function topMarcas(string $desde, string $hasta, int $limite = 8): array
     {
         $stmt = $this->db->prepare(
@@ -134,6 +140,7 @@ class Visita extends Conexion
              INNER JOIN marcas m ON m.id_marca =
                    CASE WHEN v.tipo = 'marca' THEN v.id_ref ELSE p.id_marca END
              WHERE v.tipo IN ('marca', 'producto')
+             AND (v.tipo = 'marca' OR p.eliminado_at IS NULL)
              AND v.fecha >= ? AND v.fecha < ?
              GROUP BY m.id_marca, m.nombre
              ORDER BY vistas DESC
