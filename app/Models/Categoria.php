@@ -4,6 +4,8 @@ require_once __DIR__ . '/Conexion.php';
 
 class Categoria extends Conexion
 {
+    public const SLUG_ARCHIVO = 'archivo-productos-eliminados';
+    
     public function listarActivas()
     {
         return $this->db->query("SELECT * FROM categorias WHERE activo = 1 ORDER BY nombre ASC");
@@ -21,12 +23,13 @@ class Categoria extends Conexion
 
     public function listarTodas()
     {
-        $sql = "SELECT 
+        $sql = "SELECT
                     c.*,
                     COUNT(CASE WHEN p.eliminado_at IS NULL THEN p.id_producto END)     AS cantidad_productos,
                     COUNT(CASE WHEN p.eliminado_at IS NOT NULL THEN p.id_producto END) AS en_papelera
                 FROM categorias c
                 LEFT JOIN productos p ON p.id_categoria = c.id_categoria
+                WHERE c.slug <> '" . self::SLUG_ARCHIVO . "'
                 GROUP BY c.id_categoria
                 ORDER BY c.nombre ASC";
 
@@ -109,7 +112,7 @@ class Categoria extends Conexion
      */
     public function archivarProductosEliminados(int $id): void
     {
-        $slugArchivo = 'archivo-productos-eliminados';
+        $slugArchivo = self::SLUG_ARCHIVO;
 
         $stmt = $this->db->prepare("SELECT id_categoria FROM categorias WHERE slug = ? LIMIT 1");
         $stmt->bind_param("s", $slugArchivo);

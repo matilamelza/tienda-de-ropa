@@ -96,6 +96,11 @@ class CategoriaController extends Controller
         }
 
         $categoriaModel = new Categoria();
+        $categoria      = $categoriaModel->buscarPorId($id);
+
+        if (!$categoria || $categoria['slug'] === Categoria::SLUG_ARCHIVO) {
+            $this->redirect(BASE_URL . '/admin/categorias');
+        }
 
         if ($categoriaModel->tieneProductosVivos($id)) {
             $this->redirect(BASE_URL . '/admin/categorias?error=tiene_productos');
