@@ -223,6 +223,10 @@ class ProductoController extends Controller
 
         $volver = BASE_URL . '/admin/productos/variantes?id=' . $id_producto;
 
+        // Talles y colores válidos (activos)
+        $tallesValidos  = array_column((new Talle())->listarActivos()->fetch_all(MYSQLI_ASSOC), 'id_talle');
+        $coloresValidos = array_column((new Color())->listarActivos()->fetch_all(MYSQLI_ASSOC), 'id_color');
+
         $tallesValidos  = array_map('intval', $tallesValidos);
         $coloresValidos = array_map('intval', $coloresValidos);
 
