@@ -7,6 +7,9 @@ $url = function (array $cambios = []) use ($filtros): string {
 };
 
 $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
+
+$flash = $_SESSION['productos_msg'] ?? null;
+unset($_SESSION['productos_msg']);
 ?>
 
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -20,6 +23,13 @@ $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
         + Nuevo producto
     </a>
 </div>
+
+<?php if ($flash): ?>
+    <div class="mb-4 px-4 py-3 rounded-xl text-sm border
+        <?= $flash[0] === 'ok' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200' ?>">
+        <?= htmlspecialchars($flash[1]) ?>
+    </div>
+<?php endif; ?>
 
 <?php if (isset($_GET['ok'])): ?>
     <div class="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 mb-4 text-sm">
@@ -50,11 +60,11 @@ $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
 
     <select name="categoria" class="auto-filtro border rounded-lg px-3 py-2 text-sm bg-white">
         <option value="">Todas las categorías</option>
-        <?php while ($cat = $categorias->fetch_assoc()): ?>
+        <?php foreach ($categorias as $cat): ?>
             <option value="<?= (int) $cat['id_categoria'] ?>" <?= $filtros['categoria'] === (int) $cat['id_categoria'] ? 'selected' : '' ?>>
                 <?= htmlspecialchars($cat['nombre']) ?>
             </option>
-        <?php endwhile; ?>
+        <?php endforeach; ?>
     </select>
 
     <select name="estado" class="auto-filtro border rounded-lg px-3 py-2 text-sm bg-white">
@@ -79,6 +89,114 @@ $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
     <?php endif; ?>
 </form>
 
+<!-- ── Formulario de acciones masivas ──────────────────────── -->
+<form id="formMasivo" method="POST" action="<?= BASE_URL ?>/admin/productos/masivo">
+    <?= csrf_field() ?>
+    <input type="hidden" name="accion" id="accionMasiva">
+    <input type="hidden" name="todos_filtro" id="todosFiltro" value="">
+    <?php foreach ($filtros as $k => $v): ?>
+        <input type="hidden" name="<?= $k ?>" value="<?= htmlspecialchars((string) $v) ?>">
+    <?php endforeach; ?>
+    <div id="idsMasivo"></div>
+
+    <!-- Barra (aparece al seleccionar) -->
+    <div id="barraAcciones" class="hidden sticky top-14 lg:top-0 z-20 bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="font-medium text-blue-900 mr-1"><span id="cantSel">0</span> seleccionado(s)</span>
+
+            <button type="button" id="btnTodosFiltro" onclick="seleccionarTodoElFiltro()"
+                    class="hidden text-blue-700 underline mr-2">
+                Seleccionar los <?= (int) $total ?> productos del filtro
+            </button>
+
+            <button type="button" onclick="accion('activar')"          class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Activar</button>
+            <button type="button" onclick="accion('desactivar')"       class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Desactivar</button>
+            <button type="button" onclick="accion('destacar')"         class="px-2 py-1 rounded border bg-white hover:bg-gray-50">★ Destacar</button>
+            <button type="button" onclick="accion('quitar_destacado')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Quitar ★</button>
+
+            <span class="flex items-center gap-1">
+                <select name="id_categoria" id="accCategoria" class="border rounded px-2 py-1 bg-white">
+                    <option value="">Categoría…</option>
+                    <?php foreach ($categorias as $cat): ?>
+                        <option value="<?= (int) $cat['id_categoria'] ?>"><?= htmlspecialchars($cat['nombre']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" onclick="accion('categoria', 'accCategoria')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Cambiar</button>
+            </span>
+
+            <span class="flex items-center gap-1">
+                <select name="id_marca" id="accMarca" class="border rounded px-2 py-1 bg-white">
+                    <option value="">Marca…</option>
+                    <option value="0">Sin marca</option>
+                    <?php foreach ($marcas as $m): ?>
+                        <option value="<?= (int) $m['id_marca'] ?>"><?= htmlspecialchars($m['nombre']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" onclick="accion('marca', 'accMarca')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Cambiar</button>
+            </span>
+
+            <button type="button" onclick="togglePrecios()" class="px-2 py-1 rounded border bg-white hover:bg-gray-50 font-medium">💲 Precios</button>
+            <button type="button" onclick="accion('eliminar')" class="px-2 py-1 rounded border border-red-200 bg-white text-red-600 hover:bg-red-50">Eliminar</button>
+        </div>
+
+        <!-- Panel de precios -->
+        <div id="panelPrecios" class="hidden mt-3 pt-3 border-t border-blue-200">
+            <div class="flex flex-wrap items-end gap-3">
+                <label>
+                    <span class="block text-xs text-gray-600 mb-1">Acción</span>
+                    <select name="direccion" id="precDireccion" class="border rounded px-2 py-1.5 bg-white">
+                        <option value="subir">Aumentar</option>
+                        <option value="bajar">Bajar</option>
+                    </select>
+                </label>
+                <label>
+                    <span class="block text-xs text-gray-600 mb-1">Porcentaje</span>
+                    <span class="relative inline-block">
+                        <input type="number" name="pct" id="precPct" min="0" max="500" step="0.01" placeholder="10"
+                               class="w-24 border rounded px-2 py-1.5 pr-6">
+                        <span class="absolute right-2 top-1.5 text-gray-400">%</span>
+                    </span>
+                </label>
+                <label>
+                    <span class="block text-xs text-gray-600 mb-1">Redondear</span>
+                    <select name="redondeo" id="precRedondeo" class="border rounded px-2 py-1.5 bg-white">
+                        <option value="0">Sin redondear</option>
+                        <option value="10">A $10</option>
+                        <option value="100">A $100</option>
+                        <option value="500" selected>A $500</option>
+                        <option value="1000">A $1.000</option>
+                    </select>
+                </label>
+                <label class="flex items-center gap-1 pb-1.5">
+                    <input type="checkbox" name="con_costo" value="1" id="precCosto">
+                    <span>También el costo</span>
+                </label>
+                <label class="flex items-center gap-1 pb-1.5">
+                    <input type="checkbox" name="con_variantes" value="1" checked>
+                    <span>También precios especiales de variantes</span>
+                </label>
+                <button type="button" onclick="aplicarPrecios()"
+                        class="px-4 py-1.5 rounded bg-gray-900 text-white hover:bg-gray-800">Aplicar</button>
+            </div>
+
+            <div id="previewPrecios" class="hidden mt-3 bg-white border rounded-lg max-h-56 overflow-y-auto">
+                <table class="w-full text-xs">
+                    <thead class="bg-gray-50 text-gray-500 sticky top-0">
+                        <tr>
+                            <th class="text-left px-3 py-2">Producto</th>
+                            <th class="text-right px-3 py-2">Precio actual</th>
+                            <th class="text-right px-3 py-2">Precio nuevo</th>
+                            <th class="text-right px-3 py-2" id="thCosto">Costo nuevo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="previewPreciosBody"></tbody>
+                </table>
+            </div>
+            <p id="notaPreview" class="hidden text-xs text-gray-500 mt-2"></p>
+        </div>
+    </div>
+</form>
+
 <?php if (empty($productos)): ?>
     <div class="bg-white rounded-lg shadow px-4 py-10 text-center text-gray-400 text-sm">
         <?= $hayFiltros ? '✅ No hay productos con estos filtros.' : 'Todavía no hay productos cargados.' ?>
@@ -87,9 +205,18 @@ $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
 
     <!-- ── Mobile: tarjetas ─────────────────────────────────── -->
     <div class="md:hidden space-y-3">
+        <label class="flex items-center gap-2 text-sm text-gray-500 px-1">
+            <input type="checkbox" class="sel-todos"> Seleccionar todos los de esta página
+        </label>
+
         <?php foreach ($productos as $p): ?>
             <div class="bg-white rounded-lg shadow p-3">
                 <div class="flex gap-3">
+                    <input type="checkbox" class="sel-prod mt-1 shrink-0" value="<?= (int) $p['id_producto'] ?>"
+                           data-nombre="<?= htmlspecialchars($p['nombre']) ?>"
+                           data-precio="<?= (float) $p['precio_base'] ?>"
+                           data-costo="<?= $p['precio_costo'] !== null ? (float) $p['precio_costo'] : '' ?>">
+
                     <div class="w-16 h-20 shrink-0 rounded bg-gray-100 overflow-hidden">
                         <?php if ($p['foto_principal']): ?>
                             <img src="<?= BASE_URL ?>/public/uploads/productos/<?= htmlspecialchars($p['foto_principal']) ?>"
@@ -101,7 +228,9 @@ $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
 
                     <div class="flex-1 min-w-0">
                         <div class="flex items-start justify-between gap-2">
-                            <p class="font-semibold text-gray-900 leading-tight"><?= htmlspecialchars($p['nombre']) ?></p>
+                            <p class="font-semibold text-gray-900 leading-tight">
+                                <?= $p['destacado'] ? '<span class="text-yellow-500">★</span> ' : '' ?><?= htmlspecialchars($p['nombre']) ?>
+                            </p>
                             <?php if ($p['activo'] != 1): ?>
                                 <span class="shrink-0 px-2 py-0.5 text-xs rounded bg-red-100 text-red-700">Inactivo</span>
                             <?php endif; ?>
@@ -122,13 +251,6 @@ $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
                     <a href="<?= BASE_URL ?>/admin/productos/editar?id=<?= (int) $p['id_producto'] ?>" class="text-gray-700 font-medium">Editar</a>
                     <a href="<?= BASE_URL ?>/admin/productos/variantes?id=<?= (int) $p['id_producto'] ?>" class="text-blue-600">Variantes</a>
                     <a href="<?= BASE_URL ?>/admin/productos/fotos?id=<?= (int) $p['id_producto'] ?>" class="text-indigo-600">Fotos</a>
-                    <?= boton_eliminar(
-                        BASE_URL . '/admin/productos/eliminar',
-                        ['id' => $p['id_producto']],
-                        '¿Eliminar este producto? Va a dejar de aparecer en la tienda y en el admin. Los pedidos anteriores no se modifican.',
-                        'Eliminar',
-                        'text-red-500'
-                    ) ?>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -140,19 +262,27 @@ $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
             <table class="w-full text-sm">
                 <thead class="bg-gray-100 text-gray-700">
                     <tr>
-                        <th class="text-left px-4 py-3">Producto</th>
-                        <th class="text-right px-4 py-3">Precio</th>
-                        <th class="text-right px-4 py-3">Costo</th>
-                        <th class="text-right px-4 py-3">Ganancia</th>
-                        <th class="text-right px-4 py-3">Stock</th>
-                        <th class="text-center px-4 py-3">Estado</th>
-                        <th class="text-right px-4 py-3">Acciones</th>
+                        <th class="px-3 py-3 w-8"><input type="checkbox" class="sel-todos" title="Seleccionar todos los de esta página"></th>
+                        <th class="text-left px-3 py-3">Producto</th>
+                        <th class="text-right px-3 py-3">Precio</th>
+                        <th class="text-right px-3 py-3">Costo</th>
+                        <th class="text-right px-3 py-3">Ganancia</th>
+                        <th class="text-right px-3 py-3">Stock</th>
+                        <th class="text-center px-3 py-3">Estado</th>
+                        <th class="text-right px-3 py-3">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($productos as $p): ?>
                         <tr class="border-t hover:bg-gray-50">
-                            <td class="px-4 py-3">
+                            <td class="px-3 py-3">
+                                <input type="checkbox" class="sel-prod" value="<?= (int) $p['id_producto'] ?>"
+                                       data-nombre="<?= htmlspecialchars($p['nombre']) ?>"
+                                       data-precio="<?= (float) $p['precio_base'] ?>"
+                                       data-costo="<?= $p['precio_costo'] !== null ? (float) $p['precio_costo'] : '' ?>">
+                            </td>
+
+                            <td class="px-3 py-3">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-12 shrink-0 rounded bg-gray-100 overflow-hidden">
                                         <?php if ($p['foto_principal']): ?>
@@ -161,7 +291,9 @@ $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
                                         <?php endif; ?>
                                     </div>
                                     <div class="min-w-0">
-                                        <p class="font-medium text-gray-900"><?= htmlspecialchars($p['nombre']) ?></p>
+                                        <p class="font-medium text-gray-900">
+                                            <?= $p['destacado'] ? '<span class="text-yellow-500" title="Destacado">★</span> ' : '' ?><?= htmlspecialchars($p['nombre']) ?>
+                                        </p>
                                         <p class="text-xs text-gray-400">
                                             <?= htmlspecialchars($p['categoria']) ?><?= $p['marca'] ? ' · ' . htmlspecialchars($p['marca']) : '' ?>
                                         </p>
@@ -169,13 +301,13 @@ $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
                                 </div>
                             </td>
 
-                            <td class="px-4 py-3 text-right whitespace-nowrap"><?= $pesos($p['precio_base']) ?></td>
+                            <td class="px-3 py-3 text-right whitespace-nowrap"><?= $pesos($p['precio_base']) ?></td>
 
-                            <td class="px-4 py-3 text-right text-gray-500 whitespace-nowrap">
+                            <td class="px-3 py-3 text-right text-gray-500 whitespace-nowrap">
                                 <?= $p['precio_costo'] !== null ? $pesos($p['precio_costo']) : '—' ?>
                             </td>
 
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
+                            <td class="px-3 py-3 text-right whitespace-nowrap">
                                 <?php if ($p['precio_costo'] !== null): ?>
                                     <?php
                                     $ganancia = $p['precio_base'] - $p['precio_costo'];
@@ -188,14 +320,12 @@ $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
                                 <?php endif; ?>
                             </td>
 
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <span class="<?= $p['stock_disponible'] <= 0 ? 'text-red-600 font-semibold' : '' ?>">
-                                    <?= (int) $p['stock_disponible'] ?>
-                                </span>
+                            <td class="px-3 py-3 text-right whitespace-nowrap">
+                                <span class="<?= $p['stock_disponible'] <= 0 ? 'text-red-600 font-semibold' : '' ?>"><?= (int) $p['stock_disponible'] ?></span>
                                 <span class="block text-xs text-gray-400"><?= (int) $p['cant_variantes'] ?> variante(s)</span>
                             </td>
 
-                            <td class="px-4 py-3 text-center">
+                            <td class="px-3 py-3 text-center">
                                 <?php if ($p['activo'] == 1): ?>
                                     <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-700">Activo</span>
                                 <?php else: ?>
@@ -203,18 +333,11 @@ $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
                                 <?php endif; ?>
                             </td>
 
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
+                            <td class="px-3 py-3 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center gap-3">
                                     <a href="<?= BASE_URL ?>/admin/productos/editar?id=<?= (int) $p['id_producto'] ?>" class="text-gray-600 hover:text-gray-900">Editar</a>
                                     <a href="<?= BASE_URL ?>/admin/productos/variantes?id=<?= (int) $p['id_producto'] ?>" class="text-blue-600 hover:text-blue-800">Variantes</a>
                                     <a href="<?= BASE_URL ?>/admin/productos/fotos?id=<?= (int) $p['id_producto'] ?>" class="text-indigo-600 hover:text-indigo-800">Fotos</a>
-                                    <?= boton_eliminar(
-                                        BASE_URL . '/admin/productos/eliminar',
-                                        ['id' => $p['id_producto']],
-                                        '¿Eliminar este producto? Va a dejar de aparecer en la tienda y en el admin. Los pedidos anteriores no se modifican.',
-                                        'Eliminar',
-                                        'text-red-500 hover:text-red-700'
-                                    ) ?>
                                 </div>
                             </td>
                         </tr>
@@ -262,8 +385,153 @@ $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
 <?php endif; ?>
 
 <script>
-// Los selects filtran apenas cambian (el buscador se aplica con Enter)
-document.querySelectorAll('#formFiltros .auto-filtro').forEach(sel => {
-    sel.addEventListener('change', () => sel.form.submit());
-});
+(function () {
+    const TOTAL_FILTRO = <?= (int) $total ?>;
+    const $  = id => document.getElementById(id);
+    const barra = $('barraAcciones');
+
+    // Los selects del filtro se aplican apenas cambian (el buscador, con Enter)
+    document.querySelectorAll('#formFiltros .auto-filtro').forEach(sel => {
+        sel.addEventListener('change', () => sel.form.submit());
+    });
+
+    // ── Selección ───────────────────────────────────────────────
+    // Cada producto tiene 2 casillas (tarjeta mobile y fila desktop): se mantienen sincronizadas.
+    let todoElFiltro = false;
+
+    function idsSeleccionados() {
+        return [...new Set([...document.querySelectorAll('.sel-prod:checked')].map(c => c.value))];
+    }
+
+    function datosSeleccionados() {
+        const vistos = {};
+        document.querySelectorAll('.sel-prod:checked').forEach(c => { vistos[c.value] = c.dataset; });
+        return Object.values(vistos);
+    }
+
+    function revisar() {
+        const n = idsSeleccionados().length;
+        const enPagina = new Set([...document.querySelectorAll('.sel-prod')].map(c => c.value)).size;
+
+        $('cantSel').textContent = todoElFiltro ? TOTAL_FILTRO + ' (todos los del filtro)' : n;
+        barra.classList.toggle('hidden', n === 0 && !todoElFiltro);
+
+        // Ofrecer "todos los del filtro" si está toda la página marcada y hay más
+        $('btnTodosFiltro').classList.toggle('hidden', todoElFiltro || n < enPagina || TOTAL_FILTRO <= enPagina);
+
+        document.querySelectorAll('.sel-todos').forEach(c => {
+            c.checked = n > 0 && n === enPagina;
+            c.indeterminate = n > 0 && n < enPagina;
+        });
+
+        if (!$('panelPrecios').classList.contains('hidden')) previewPrecios();
+    }
+
+    document.querySelectorAll('.sel-prod').forEach(c => c.addEventListener('change', () => {
+        todoElFiltro = false;
+        document.querySelectorAll(`.sel-prod[value="${c.value}"]`).forEach(o => o.checked = c.checked);
+        revisar();
+    }));
+
+    document.querySelectorAll('.sel-todos').forEach(t => t.addEventListener('change', () => {
+        todoElFiltro = false;
+        document.querySelectorAll('.sel-prod').forEach(c => c.checked = t.checked);
+        revisar();
+    }));
+
+    window.seleccionarTodoElFiltro = function () {
+        todoElFiltro = true;
+        revisar();
+    };
+
+    // ── Enviar una acción ───────────────────────────────────────
+    const textos = {
+        activar: 'activar', desactivar: 'desactivar', destacar: 'destacar',
+        quitar_destacado: 'quitarle el destacado a', categoria: 'cambiar la categoría de',
+        marca: 'cambiar la marca de', eliminar: 'ELIMINAR', precios: 'cambiar el precio de'
+    };
+
+    function enviar(accion) {
+        const cant = todoElFiltro ? TOTAL_FILTRO : idsSeleccionados().length;
+        if (!confirm(`¿Seguro que querés ${textos[accion]} ${cant} producto(s)?`)) return;
+
+        $('accionMasiva').value = accion;
+        $('todosFiltro').value  = todoElFiltro ? '1' : '';
+        $('idsMasivo').innerHTML = todoElFiltro ? '' :
+            idsSeleccionados().map(id => `<input type="hidden" name="ids[]" value="${id}">`).join('');
+        $('formMasivo').submit();
+    }
+
+    window.accion = function (accion, selectId) {
+        if (selectId && $(selectId).value === '') { $(selectId).focus(); return; }
+        enviar(accion);
+    };
+
+    // ── Precios ─────────────────────────────────────────────────
+    window.togglePrecios = function () {
+        $('panelPrecios').classList.toggle('hidden');
+        previewPrecios();
+    };
+
+    /** Misma fórmula que Producto::calcularPrecio() en PHP */
+    function calcular(precio, pct, redondeo) {
+        let nuevo = precio * (1 + pct / 100);
+        if (redondeo > 0) {
+            nuevo = pct >= 0 ? Math.ceil(nuevo / redondeo) * redondeo : Math.floor(nuevo / redondeo) * redondeo;
+        }
+        return Math.max(0, Math.round(nuevo * 100) / 100);
+    }
+
+    const pesos = n => '$' + n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+    function pctActual() {
+        const v = parseFloat(($('precPct').value || '0').replace(',', '.')) || 0;
+        return $('precDireccion').value === 'bajar' ? -Math.abs(v) : Math.abs(v);
+    }
+
+    function previewPrecios() {
+        const pct      = pctActual();
+        const redondeo = parseInt($('precRedondeo').value);
+        const conCosto = $('precCosto').checked;
+        const datos    = datosSeleccionados();
+
+        $('previewPrecios').classList.toggle('hidden', pct === 0 || datos.length === 0);
+        $('thCosto').classList.toggle('hidden', !conCosto);
+
+        $('previewPreciosBody').innerHTML = datos.map(d => {
+            const precio = parseFloat(d.precio);
+            const costo  = d.costo !== '' ? parseFloat(d.costo) : null;
+            return `<tr class="border-t">
+                <td class="px-3 py-1.5">${escapar(d.nombre)}</td>
+                <td class="px-3 py-1.5 text-right text-gray-400">${pesos(precio)}</td>
+                <td class="px-3 py-1.5 text-right font-semibold">${pesos(calcular(precio, pct, redondeo))}</td>
+                <td class="px-3 py-1.5 text-right ${conCosto ? '' : 'hidden'}">${costo !== null ? pesos(calcular(costo, pct, 0)) : '—'}</td>
+            </tr>`;
+        }).join('');
+
+        const nota = $('notaPreview');
+        nota.classList.toggle('hidden', !todoElFiltro);
+        nota.textContent = todoElFiltro
+            ? `Se va a aplicar a los ${TOTAL_FILTRO} productos del filtro. La vista previa muestra solo los de esta página.`
+            : '';
+    }
+
+    ['precPct', 'precDireccion', 'precRedondeo', 'precCosto'].forEach(id => {
+        $(id).addEventListener('input', previewPrecios);
+        $(id).addEventListener('change', previewPrecios);
+    });
+
+    window.aplicarPrecios = function () {
+        if (pctActual() === 0) { $('precPct').focus(); return; }
+        enviar('precios');
+    };
+
+    function escapar(t) {
+        const d = document.createElement('div');
+        d.textContent = t;
+        return d.innerHTML;
+    }
+
+    revisar();
+})();
 </script>

@@ -16,18 +16,10 @@ class ProductoController extends Controller
     {
         $porPagina = 25;
         $pagina    = max(1, (int) ($_GET['pagina'] ?? 1));
+        $filtros   = $this->filtrosDesde($_GET);
 
-        $filtros = [
-            'q'         => trim($_GET['q'] ?? ''),
-            'categoria' => (int) ($_GET['categoria'] ?? 0),
-            'estado'    => in_array($_GET['estado'] ?? '', ['activos', 'inactivos'], true) ? $_GET['estado'] : '',
-            'problema'  => in_array($_GET['problema'] ?? '', ['agotados', 'faltantes', 'sin_foto', 'sin_costo'], true) ? $_GET['problema'] : '',
-        ];
-
-        $productoModel  = new Producto();
-        $categoriaModel = new Categoria();
-
-        $total = $productoModel->contarAdmin($filtros);
+        $productoModel = new Producto();
+        $total         = $productoModel->contarAdmin($filtros);
 
         $this->view('productos/index', [
             'productos'    => $productoModel->listarAdmin($filtros, $pagina, $porPagina),
@@ -35,7 +27,8 @@ class ProductoController extends Controller
             'pagina'       => $pagina,
             'totalPaginas' => (int) ceil($total / $porPagina),
             'filtros'      => $filtros,
-            'categorias'   => $categoriaModel->listarActivas(),
+            'categorias'   => (new Categoria())->listarActivas()->fetch_all(MYSQLI_ASSOC),
+            'marcas'       => (new Marca())->listarActivas()->fetch_all(MYSQLI_ASSOC),
         ]);
     }
     public function crear()
@@ -156,6 +149,116 @@ class ProductoController extends Controller
             'activo'       => isset($_POST['activo']) ? 1 : 0,
             'destacado'    => isset($_POST['destacado']) ? 1 : 0
         ];
+    }
+
+        /** Lee los filtros del listado desde un array (GET o POST). */
+    private function filtrosDesde(array $src): array
+    {
+        return [
+            'q'         => trim($src['q'] ?? ''),
+            'categoria' => (int) ($src['categoria'] ?? 0),
+            'estado'    => in_array($src['estado'] ?? '', ['activos', 'inactivos'], true) ? $src['estado'] : '',
+            'problema'  => in_array($src['problema'] ?? '', ['agotados', 'faltantes', 'sin_foto', 'sin_costo'], true) ? $src['problema'] : '',
+        ];
+    }
+
+        public function masivo()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
+
+        $modelo = new Producto();
+        $accion = $_POST['accion'] ?? '';
+
+        // ¿Todos los del filtro, o los tildados?
+        $ids = !empty($_POST['todos_filtro'])
+            ? $modelo->idsAdmin($this->filtrosDesde($_POST))
+            : array_values(array_unique(array_filter(array_map('intval', (array) ($_POST['ids'] ?? [])))));
+
+        $volver = $_SERVER['HTTP_REFERER'] ?? BASE_URL . '/admin/productos';
+
+        if (empty($ids)) {
+            $_SESSION['productos_msg'] = ['error', 'No hay productos seleccionados.'];
+            $this->redirect($volver);
+        }
+
+        $n = count($ids);
+
+        switch ($accion) {
+            case 'activar':
+                $modelo->actualizarCampoMasivo($ids, 'activo', 1);
+                $msg = "$n producto(s) activados.";
+                break;
+
+            case 'desactivar':
+                $modelo->actualizarCampoMasivo($ids, 'activo', 0);
+                $msg = "$n producto(s) desactivados.";
+                break;
+
+            case 'destacar':
+                $modelo->actualizarCampoMasivo($ids, 'destacado', 1);
+                $msg = "$n producto(s) destacados.";
+                break;
+
+            case 'quitar_destacado':
+                $modelo->actualizarCampoMasivo($ids, 'destacado', 0);
+                $msg = "Se quitó el destacado de $n producto(s).";
+                break;
+
+            case 'categoria':
+                $idCat   = (int) ($_POST['id_categoria'] ?? 0);
+                $validas = array_map('intval', array_column((new Categoria())->listarActivas()->fetch_all(MYSQLI_ASSOC), 'id_categoria'));
+                if (!in_array($idCat, $validas, true)) {
+                    $_SESSION['productos_msg'] = ['error', 'Elegí una categoría.'];
+                    $this->redirect($volver);
+                }
+                $modelo->actualizarCampoMasivo($ids, 'id_categoria', $idCat);
+                $msg = "Se cambió la categoría de $n producto(s).";
+                break;
+
+            case 'marca':
+                $idMarca = (int) ($_POST['id_marca'] ?? -1);
+                $validas = array_map('intval', array_column((new Marca())->listarActivas()->fetch_all(MYSQLI_ASSOC), 'id_marca'));
+                if ($idMarca !== 0 && !in_array($idMarca, $validas, true)) {
+                    $_SESSION['productos_msg'] = ['error', 'Elegí una marca.'];
+                    $this->redirect($volver);
+                }
+                $modelo->actualizarCampoMasivo($ids, 'id_marca', $idMarca ?: null);
+                $msg = "Se cambió la marca de $n producto(s).";
+                break;
+
+            case 'precios':
+                $pct      = (float) str_replace(',', '.', $_POST['pct'] ?? '0');
+                $pct      = ($_POST['direccion'] ?? 'subir') === 'bajar' ? -abs($pct) : abs($pct);
+                $redondeo = (int) ($_POST['redondeo'] ?? 0);
+
+                if ($pct == 0 || abs($pct) > 500 || !in_array($redondeo, [0, 10, 100, 500, 1000], true)) {
+                    $_SESSION['productos_msg'] = ['error', 'Revisá el porcentaje (entre 0 y 500) y el redondeo.'];
+                    $this->redirect($volver);
+                }
+                if ($pct <= -100) {
+                    $_SESSION['productos_msg'] = ['error', 'No se puede bajar un 100% o más.'];
+                    $this->redirect($volver);
+                }
+
+                $n   = $modelo->ajustarPrecios($ids, $pct, $redondeo, !empty($_POST['con_costo']), !empty($_POST['con_variantes']));
+                $msg = ($pct > 0 ? 'Aumento' : 'Rebaja') . ' del ' . rtrim(rtrim(number_format(abs($pct), 2, ',', ''), '0'), ',') . "% aplicado a $n producto(s).";
+                break;
+
+            case 'eliminar':
+                foreach ($ids as $id) {
+                    $modelo->eliminar($id);
+                }
+                $msg = "$n producto(s) eliminados.";
+                break;
+
+            default:
+                $this->redirect($volver);
+        }
+
+        $_SESSION['productos_msg'] = ['ok', $msg];
+        $this->redirect($volver);
     }
 
     // ─── VARIANTES ─────────────────────────────────────────────────────────────

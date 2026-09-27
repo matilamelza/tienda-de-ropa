@@ -911,4 +911,129 @@ class Producto extends Conexion
 
         return [$cambiadas, $omitidas];
     }
+
+        /** Ids de todos los productos que cumplen los filtros del admin (para "seleccionar todos los del filtro"). */
+    public function idsAdmin(array $filtros): array
+    {
+        [$where, $params, $types] = $this->filtroAdmin($filtros);
+
+        $sql = "SELECT p.id_producto
+                FROM productos p
+                LEFT JOIN marcas m ON m.id_marca = p.id_marca
+                $where";
+
+        $stmt = $this->db->prepare($sql);
+        if ($params) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+
+        return array_map('intval', array_column($stmt->get_result()->fetch_all(MYSQLI_ASSOC), 'id_producto'));
+    }
+
+    /**
+     * Cambia un campo en varios productos. Solo campos permitidos.
+     * $valor null = dejar vacío (ej: sin marca).
+     */
+    public function actualizarCampoMasivo(array $ids, string $campo, ?int $valor): int
+    {
+        $permitidos = ['activo', 'destacado', 'id_categoria', 'id_marca'];
+
+        if (!in_array($campo, $permitidos, true) || empty($ids)) {
+            return 0;
+        }
+
+        $marcas = implode(',', array_fill(0, count($ids), '?'));
+        $sql    = "UPDATE productos SET $campo = ? WHERE eliminado_at IS NULL AND id_producto IN ($marcas)";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param('i' . str_repeat('i', count($ids)), $valor, ...$ids);
+        $stmt->execute();
+
+        return $stmt->affected_rows;
+    }
+
+    /**
+     * Calcula un precio nuevo: aplica el % y redondea.
+     * Al aumentar redondea hacia arriba; al bajar, hacia abajo. $redondeo 0 = sin redondear.
+     * (La misma fórmula está en la vista previa, en JS.)
+     */
+    public static function calcularPrecio(float $precio, float $pct, int $redondeo): float
+    {
+        $nuevo = $precio * (1 + $pct / 100);
+
+        if ($redondeo > 0) {
+            $nuevo = $pct >= 0
+                ? ceil($nuevo / $redondeo) * $redondeo
+                : floor($nuevo / $redondeo) * $redondeo;
+        }
+
+        return max(0, round($nuevo, 2));
+    }
+
+    /**
+     * Aumenta (o baja, con % negativo) los precios de varios productos.
+     * Opcional: también el costo y los precios especiales de sus variantes.
+     */
+    public function ajustarPrecios(array $ids, float $pct, int $redondeo, bool $conCosto, bool $conVariantes): int
+    {
+        if (empty($ids)) {
+            return 0;
+        }
+
+        $marcas = implode(',', array_fill(0, count($ids), '?'));
+        $tipos  = str_repeat('i', count($ids));
+
+        $stmt = $this->db->prepare(
+            "SELECT id_producto, precio_base, precio_costo FROM productos
+             WHERE eliminado_at IS NULL AND id_producto IN ($marcas)"
+        );
+        $stmt->bind_param($tipos, ...$ids);
+        $stmt->execute();
+        $productos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        try {
+            $this->db->begin_transaction();
+
+            $upd = $this->db->prepare("UPDATE productos SET precio_base = ?, precio_costo = ? WHERE id_producto = ?");
+
+            foreach ($productos as $p) {
+                $precio = self::calcularPrecio((float) $p['precio_base'], $pct, $redondeo);
+                $costo  = $p['precio_costo'] !== null && $conCosto
+                    ? self::calcularPrecio((float) $p['precio_costo'], $pct, 0)   // el costo no se redondea
+                    : ($p['precio_costo'] !== null ? (float) $p['precio_costo'] : null);
+                $id = (int) $p['id_producto'];
+
+                $upd->bind_param("ddi", $precio, $costo, $id);
+                $upd->execute();
+            }
+
+            if ($conVariantes) {
+                $stmt = $this->db->prepare(
+                    "SELECT id_variante, precio FROM producto_variantes
+                     WHERE precio IS NOT NULL AND id_producto IN ($marcas)"
+                );
+                $stmt->bind_param($tipos, ...$ids);
+                $stmt->execute();
+                $variantes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+                $updVar = $this->db->prepare("UPDATE producto_variantes SET precio = ? WHERE id_variante = ?");
+
+                foreach ($variantes as $v) {
+                    $precio = self::calcularPrecio((float) $v['precio'], $pct, $redondeo);
+                    $id     = (int) $v['id_variante'];
+                    $updVar->bind_param("di", $precio, $id);
+                    $updVar->execute();
+                }
+            }
+
+            $this->db->commit();
+
+        } catch (Throwable $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+
+        return count($productos);
+    }
 }
