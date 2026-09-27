@@ -254,7 +254,7 @@ $actividad = function (array $p) use ($num): string {
 
         <?php foreach ($productos as $p): ?>
             <?php $idp = (int) $p['id_producto']; ?>
-            <div class="bg-white rounded-lg shadow p-3">
+            <div class="bg-white rounded-lg shadow p-3 cursor-pointer" data-abrir-producto="<?= $idp ?>">
                 <div class="flex gap-3">
                     <input type="checkbox" class="sel-prod mt-1 shrink-0" value="<?= $idp ?>"
                            data-nombre="<?= htmlspecialchars($p['nombre']) ?>"
@@ -321,7 +321,7 @@ $actividad = function (array $p) use ($num): string {
                 <tbody>
                     <?php foreach ($productos as $p): ?>
                         <?php $idp = (int) $p['id_producto']; ?>
-                        <tr class="border-t hover:bg-gray-50 align-top">
+                        <tr class="border-t hover:bg-gray-50 align-top cursor-pointer" data-abrir-producto="<?= $idp ?>">
                             <td class="px-3 py-3">
                                 <input type="checkbox" class="sel-prod" value="<?= $idp ?>"
                                        data-nombre="<?= htmlspecialchars($p['nombre']) ?>"
@@ -431,6 +431,18 @@ $actividad = function (array $p) use ($num): string {
     <p class="text-center text-xs text-gray-400 mt-2">Página <?= $pagina ?> de <?= $totalPaginas ?></p>
 <?php endif; ?>
 
+
+<!-- ── Modal: ficha del producto ────────────────────────────── -->
+<div id="modalProducto" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/50" onclick="cerrarModalProducto()"></div>
+    <div class="absolute inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center md:p-6 pointer-events-none">
+        <div id="modalProductoContenido"
+             class="pointer-events-auto bg-white w-full md:max-w-4xl max-h-[92vh] overflow-y-auto rounded-t-2xl md:rounded-2xl shadow-xl">
+        </div>
+    </div>
+</div>
+
+
 <script>
 (function () {
     const CSRF         = <?= json_encode(csrf_token()) ?>;
@@ -501,6 +513,42 @@ $actividad = function (array $p) use ($num): string {
         document.querySelectorAll('.sel-prod:checked').forEach(c => { vistos[c.value] = c.dataset; });
         return Object.values(vistos);
     }
+
+        // ── Modal: ficha completa del producto ──────────────────────
+    const modal          = $('modalProducto');
+    const modalContenido = $('modalProductoContenido');
+    const cargando       = '<div class="p-16 text-center text-gray-400">Cargando…</div>';
+
+    async function abrirModalProducto(id) {
+        modalContenido.innerHTML = cargando;
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+
+        try {
+            const resp = await fetch('<?= BASE_URL ?>/admin/productos/modal?id=' + encodeURIComponent(id), { credentials: 'same-origin' });
+            modalContenido.innerHTML = await resp.text();
+        } catch (e) {
+            modalContenido.innerHTML = '<p class="p-10 text-center text-red-600">No se pudo cargar. Probá de nuevo.</p>';
+        }
+    }
+
+    window.cerrarModalProducto = function () {
+        modal.classList.add('hidden');
+        modalContenido.innerHTML = '';
+        document.body.style.overflow = '';
+    };
+
+    // Tocar la fila/tarjeta abre el modal, salvo que se toque un botón, link, casilla o campo
+    document.addEventListener('click', e => {
+        const fila = e.target.closest('[data-abrir-producto]');
+        if (!fila) return;
+        if (e.target.closest('a, button, input, select, label, textarea')) return;
+        abrirModalProducto(fila.dataset.abrirProducto);
+    });
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) cerrarModalProducto();
+    });
 
     function revisar() {
         const n = idsSeleccionados().length;

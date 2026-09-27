@@ -149,6 +149,32 @@ class ProductoController extends Controller
         $this->redirect(url_listado_productos());
     }
 
+        /**
+     * AJAX: ficha completa de un producto para el modal del listado.
+     * Devuelve HTML (sin layout).
+     */
+    public function modal()
+    {
+        $id     = (int) ($_GET['id'] ?? 0);
+        $modelo = new Producto();
+
+        $producto = $modelo->buscarPorId($id);
+
+        if (!$producto) {
+            http_response_code(404);
+            echo '<p class="p-10 text-center text-gray-500">Producto no encontrado.</p>';
+            exit;
+        }
+
+        $variantes = $modelo->listarVariantes($id)->fetch_all(MYSQLI_ASSOC);
+        $fotos     = $modelo->listarFotos($id)->fetch_all(MYSQLI_ASSOC);
+        $resumen   = $modelo->resumenProducto($id);
+        $pedidos   = $modelo->ultimosPedidosProducto($id, 5);
+
+        require __DIR__ . '/../Views/productos/_modal.php';
+        exit;
+    }
+
     /** Arma y valida los datos del producto. Devuelve null si falta algo obligatorio. */
     private function datosProductoDesdePost(): ?array
     {

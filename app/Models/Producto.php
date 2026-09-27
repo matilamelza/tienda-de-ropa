@@ -628,6 +628,64 @@ class Producto extends Conexion
         return $stmt->get_result();
     }
 
+        /** Números de ventas y visitas de un producto (histórico y últimos 30 días). */
+    public function resumenProducto(int $id_producto): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT
+                COALESCE(SUM(pi.cantidad), 0) AS vendidos_total,
+                COALESCE(SUM(pi.subtotal), 0) AS facturado_total,
+                COALESCE(SUM(CASE WHEN pe.fecha >= NOW() - INTERVAL 30 DAY THEN pi.cantidad END), 0) AS vendidos_30d
+             FROM pedido_items pi
+             INNER JOIN producto_variantes pv ON pv.id_variante = pi.id_variante
+             INNER JOIN pedidos pe ON pe.id_pedido = pi.id_pedido
+             WHERE pv.id_producto = ? AND pe.estado <> 'cancelado'"
+        );
+        $stmt->bind_param("i", $id_producto);
+        $stmt->execute();
+        $ventas = $stmt->get_result()->fetch_assoc();
+
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) AS vistas, COUNT(DISTINCT visitante) AS personas
+             FROM visitas
+             WHERE tipo = 'producto' AND id_ref = ? AND fecha >= NOW() - INTERVAL 30 DAY"
+        );
+        $stmt->bind_param("i", $id_producto);
+        $stmt->execute();
+        $visitas = $stmt->get_result()->fetch_assoc();
+
+        return [
+            'vendidos_total'  => (int) $ventas['vendidos_total'],
+            'facturado_total' => (float) $ventas['facturado_total'],
+            'vendidos_30d'    => (int) $ventas['vendidos_30d'],
+            'vistas_30d'      => (int) $visitas['vistas'],
+            'personas_30d'    => (int) $visitas['personas'],
+        ];
+    }
+
+    /** Últimos pedidos en los que aparece el producto. */
+    public function ultimosPedidosProducto(int $id_producto, int $limite = 5): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT pe.id_pedido, pe.fecha, pe.estado,
+                    SUM(pi.cantidad) AS unidades,
+                    SUM(pi.subtotal) AS importe,
+                    c.nombre, c.apellido
+             FROM pedido_items pi
+             INNER JOIN producto_variantes pv ON pv.id_variante = pi.id_variante
+             INNER JOIN pedidos pe ON pe.id_pedido = pi.id_pedido
+             LEFT JOIN clientes c ON c.id_cliente = pe.id_cliente
+             WHERE pv.id_producto = ?
+             GROUP BY pe.id_pedido, pe.fecha, pe.estado, c.nombre, c.apellido
+             ORDER BY pe.fecha DESC
+             LIMIT ?"
+        );
+        $stmt->bind_param("ii", $id_producto, $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
     /** Problemas del catálogo a resolver (solo productos activos y no eliminados). */
     public function alertasCatalogo(): array
     {
