@@ -1,5 +1,13 @@
 <?php
 
+
+// ── Compatibilidad con PHP 7.4 (str_starts_with es de PHP 8) ─────────────────
+if (!function_exists('str_starts_with')) {
+    function str_starts_with(string $texto, string $inicio): bool
+    {
+        return $inicio === '' || strpos($texto, $inicio) === 0;
+    }
+}
 date_default_timezone_set('America/Argentina/Buenos_Aires');
 // ── Buffer de salida: permite reemplazar una página a medias por la de error ──
 ob_start();
@@ -71,11 +79,16 @@ require_once __DIR__ . '/../app/Models/Cliente.php';
 require_once __DIR__ . '/../app/Models/UsuarioAdmin.php';
 require_once __DIR__ . '/../app/Models/LoginIntento.php';
 require_once __DIR__ . '/../app/Models/Visita.php';
+require_once __DIR__ . '/../app/Models/Caja.php';
+require_once __DIR__ . '/../app/Models/MedioPago.php';
+require_once __DIR__ . '/../app/Models/CategoriaMovimiento.php';
+require_once __DIR__ . '/../app/Models/Movimiento.php';
 require_once __DIR__ . '/../app/Models/ConfiguracionTienda.php';
 
 // ── Controllers ──────────────────────────────────────────────────────────────
 require_once __DIR__ . '/../app/Controllers/DashboardController.php';
 require_once __DIR__ . '/../app/Controllers/EstadisticasController.php';
+require_once __DIR__ . '/../app/Controllers/CajaController.php';
 require_once __DIR__ . '/../app/Controllers/ProductoController.php';
 require_once __DIR__ . '/../app/Controllers/CategoriaController.php';
 require_once __DIR__ . '/../app/Controllers/MarcaController.php';
@@ -601,6 +614,68 @@ switch ($route) {
     case 'cliente_pedido_detalle':
         $controller = new ClienteController();
         $controller->pedidoDetalle();
+        break;
+
+        // ─── CAJA ──────────────────────────────────────────────────────────────────
+
+    case 'caja_config':
+        requireAdmin();
+        $controller = new CajaController();
+        $controller->config();
+        break;
+
+    case 'caja_config_caja':
+        requireAdmin();
+        $controller = new CajaController();
+        $controller->guardarCaja();
+        break;
+
+    case 'caja_config_medio':
+        requireAdmin();
+        $controller = new CajaController();
+        $controller->guardarMedio();
+        break;
+
+    case 'caja_config_categoria':
+        requireAdmin();
+        $controller = new CajaController();
+        $controller->guardarCategoria();
+        break;
+
+    case 'caja':
+        requireAdmin();
+        $controller = new CajaController();
+        $controller->index();
+        break;
+
+    case 'caja_gasto':
+        requireAdmin();
+        $controller = new CajaController();
+        $controller->gasto();
+        break;
+
+    case 'caja_ingreso':
+        requireAdmin();
+        $controller = new CajaController();
+        $controller->ingreso();
+        break;
+
+    case 'caja_transferir':
+        requireAdmin();
+        $controller = new CajaController();
+        $controller->transferir();
+        break;
+
+    case 'caja_ajustar':
+        requireAdmin();
+        $controller = new CajaController();
+        $controller->ajustar();
+        break;
+
+    case 'caja_anular':
+        requireAdmin();
+        $controller = new CajaController();
+        $controller->anular();
         break;
 
     // ─── 404 ───────────────────────────────────────────────────────────────────

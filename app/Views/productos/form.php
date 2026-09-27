@@ -1,20 +1,25 @@
 <?php $editando = !empty($producto); ?>
 
-<div class="mb-6 flex justify-between items-center">
-    <div>
-        <h2 class="text-2xl font-bold text-gray-800">
-            <?php echo $editando ? 'Editar producto' : 'Nuevo producto'; ?>
-        </h2>
-        <p class="text-gray-500">
-            <?php echo $editando ? htmlspecialchars($producto['nombre']) : 'Cargá la información principal del producto'; ?>
-        </p>
+<?php if ($editando): ?>
+    <?php $tabActiva = 'datos'; require __DIR__ . '/_tabs.php'; ?>
+<?php else: ?>
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Nuevo producto</h2>
+            <p class="text-gray-500">Cargá la información principal del producto</p>
+        </div>
+        <a href="<?= BASE_URL ?>/admin/productos"
+           class="px-4 py-2 rounded-lg border bg-white text-gray-700">
+            Volver
+        </a>
     </div>
+<?php endif; ?>
 
-    <a href="<?= BASE_URL ?>/admin/productos"
-       class="px-4 py-2 rounded-lg border bg-white text-gray-700">
-        Volver
-    </a>
-</div>
+<?php if (($_GET['ok'] ?? '') === 'actualizado'): ?>
+    <div class="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 mb-4 text-sm max-w-2xl">
+        ✓ Cambios guardados.
+    </div>
+<?php endif; ?>
 
 <?php if (isset($_GET['error'])): ?>
     <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm max-w-2xl">
@@ -134,7 +139,7 @@
     <div class="flex justify-end gap-2 pt-2">
         <a href="<?= BASE_URL ?>/admin/productos"
            class="px-4 py-2 rounded-lg border text-gray-700">
-            Cancelar
+            <?php echo $editando ? 'Volver al listado' : 'Cancelar'; ?>
         </a>
 
         <button type="submit"
@@ -144,19 +149,6 @@
     </div>
 
 </form>
-
-<?php if ($editando): ?>
-    <div class="mt-6 flex gap-3 max-w-2xl">
-        <a href="<?= BASE_URL ?>/admin/productos/variantes?id=<?php echo (int) $producto['id_producto']; ?>"
-           class="px-4 py-2 rounded-lg border text-blue-700 bg-blue-50 hover:bg-blue-100">
-            Gestionar variantes →
-        </a>
-        <a href="<?= BASE_URL ?>/admin/productos/fotos?id=<?php echo (int) $producto['id_producto']; ?>"
-           class="px-4 py-2 rounded-lg border text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
-            Gestionar fotos →
-        </a>
-    </div>
-<?php endif; ?>
 
 <script>
 (function () {

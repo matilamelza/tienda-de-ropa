@@ -63,9 +63,9 @@ class ProductoController extends Controller
         }
 
         $productoModel = new Producto();
-        $productoModel->guardar($data);
+        $id = $productoModel->guardar($data);
 
-        $this->redirect(BASE_URL . '/admin/productos?ok=creado');
+       $this->redirect(BASE_URL . '/admin/productos/variantes?id=' . (int) $id . '&ok=producto_creado');
     }
 
     public function editar()
@@ -109,7 +109,7 @@ class ProductoController extends Controller
         $productoModel = new Producto();
         $productoModel->actualizar($id, $data);
 
-        $this->redirect(BASE_URL . '/admin/productos?ok=actualizado');
+        $this->redirect(BASE_URL . '/admin/productos/editar?id=' . $id . '&ok=actualizado');
     }
 
     public function eliminar()

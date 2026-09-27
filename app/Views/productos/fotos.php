@@ -9,17 +9,7 @@ $lugares       = max(0, $maxFotos - $cantidadFotos);
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
 
-<div class="mb-6 flex justify-between items-center">
-    <div>
-        <h2 class="text-2xl font-bold text-gray-800">Fotos</h2>
-        <p class="text-gray-500"><?php echo htmlspecialchars($producto['nombre']); ?></p>
-    </div>
-
-    <a href="<?= BASE_URL ?>/admin/productos"
-       class="px-4 py-2 border rounded-lg bg-white text-gray-700">
-        Volver
-    </a>
-</div>
+<?php $tabActiva = 'fotos'; require __DIR__ . '/_tabs.php'; ?>
 
 <?php if (isset($_GET['ok']) && $_GET['ok'] === 'eliminada'): ?>
     <div class="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 mb-4 text-sm">

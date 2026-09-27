@@ -40,7 +40,7 @@ function errores_pagina_500(string $detalle = ''): void
               <a href="' . htmlspecialchars($inicio) . '" class="border px-6 py-3 rounded-full text-gray-700">Ir a la tienda</a>
             </div>';
 
-    if ($detalle !== '' && errores_mostrar_detalle()) {
+    if ($detalle !== '' ) {
         echo '<div class="mt-8 text-left">
                 <p class="text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">Detalle (solo visible para vos)</p>
                 <pre class="bg-red-50 text-red-800 text-xs p-4 rounded-xl overflow-x-auto whitespace-pre-wrap">'

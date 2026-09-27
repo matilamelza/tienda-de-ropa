@@ -1,29 +1,19 @@
-<div class="mb-6 flex justify-between items-center">
-    <div>
-        <h2 class="text-2xl font-bold text-gray-800">Variantes</h2>
-        <p class="text-gray-500">
-            Producto: <strong><?php echo htmlspecialchars($producto['nombre']); ?></strong>
-        </p>
-    </div>
-
-    <a href="<?= BASE_URL ?>/admin/productos"
-       class="px-4 py-2 rounded-lg border text-gray-700 bg-white">
-        Volver
-    </a>
-</div>
+<?php $tabActiva = 'variantes'; require __DIR__ . '/_tabs.php'; ?>
 
 <?php if (isset($_GET['ok'])): ?>
     <div class="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 mb-4 text-sm">
         <?php
         $msgs = [
-            'creada'      => 'Variante agregada correctamente.',
-            'actualizada' => 'Variante actualizada correctamente.',
-            'eliminada'   => 'Variante eliminada correctamente.',
+            'producto_creado' => 'Producto creado. Ahora cargale los talles y colores.',
+            'creada'          => 'Variante agregada correctamente.',
+            'actualizada'     => 'Variante actualizada correctamente.',
+            'eliminada'       => 'Variante eliminada correctamente.',
         ];
         echo $msgs[$_GET['ok']] ?? 'Operación realizada.';
         ?>
     </div>
 <?php endif; ?>
+
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 

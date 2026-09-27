@@ -49,6 +49,19 @@ RewriteRule ^admin/cliente/?$ index.php?route=admin_cliente_detalle [L,QSA]
 RewriteRule ^admin/cliente/password/?$ index.php?route=admin_cliente_password [L,QSA]
 RewriteRule ^admin/estadisticas/?$ index.php?route=admin_estadisticas [L,QSA]
 
+# Caja
+RewriteRule ^admin/caja/config/?$            index.php?route=caja_config            [L,QSA]
+RewriteRule ^admin/caja/config/caja/?$       index.php?route=caja_config_caja       [L,QSA]
+RewriteRule ^admin/caja/config/medio/?$      index.php?route=caja_config_medio      [L,QSA]
+RewriteRule ^admin/caja/config/categoria/?$  index.php?route=caja_config_categoria  [L,QSA]
+
+RewriteRule ^admin/caja/?$             index.php?route=caja             [L,QSA]
+RewriteRule ^admin/caja/gasto/?$       index.php?route=caja_gasto       [L,QSA]
+RewriteRule ^admin/caja/ingreso/?$     index.php?route=caja_ingreso     [L,QSA]
+RewriteRule ^admin/caja/transferir/?$  index.php?route=caja_transferir  [L,QSA]
+RewriteRule ^admin/caja/ajustar/?$     index.php?route=caja_ajustar     [L,QSA]
+RewriteRule ^admin/caja/anular/?$      index.php?route=caja_anular      [L,QSA]
+
 # Resets de contraseña (admin)
 RewriteRule ^admin/resets/?$ index.php?route=admin_resets [L,QSA]
 RewriteRule ^admin/resets/limpiar/?$ index.php?route=admin_resets_limpiar [L,QSA]
