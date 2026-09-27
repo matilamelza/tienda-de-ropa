@@ -14,15 +14,20 @@ class ProductoController extends Controller
 
         public function index()
     {
+        // Recordar cómo estaba el listado para volver igual
+        $_SESSION['productos_lista_url'] = $_SERVER['REQUEST_URI'] ?? BASE_URL . '/admin/productos';
+
         $porPagina = 25;
         $pagina    = max(1, (int) ($_GET['pagina'] ?? 1));
         $filtros   = $this->filtrosDesde($_GET);
 
         $productoModel = new Producto();
         $total         = $productoModel->contarAdmin($filtros);
+        $productos     = $productoModel->listarAdmin($filtros, $pagina, $porPagina);
 
         $this->view('productos/index', [
-            'productos'    => $productoModel->listarAdmin($filtros, $pagina, $porPagina),
+            'productos'    => $productos,
+            'talles'       => $productoModel->tallesPorProducto(array_map('intval', array_column($productos, 'id_producto'))),
             'total'        => $total,
             'pagina'       => $pagina,
             'totalPaginas' => (int) ceil($total / $porPagina),
@@ -31,6 +36,23 @@ class ProductoController extends Controller
             'marcas'       => (new Marca())->listarActivas()->fetch_all(MYSQLI_ASSOC),
         ]);
     }
+    
+        /** AJAX: invierte activo o destacado de un producto. */
+    public function toggle()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['ok' => false], 405);
+        }
+
+        $valor = (new Producto())->toggleCampo((int) ($_POST['id'] ?? 0), $_POST['campo'] ?? '');
+
+        if ($valor === null) {
+            $this->json(['ok' => false, 'error' => 'No se pudo cambiar'], 400);
+        }
+
+        $this->json(['ok' => true, 'valor' => $valor]);
+    }
+
     public function crear()
     {
         $categoriaModel = new Categoria();
@@ -123,7 +145,8 @@ class ProductoController extends Controller
             $this->redirect(BASE_URL . '/admin/productos?error=eliminar');
         }
 
-        $this->redirect(BASE_URL . '/admin/productos?ok=eliminado');
+        $_SESSION['productos_msg'] = ['ok', 'Producto eliminado.'];
+        $this->redirect(url_listado_productos());
     }
 
     /** Arma y valida los datos del producto. Devuelve null si falta algo obligatorio. */
@@ -152,6 +175,7 @@ class ProductoController extends Controller
     }
 
         /** Lee los filtros del listado desde un array (GET o POST). */
+        /** Lee los filtros del listado desde un array (GET o POST). */
     private function filtrosDesde(array $src): array
     {
         return [
@@ -159,6 +183,7 @@ class ProductoController extends Controller
             'categoria' => (int) ($src['categoria'] ?? 0),
             'estado'    => in_array($src['estado'] ?? '', ['activos', 'inactivos'], true) ? $src['estado'] : '',
             'problema'  => in_array($src['problema'] ?? '', ['agotados', 'faltantes', 'sin_foto', 'sin_costo'], true) ? $src['problema'] : '',
+            'orden'     => isset(Producto::ORDENES[$src['orden'] ?? '']) ? $src['orden'] : '',
         ];
     }
 

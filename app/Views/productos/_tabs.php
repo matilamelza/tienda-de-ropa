@@ -13,7 +13,7 @@ $tabs = [
 ?>
 
 <div class="mb-6">
-    <a href="<?= BASE_URL ?>/admin/productos" class="text-sm text-gray-500 hover:text-gray-900">← Productos</a>
+<a href="<?= htmlspecialchars(url_listado_productos()) ?>" class="text-sm text-gray-500 hover:text-gray-900">← Productos</a>
 
     <h2 class="text-2xl font-bold text-gray-800 mt-1 truncate"><?= htmlspecialchars($producto['nombre']) ?></h2>
 

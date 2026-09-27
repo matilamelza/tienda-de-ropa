@@ -4,6 +4,17 @@ require_once __DIR__ . '/Conexion.php';
 
 class Producto extends Conexion
 {
+
+    public const ORDENES = [
+        'recientes'   => ['Más nuevos',           'p.id_producto DESC'],
+        'nombre'      => ['Nombre A-Z',           'p.nombre ASC'],
+        'precio_asc'  => ['Precio: menor a mayor', 'p.precio_base ASC'],
+        'precio_desc' => ['Precio: mayor a menor', 'p.precio_base DESC'],
+        'stock_asc'   => ['Stock: menos primero',  'stock_disponible ASC, p.id_producto DESC'],
+        'stock_desc'  => ['Stock: más primero',    'stock_disponible DESC, p.id_producto DESC'],
+        'vendidos'    => ['Más vendidos (30 días)', 'vendidos_30d DESC, p.id_producto DESC'],
+        'vistos'      => ['Más vistos (30 días)',   'vistas_30d DESC, p.id_producto DESC'],
+    ];
     // ─── PRODUCTOS ─────────────────────────────────────────────────────────────
 
        /**
@@ -61,10 +72,12 @@ class Producto extends Conexion
     }
 
     /** Listado del admin con filtros y paginación. */
+        /** Listado del admin con filtros, orden y paginación. */
     public function listarAdmin(array $filtros, int $pagina = 1, int $porPagina = 25): array
     {
         [$where, $params, $types] = $this->filtroAdmin($filtros);
 
+        $orden   = self::ORDENES[$filtros['orden'] ?? ''][1] ?? self::ORDENES['recientes'][1];
         $params[] = $porPagina;
         $params[] = ($pagina - 1) * $porPagina;
         $types   .= 'ii';
@@ -81,12 +94,22 @@ class Producto extends Conexion
                      FROM producto_variantes pv
                      WHERE pv.id_producto = p.id_producto AND pv.activo = 1) AS stock_disponible,
                     (SELECT COUNT(*) FROM producto_variantes pv
-                     WHERE pv.id_producto = p.id_producto AND pv.activo = 1) AS cant_variantes
+                     WHERE pv.id_producto = p.id_producto AND pv.activo = 1) AS cant_variantes,
+                    (SELECT COALESCE(SUM(pi.cantidad), 0)
+                     FROM pedido_items pi
+                     INNER JOIN producto_variantes pv ON pv.id_variante = pi.id_variante
+                     INNER JOIN pedidos pe ON pe.id_pedido = pi.id_pedido
+                     WHERE pv.id_producto = p.id_producto
+                     AND pe.estado <> 'cancelado'
+                     AND pe.fecha >= NOW() - INTERVAL 30 DAY) AS vendidos_30d,
+                    (SELECT COUNT(*) FROM visitas v
+                     WHERE v.tipo = 'producto' AND v.id_ref = p.id_producto
+                     AND v.fecha >= NOW() - INTERVAL 30 DAY) AS vistas_30d
                 FROM productos p
                 INNER JOIN categorias c ON c.id_categoria = p.id_categoria
                 LEFT JOIN marcas m ON m.id_marca = p.id_marca
                 $where
-                ORDER BY p.id_producto DESC
+                ORDER BY $orden
                 LIMIT ? OFFSET ?";
 
         $stmt = $this->db->prepare($sql);
@@ -94,6 +117,63 @@ class Producto extends Conexion
         $stmt->execute();
 
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+        /**
+     * Talles de varios productos con su disponibilidad (sumando todos los colores).
+     * Devuelve [id_producto => [['nombre' => '38', 'disponible' => 3], ...]] ordenado por talle.
+     */
+    public function tallesPorProducto(array $ids): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $marcas = implode(',', array_fill(0, count($ids), '?'));
+
+        $stmt = $this->db->prepare(
+            "SELECT pv.id_producto, t.nombre, t.orden,
+                    SUM(GREATEST(pv.stock - pv.stock_reservado, 0)) AS disponible
+             FROM producto_variantes pv
+             INNER JOIN talles t ON t.id_talle = pv.id_talle
+             WHERE pv.activo = 1 AND pv.id_producto IN ($marcas)
+             GROUP BY pv.id_producto, t.id_talle, t.nombre, t.orden
+             ORDER BY t.orden ASC, t.nombre ASC"
+        );
+        $stmt->bind_param(str_repeat('i', count($ids)), ...$ids);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        $talles = [];
+        while ($row = $res->fetch_assoc()) {
+            $talles[(int) $row['id_producto']][] = [
+                'nombre'     => $row['nombre'],
+                'disponible' => (int) $row['disponible'],
+            ];
+        }
+
+        return $talles;
+    }
+
+    /** Invierte activo o destacado de un producto. Devuelve el valor nuevo (0/1) o null si falla. */
+    public function toggleCampo(int $id, string $campo): ?int
+    {
+        if (!in_array($campo, ['activo', 'destacado'], true)) {
+            return null;
+        }
+
+        $stmt = $this->db->prepare(
+            "UPDATE productos SET $campo = 1 - $campo WHERE id_producto = ? AND eliminado_at IS NULL"
+        );
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+
+        $stmt = $this->db->prepare("SELECT $campo FROM productos WHERE id_producto = ? AND eliminado_at IS NULL");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $fila = $stmt->get_result()->fetch_assoc();
+
+        return $fila ? (int) $fila[$campo] : null;
     }
 
     public function contarAdmin(array $filtros): int

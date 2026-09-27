@@ -7,9 +7,65 @@ $url = function (array $cambios = []) use ($filtros): string {
 };
 
 $pesos = fn($n) => '$' . number_format((float) $n, 2, ',', '.');
+$num   = fn($n) => number_format((float) $n, 0, ',', '.');
 
 $flash = $_SESSION['productos_msg'] ?? null;
 unset($_SESSION['productos_msg']);
+
+/** Chips de talles: los agotados tachados. */
+$chipsTalles = function (int $idProducto) use ($talles): string {
+    if (empty($talles[$idProducto])) {
+        return '';
+    }
+    $html = '<div class="flex flex-wrap gap-1 mt-1">';
+    foreach ($talles[$idProducto] as $t) {
+        $clase = $t['disponible'] > 0
+            ? 'bg-gray-100 text-gray-700'
+            : 'bg-red-50 text-red-300 line-through';
+        $titulo = $t['disponible'] > 0 ? $t['disponible'] . ' disponible(s)' : 'Agotado';
+        $html  .= '<span class="px-1.5 py-0.5 rounded text-[11px] leading-none ' . $clase . '" title="' . $titulo . '">'
+                . htmlspecialchars($t['nombre']) . '</span>';
+    }
+    return $html . '</div>';
+};
+
+/** Íconos de aviso al lado del nombre. */
+$avisos = function (array $p): string {
+    $a = [];
+    if (empty($p['foto_principal']))      $a[] = '<span title="Sin foto">🖼️</span>';
+    if ($p['precio_costo'] === null)       $a[] = '<span title="Sin precio de costo">💲</span>';
+    if ((int) $p['stock_disponible'] <= 0) $a[] = '<span title="Agotado">⛔</span>';
+    return $a ? '<span class="ml-1 text-xs opacity-80">' . implode(' ', $a) . '</span>' : '';
+};
+
+/** Botón Activo/Inactivo que se cambia con un toque. */
+$botonActivo = function (array $p): string {
+    $on = (int) $p['activo'] === 1;
+    return '<button type="button" class="btn-toggle px-2 py-1 text-xs rounded whitespace-nowrap '
+         . ($on ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') . '"'
+         . ' data-id="' . (int) $p['id_producto'] . '" data-campo="activo" data-valor="' . ($on ? 1 : 0) . '"'
+         . ' title="Tocá para ' . ($on ? 'desactivar' : 'activar') . '">'
+         . ($on ? 'Activo' : 'Inactivo') . '</button>';
+};
+
+/** Estrella de destacado que se cambia con un toque. */
+$botonDestacado = function (array $p): string {
+    $on = (int) $p['destacado'] === 1;
+    return '<button type="button" class="btn-toggle text-lg leading-none ' . ($on ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400') . '"'
+         . ' data-id="' . (int) $p['id_producto'] . '" data-campo="destacado" data-valor="' . ($on ? 1 : 0) . '"'
+         . ' title="' . ($on ? 'Destacado (tocá para quitar)' : 'Tocá para destacar') . '">'
+         . ($on ? '★' : '☆') . '</button>';
+};
+
+/** Línea de actividad de los últimos 30 días. */
+$actividad = function (array $p) use ($num): string {
+    $vistas = (int) $p['vistas_30d'];
+    $ventas = (int) $p['vendidos_30d'];
+    if ($vistas === 0 && $ventas === 0) {
+        return '';
+    }
+    return '<p class="text-[11px] text-gray-400 mt-1">30 días: ' . $num($vistas) . ' vistas · ' . $num($ventas) . ' vendidos</p>';
+};
 ?>
 
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -31,32 +87,13 @@ unset($_SESSION['productos_msg']);
     </div>
 <?php endif; ?>
 
-<?php if (isset($_GET['ok'])): ?>
-    <div class="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 mb-4 text-sm">
-        <?php
-        $msgs = [
-            'creado'      => 'Producto creado correctamente.',
-            'actualizado' => 'Producto actualizado correctamente.',
-            'eliminado'   => 'Producto eliminado correctamente.',
-        ];
-        echo $msgs[$_GET['ok']] ?? 'Operación realizada.';
-        ?>
-    </div>
-<?php endif; ?>
-
-<?php if (isset($_GET['error'])): ?>
-    <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">
-        No se pudo eliminar el producto. Puede que ya haya sido eliminado.
-    </div>
-<?php endif; ?>
-
-<!-- ── Filtros ─────────────────────────────────────────────── -->
+<!-- ── Filtros y orden ─────────────────────────────────────── -->
 <form method="GET" action="<?= BASE_URL ?>/admin/productos" id="formFiltros"
-      class="bg-white rounded-lg shadow p-3 mb-4 grid grid-cols-2 md:grid-cols-5 gap-2">
+      class="bg-white rounded-lg shadow p-3 mb-4 grid grid-cols-2 md:grid-cols-6 gap-2">
 
     <input type="text" name="q" value="<?= htmlspecialchars($filtros['q']) ?>"
            placeholder="Buscar por nombre o marca…"
-           class="col-span-2 md:col-span-2 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
+           class="col-span-2 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
 
     <select name="categoria" class="auto-filtro border rounded-lg px-3 py-2 text-sm bg-white">
         <option value="">Todas las categorías</option>
@@ -73,7 +110,7 @@ unset($_SESSION['productos_msg']);
         <option value="inactivos" <?= $filtros['estado'] === 'inactivos' ? 'selected' : '' ?>>Solo inactivos</option>
     </select>
 
-    <select name="problema" class="auto-filtro col-span-2 md:col-span-1 border rounded-lg px-3 py-2 text-sm bg-white">
+    <select name="problema" class="auto-filtro border rounded-lg px-3 py-2 text-sm bg-white">
         <option value="">Sin filtro de problemas</option>
         <option value="agotados"  <?= $filtros['problema'] === 'agotados'  ? 'selected' : '' ?>>⛔ Agotados</option>
         <option value="faltantes" <?= $filtros['problema'] === 'faltantes' ? 'selected' : '' ?>>📦 Con talles agotados</option>
@@ -81,9 +118,17 @@ unset($_SESSION['productos_msg']);
         <option value="sin_costo" <?= $filtros['problema'] === 'sin_costo' ? 'selected' : '' ?>>💲 Sin costo</option>
     </select>
 
+    <select name="orden" class="auto-filtro border rounded-lg px-3 py-2 text-sm bg-white">
+        <?php foreach (Producto::ORDENES as $clave => [$texto]): ?>
+            <option value="<?= $clave === 'recientes' ? '' : $clave ?>" <?= ($filtros['orden'] ?: 'recientes') === $clave ? 'selected' : '' ?>>
+                <?= htmlspecialchars($texto) ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+
     <?php if ($hayFiltros): ?>
-        <a href="<?= BASE_URL ?>/admin/productos"
-           class="col-span-2 md:col-span-5 text-center text-sm text-gray-500 hover:text-red-600">
+        <a href="<?= $url(['q' => '', 'categoria' => 0, 'estado' => '', 'problema' => '', 'pagina' => null]) ?>"
+           class="col-span-2 md:col-span-6 text-center text-sm text-gray-500 hover:text-red-600">
             ✕ Limpiar filtros
         </a>
     <?php endif; ?>
@@ -99,7 +144,6 @@ unset($_SESSION['productos_msg']);
     <?php endforeach; ?>
     <div id="idsMasivo"></div>
 
-    <!-- Barra (aparece al seleccionar) -->
     <div id="barraAcciones" class="hidden sticky top-14 lg:top-0 z-20 bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
         <div class="flex flex-wrap items-center gap-2">
             <span class="font-medium text-blue-900 mr-1"><span id="cantSel">0</span> seleccionado(s)</span>
@@ -139,7 +183,6 @@ unset($_SESSION['productos_msg']);
             <button type="button" onclick="accion('eliminar')" class="px-2 py-1 rounded border border-red-200 bg-white text-red-600 hover:bg-red-50">Eliminar</button>
         </div>
 
-        <!-- Panel de precios -->
         <div id="panelPrecios" class="hidden mt-3 pt-3 border-t border-blue-200">
             <div class="flex flex-wrap items-end gap-3">
                 <label>
@@ -210,9 +253,10 @@ unset($_SESSION['productos_msg']);
         </label>
 
         <?php foreach ($productos as $p): ?>
+            <?php $idp = (int) $p['id_producto']; ?>
             <div class="bg-white rounded-lg shadow p-3">
                 <div class="flex gap-3">
-                    <input type="checkbox" class="sel-prod mt-1 shrink-0" value="<?= (int) $p['id_producto'] ?>"
+                    <input type="checkbox" class="sel-prod mt-1 shrink-0" value="<?= $idp ?>"
                            data-nombre="<?= htmlspecialchars($p['nombre']) ?>"
                            data-precio="<?= (float) $p['precio_base'] ?>"
                            data-costo="<?= $p['precio_costo'] !== null ? (float) $p['precio_costo'] : '' ?>">
@@ -229,28 +273,29 @@ unset($_SESSION['productos_msg']);
                     <div class="flex-1 min-w-0">
                         <div class="flex items-start justify-between gap-2">
                             <p class="font-semibold text-gray-900 leading-tight">
-                                <?= $p['destacado'] ? '<span class="text-yellow-500">★</span> ' : '' ?><?= htmlspecialchars($p['nombre']) ?>
+                                <?= htmlspecialchars($p['nombre']) ?><?= $avisos($p) ?>
                             </p>
-                            <?php if ($p['activo'] != 1): ?>
-                                <span class="shrink-0 px-2 py-0.5 text-xs rounded bg-red-100 text-red-700">Inactivo</span>
-                            <?php endif; ?>
+                            <?= $botonDestacado($p) ?>
                         </div>
                         <p class="text-xs text-gray-400 truncate">
                             <?= htmlspecialchars($p['categoria']) ?><?= $p['marca'] ? ' · ' . htmlspecialchars($p['marca']) : '' ?>
                         </p>
+                        <?= $chipsTalles($idp) ?>
                         <div class="flex items-center justify-between mt-2 text-sm">
                             <span class="font-bold"><?= $pesos($p['precio_base']) ?></span>
-                            <span class="<?= $p['stock_disponible'] <= 0 ? 'text-red-600 font-semibold' : 'text-gray-500' ?>">
-                                <?= (int) $p['stock_disponible'] ?> en stock
-                            </span>
+                            <?= $botonActivo($p) ?>
                         </div>
+                        <?= $actividad($p) ?>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-between mt-3 pt-3 border-t text-sm">
-                    <a href="<?= BASE_URL ?>/admin/productos/editar?id=<?= (int) $p['id_producto'] ?>" class="text-gray-700 font-medium">Editar</a>
-                    <a href="<?= BASE_URL ?>/admin/productos/variantes?id=<?= (int) $p['id_producto'] ?>" class="text-blue-600">Variantes</a>
-                    <a href="<?= BASE_URL ?>/admin/productos/fotos?id=<?= (int) $p['id_producto'] ?>" class="text-indigo-600">Fotos</a>
+                    <a href="<?= BASE_URL ?>/admin/productos/editar?id=<?= $idp ?>" class="text-gray-700 font-medium">Editar</a>
+                    <a href="<?= BASE_URL ?>/admin/productos/variantes?id=<?= $idp ?>" class="text-blue-600">Variantes</a>
+                    <a href="<?= BASE_URL ?>/admin/productos/fotos?id=<?= $idp ?>" class="text-indigo-600">Fotos</a>
+                    <?php if ((int) $p['activo'] === 1): ?>
+                        <a href="<?= BASE_URL ?>/producto/<?= htmlspecialchars($p['slug']) ?>" target="_blank" class="text-gray-400">↗ Ver</a>
+                    <?php endif; ?>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -263,6 +308,7 @@ unset($_SESSION['productos_msg']);
                 <thead class="bg-gray-100 text-gray-700">
                     <tr>
                         <th class="px-3 py-3 w-8"><input type="checkbox" class="sel-todos" title="Seleccionar todos los de esta página"></th>
+                        <th class="px-2 py-3 w-6"></th>
                         <th class="text-left px-3 py-3">Producto</th>
                         <th class="text-right px-3 py-3">Precio</th>
                         <th class="text-right px-3 py-3">Costo</th>
@@ -274,16 +320,19 @@ unset($_SESSION['productos_msg']);
                 </thead>
                 <tbody>
                     <?php foreach ($productos as $p): ?>
-                        <tr class="border-t hover:bg-gray-50">
+                        <?php $idp = (int) $p['id_producto']; ?>
+                        <tr class="border-t hover:bg-gray-50 align-top">
                             <td class="px-3 py-3">
-                                <input type="checkbox" class="sel-prod" value="<?= (int) $p['id_producto'] ?>"
+                                <input type="checkbox" class="sel-prod" value="<?= $idp ?>"
                                        data-nombre="<?= htmlspecialchars($p['nombre']) ?>"
                                        data-precio="<?= (float) $p['precio_base'] ?>"
                                        data-costo="<?= $p['precio_costo'] !== null ? (float) $p['precio_costo'] : '' ?>">
                             </td>
 
+                            <td class="px-2 py-3"><?= $botonDestacado($p) ?></td>
+
                             <td class="px-3 py-3">
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-start gap-3">
                                     <div class="w-10 h-12 shrink-0 rounded bg-gray-100 overflow-hidden">
                                         <?php if ($p['foto_principal']): ?>
                                             <img src="<?= BASE_URL ?>/public/uploads/productos/<?= htmlspecialchars($p['foto_principal']) ?>"
@@ -291,12 +340,12 @@ unset($_SESSION['productos_msg']);
                                         <?php endif; ?>
                                     </div>
                                     <div class="min-w-0">
-                                        <p class="font-medium text-gray-900">
-                                            <?= $p['destacado'] ? '<span class="text-yellow-500" title="Destacado">★</span> ' : '' ?><?= htmlspecialchars($p['nombre']) ?>
-                                        </p>
+                                        <p class="font-medium text-gray-900"><?= htmlspecialchars($p['nombre']) ?><?= $avisos($p) ?></p>
                                         <p class="text-xs text-gray-400">
                                             <?= htmlspecialchars($p['categoria']) ?><?= $p['marca'] ? ' · ' . htmlspecialchars($p['marca']) : '' ?>
                                         </p>
+                                        <?= $chipsTalles($idp) ?>
+                                        <?= $actividad($p) ?>
                                     </div>
                                 </div>
                             </td>
@@ -325,19 +374,17 @@ unset($_SESSION['productos_msg']);
                                 <span class="block text-xs text-gray-400"><?= (int) $p['cant_variantes'] ?> variante(s)</span>
                             </td>
 
-                            <td class="px-3 py-3 text-center">
-                                <?php if ($p['activo'] == 1): ?>
-                                    <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-700">Activo</span>
-                                <?php else: ?>
-                                    <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-700">Inactivo</span>
-                                <?php endif; ?>
-                            </td>
+                            <td class="px-3 py-3 text-center"><?= $botonActivo($p) ?></td>
 
                             <td class="px-3 py-3 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center gap-3">
-                                    <a href="<?= BASE_URL ?>/admin/productos/editar?id=<?= (int) $p['id_producto'] ?>" class="text-gray-600 hover:text-gray-900">Editar</a>
-                                    <a href="<?= BASE_URL ?>/admin/productos/variantes?id=<?= (int) $p['id_producto'] ?>" class="text-blue-600 hover:text-blue-800">Variantes</a>
-                                    <a href="<?= BASE_URL ?>/admin/productos/fotos?id=<?= (int) $p['id_producto'] ?>" class="text-indigo-600 hover:text-indigo-800">Fotos</a>
+                                    <a href="<?= BASE_URL ?>/admin/productos/editar?id=<?= $idp ?>" class="text-gray-600 hover:text-gray-900">Editar</a>
+                                    <a href="<?= BASE_URL ?>/admin/productos/variantes?id=<?= $idp ?>" class="text-blue-600 hover:text-blue-800">Variantes</a>
+                                    <a href="<?= BASE_URL ?>/admin/productos/fotos?id=<?= $idp ?>" class="text-indigo-600 hover:text-indigo-800">Fotos</a>
+                                    <?php if ((int) $p['activo'] === 1): ?>
+                                        <a href="<?= BASE_URL ?>/producto/<?= htmlspecialchars($p['slug']) ?>" target="_blank"
+                                           class="text-gray-400 hover:text-gray-900" title="Ver en la tienda">↗</a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -386,17 +433,63 @@ unset($_SESSION['productos_msg']);
 
 <script>
 (function () {
+    const CSRF         = <?= json_encode(csrf_token()) ?>;
+    const URL_TOGGLE   = '<?= BASE_URL ?>/admin/productos/toggle';
     const TOTAL_FILTRO = <?= (int) $total ?>;
-    const $  = id => document.getElementById(id);
+    const $     = id => document.getElementById(id);
     const barra = $('barraAcciones');
 
-    // Los selects del filtro se aplican apenas cambian (el buscador, con Enter)
+    // Filtros y orden se aplican apenas cambian (el buscador, con Enter)
     document.querySelectorAll('#formFiltros .auto-filtro').forEach(sel => {
         sel.addEventListener('change', () => sel.form.submit());
     });
 
+    // ── Interruptores Activo / ★ Destacado (con un toque) ───────
+    function pintarToggle(btn, valor) {
+        btn.dataset.valor = valor;
+        if (btn.dataset.campo === 'activo') {
+            btn.textContent = valor ? 'Activo' : 'Inactivo';
+            btn.className = 'btn-toggle px-2 py-1 text-xs rounded whitespace-nowrap ' +
+                (valor ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
+            btn.title = 'Tocá para ' + (valor ? 'desactivar' : 'activar');
+        } else {
+            btn.textContent = valor ? '★' : '☆';
+            btn.className = 'btn-toggle text-lg leading-none ' + (valor ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400');
+            btn.title = valor ? 'Destacado (tocá para quitar)' : 'Tocá para destacar';
+        }
+    }
+
+    document.addEventListener('click', async e => {
+        const btn = e.target.closest('.btn-toggle');
+        if (!btn || btn.disabled) return;
+
+        const id = btn.dataset.id, campo = btn.dataset.campo;
+        const todos = document.querySelectorAll(`.btn-toggle[data-id="${id}"][data-campo="${campo}"]`);
+        const anterior = Number(btn.dataset.valor);
+
+        // Cambio optimista (se ve al instante); si falla, se vuelve atrás
+        todos.forEach(b => { pintarToggle(b, anterior ? 0 : 1); b.disabled = true; });
+
+        try {
+            const datos = new FormData();
+            datos.append('csrf_token', CSRF);
+            datos.append('id', id);
+            datos.append('campo', campo);
+
+            const resp = await fetch(URL_TOGGLE, { method: 'POST', body: datos, credentials: 'same-origin' });
+            const json = (resp.headers.get('Content-Type') || '').includes('application/json') ? await resp.json() : null;
+
+            if (!json || !json.ok) throw new Error();
+            todos.forEach(b => pintarToggle(b, json.valor));
+        } catch (err) {
+            todos.forEach(b => pintarToggle(b, anterior));
+            alert('No se pudo guardar. Si pasó mucho tiempo, recargá la página.');
+        } finally {
+            todos.forEach(b => b.disabled = false);
+        }
+    });
+
     // ── Selección ───────────────────────────────────────────────
-    // Cada producto tiene 2 casillas (tarjeta mobile y fila desktop): se mantienen sincronizadas.
     let todoElFiltro = false;
 
     function idsSeleccionados() {
@@ -415,8 +508,6 @@ unset($_SESSION['productos_msg']);
 
         $('cantSel').textContent = todoElFiltro ? TOTAL_FILTRO + ' (todos los del filtro)' : n;
         barra.classList.toggle('hidden', n === 0 && !todoElFiltro);
-
-        // Ofrecer "todos los del filtro" si está toda la página marcada y hay más
         $('btnTodosFiltro').classList.toggle('hidden', todoElFiltro || n < enPagina || TOTAL_FILTRO <= enPagina);
 
         document.querySelectorAll('.sel-todos').forEach(c => {
@@ -444,7 +535,7 @@ unset($_SESSION['productos_msg']);
         revisar();
     };
 
-    // ── Enviar una acción ───────────────────────────────────────
+    // ── Acciones masivas ────────────────────────────────────────
     const textos = {
         activar: 'activar', desactivar: 'desactivar', destacar: 'destacar',
         quitar_destacado: 'quitarle el destacado a', categoria: 'cambiar la categoría de',

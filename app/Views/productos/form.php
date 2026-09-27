@@ -137,7 +137,7 @@
     </div>
 
     <div class="flex justify-end gap-2 pt-2">
-        <a href="<?= BASE_URL ?>/admin/productos"
+        <a href="<?= htmlspecialchars(url_listado_productos()) ?>"
            class="px-4 py-2 rounded-lg border text-gray-700">
             <?php echo $editando ? 'Volver al listado' : 'Cancelar'; ?>
         </a>

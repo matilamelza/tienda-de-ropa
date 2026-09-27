@@ -21,3 +21,12 @@ function variante_texto(?string $talle, ?string $color): string
 {
     return implode(' / ', array_filter([trim((string) $talle), trim((string) $color)], 'strlen'));
 }
+
+/** URL del listado de productos tal como la dejó el admin (con filtros, orden y página). */
+function url_listado_productos(): string
+{
+    $url = $_SESSION['productos_lista_url'] ?? '';
+
+    // Solo se acepta una URL del propio listado
+    return strpos($url, BASE_URL . '/admin/productos') === 0 ? $url : BASE_URL . '/admin/productos';
+}
