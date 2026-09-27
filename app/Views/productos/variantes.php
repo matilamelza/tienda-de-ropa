@@ -13,6 +13,7 @@
                 'creada'          => 'Variante agregada correctamente.',
                 'actualizada'     => 'Variante actualizada correctamente.',
                 'eliminada'       => 'Variante eliminada correctamente.',
+                'stock'           => 'Stock actualizado.',
             ];
             echo $msgs[$_GET['ok']] ?? 'Operación realizada.';
         }
@@ -59,7 +60,7 @@
 
                 <!-- Rango -->
                 <?php if (count($talles) > 2): ?>
-                    <div class="flex items-center gap-2 mt-3 text-sm">
+                    <div class="flex flex-wrap items-center gap-2 mt-3 text-sm">
                         <span class="text-gray-500">Desde</span>
                         <select id="rangoDesde" class="border rounded-lg px-2 py-1.5 bg-white text-sm">
                             <?php foreach ($talles as $t): ?>
@@ -134,7 +135,7 @@
             <!-- STOCK / PRECIO -->
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Stock para todas</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Stock de cada una</label>
                     <input type="number" id="stockTodas" min="0" value="0" class="w-full border rounded-lg px-3 py-2">
                 </div>
                 <div>
@@ -155,6 +156,8 @@
                 <div id="previewLista" class="max-h-72 overflow-y-auto border rounded-lg divide-y text-sm"></div>
             </div>
 
+            <p id="totalUnidades" class="hidden text-sm bg-blue-50 text-blue-800 rounded-lg px-3 py-2"></p>
+
             <div id="hiddenCombos"></div>
 
             <button type="submit" id="btnCrear" disabled
@@ -167,6 +170,20 @@
     <!-- ══ LISTADO DE VARIANTES ═══════════════════════════════════ -->
     <div class="lg:col-span-3">
         <div class="bg-white rounded-lg shadow overflow-hidden">
+
+            <form id="formStock" method="POST" action="<?= BASE_URL ?>/admin/productos/stock-variantes"
+                  class="flex items-center justify-between gap-3 px-4 py-3 border-b bg-gray-50">
+                <?= csrf_field() ?>
+                <input type="hidden" name="id_producto" value="<?= (int) $producto['id_producto'] ?>">
+                <p class="text-sm text-gray-600">
+                    Total: <strong id="totalStockListado">0</strong> unidades
+                </p>
+                <button id="btnGuardarStock" disabled
+                        class="text-sm px-4 py-2 rounded-lg bg-gray-300 text-white cursor-not-allowed">
+                    Guardar stock
+                </button>
+            </form>
+
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-100">
@@ -198,9 +215,15 @@
                                         <?= $v['precio'] ? '$' . number_format($v['precio'], 2, ',', '.') : '<span class="text-gray-400">base</span>' ?>
                                     </td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap">
-                                        <span class="<?= $v['stock_disponible'] <= 0 ? 'text-red-600 font-semibold' : '' ?>"><?= (int) $v['stock_disponible'] ?></span>
+                                        <input type="number" form="formStock"
+                                               name="stock[<?= (int) $v['id_variante'] ?>]"
+                                               value="<?= (int) $v['stock'] ?>"
+                                               min="<?= (int) $v['stock_reservado'] ?>"
+                                               data-original="<?= (int) $v['stock'] ?>"
+                                               class="input-stock w-20 border rounded px-2 py-1 text-right
+                                                      <?= $v['stock_disponible'] <= 0 ? 'border-red-300 text-red-600' : '' ?>">
                                         <?php if (!empty($v['stock_reservado']) && $v['stock_reservado'] > 0): ?>
-                                            <span class="block text-xs text-orange-600">+<?= (int) $v['stock_reservado'] ?> reservado</span>
+                                            <span class="block text-xs text-orange-600 mt-1"><?= (int) $v['stock_reservado'] ?> reservado</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="px-4 py-3 text-center">
@@ -257,6 +280,7 @@
     const hidden       = document.getElementById('hiddenCombos');
     const btnCrear     = document.getElementById('btnCrear');
     const stockTodas   = document.getElementById('stockTodas');
+    const cajaTotal    = document.getElementById('totalUnidades');
 
     // Stock editado a mano por combinación (clave "talle-color")
     const stockManual = {};
@@ -309,17 +333,35 @@
         return [...chips(tipo)].map(c => c.dataset.id).filter(id => elegidos[tipo].has(id));
     }
 
+    /** Recalcula el total de unidades y el texto del botón (sin redibujar la lista). */
+    function actualizarTotal() {
+        const inputs = hidden.querySelectorAll('input[name$="[stock]"]');
+        const nuevas = inputs.length;
+        const total  = [...inputs].reduce((s, inp) => s + (parseInt(inp.value) || 0), 0);
+
+        cajaTotal.classList.toggle('hidden', nuevas === 0);
+        cajaTotal.innerHTML = `<strong>${nuevas}</strong> variante${nuevas !== 1 ? 's' : ''} → `
+            + `<strong>${total}</strong> unidades en total`;
+
+        btnCrear.disabled = nuevas === 0;
+        btnCrear.className = 'w-full py-2.5 rounded-lg font-semibold ' +
+            (nuevas === 0 ? 'bg-gray-300 text-white cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800');
+        btnCrear.textContent = nuevas === 0
+            ? (previewLista.children.length ? 'Todas ya existen' : 'Elegí talles y colores')
+            : `Crear ${nuevas} variante${nuevas !== 1 ? 's' : ''} (${total} unidades)`;
+    }
+
     function armarPreview() {
         previewLista.innerHTML = '';
         hidden.innerHTML       = '';
 
-        let nuevas = 0;
-        let i      = 0;
+        let i = 0;
 
         ordenados('color').forEach(idColor => {
             ordenados('talle').forEach(idTalle => {
                 const clave  = idTalle + '-' + idColor;
                 const existe = EXISTENTES.includes(clave);
+                const stock  = stockManual[clave] ?? stockTodas.value;
 
                 const fila = document.createElement('div');
                 fila.className = 'flex items-center justify-between px-3 py-2 ' + (existe ? 'bg-gray-50 text-gray-400' : '');
@@ -327,8 +369,7 @@
                     <span>${escapar(nombreDe('talle', idTalle))} · ${escapar(nombreDe('color', idColor))}</span>
                     ${existe
                         ? '<span class="text-xs">ya existe</span>'
-                        : `<input type="number" min="0" data-clave="${clave}" data-i="${i}"
-                                  value="${stockManual[clave] ?? stockTodas.value}"
+                        : `<input type="number" min="0" data-clave="${clave}" data-i="${i}" value="${stock}"
                                   class="w-20 border rounded px-2 py-1 text-right">`}
                 `;
                 previewLista.appendChild(fila);
@@ -337,32 +378,26 @@
                     hidden.insertAdjacentHTML('beforeend',
                         `<input type="hidden" name="combos[${i}][talle]" value="${idTalle}">
                          <input type="hidden" name="combos[${i}][color]" value="${idColor}">
-                         <input type="hidden" name="combos[${i}][stock]" id="stock-${i}" value="${stockManual[clave] ?? stockTodas.value}">`);
+                         <input type="hidden" name="combos[${i}][stock]" id="stock-${i}" value="${stock}">`);
                     i++;
-                    nuevas++;
                 }
             });
         });
 
         previewBox.classList.toggle('hidden', previewLista.children.length === 0);
-
-        btnCrear.disabled = nuevas === 0;
-        btnCrear.className = 'w-full py-2.5 rounded-lg font-semibold ' +
-            (nuevas === 0 ? 'bg-gray-300 text-white cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800');
-        btnCrear.textContent = nuevas === 0
-            ? (previewLista.children.length ? 'Todas ya existen' : 'Elegí talles y colores')
-            : `Crear ${nuevas} variante${nuevas !== 1 ? 's' : ''}`;
+        actualizarTotal();
     }
 
-    // Stock editado en una fila → se guarda para esa combinación
+    // Stock editado en una fila → se guarda para esa combinación y se recalcula el total
     previewLista.addEventListener('input', e => {
         const inp = e.target.closest('input[data-clave]');
         if (!inp) return;
         stockManual[inp.dataset.clave] = inp.value;
         document.getElementById('stock-' + inp.dataset.i).value = inp.value;
+        actualizarTotal();
     });
 
-    // "Stock para todas" pisa todo lo editado a mano
+    // "Stock de cada una" pisa todo lo editado a mano
     stockTodas.addEventListener('input', () => {
         Object.keys(stockManual).forEach(k => delete stockManual[k]);
         armarPreview();
@@ -444,6 +479,31 @@
 
     $('nuevoTalleNombre').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); crearTalle(); } });
     $('nuevoColorNombre').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); crearColor(); } });
+
+    // ── Stock editable del listado ──────────────────────────────
+    const inputsStock  = document.querySelectorAll('.input-stock');
+    const btnGuardar   = document.getElementById('btnGuardarStock');
+    const totalListado = document.getElementById('totalStockListado');
+
+    function revisarStock() {
+        let total = 0, cambios = 0;
+
+        inputsStock.forEach(inp => {
+            total += parseInt(inp.value) || 0;
+            const cambio = inp.value !== inp.dataset.original;
+            if (cambio) cambios++;
+            inp.classList.toggle('bg-yellow-50', cambio);
+        });
+
+        totalListado.textContent = total;
+        btnGuardar.disabled  = cambios === 0;
+        btnGuardar.className = 'text-sm px-4 py-2 rounded-lg ' +
+            (cambios ? 'bg-gray-900 text-white hover:bg-gray-800' : 'bg-gray-300 text-white cursor-not-allowed');
+        btnGuardar.textContent = cambios ? `Guardar stock (${cambios})` : 'Guardar stock';
+    }
+
+    inputsStock.forEach(inp => inp.addEventListener('input', revisarStock));
+    revisarStock();
 
     function escapar(t) {
         const d = document.createElement('div');

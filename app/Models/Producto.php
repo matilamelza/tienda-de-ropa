@@ -751,4 +751,41 @@ class Producto extends Conexion
 
         return [$creadas, $omitidas];
     }
+
+        /**
+     * Actualiza el stock de varias variantes de un producto a la vez.
+     * $stocks: [id_variante => stock]
+     * El stock nunca queda por debajo de lo reservado por pedidos.
+     */
+    public function actualizarStockVariantes(int $id_producto, array $stocks): int
+    {
+        $cambiadas = 0;
+
+        try {
+            $this->db->begin_transaction();
+
+            $stmt = $this->db->prepare(
+                "UPDATE producto_variantes
+                 SET stock = GREATEST(?, stock_reservado)
+                 WHERE id_variante = ? AND id_producto = ?"
+            );
+
+            foreach ($stocks as $id_variante => $stock) {
+                $id_variante = (int) $id_variante;
+                $stock       = max(0, (int) $stock);
+
+                $stmt->bind_param("iii", $stock, $id_variante, $id_producto);
+                $stmt->execute();
+                $cambiadas += $stmt->affected_rows;
+            }
+
+            $this->db->commit();
+
+        } catch (Throwable $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+
+        return $cambiadas;
+    }
 }

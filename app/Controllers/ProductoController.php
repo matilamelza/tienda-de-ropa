@@ -519,4 +519,20 @@ class ProductoController extends Controller
         echo json_encode(['ok' => true]);
         exit;
     }
+
+        public function actualizarStockVariantes()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
+
+        $id_producto = (int) ($_POST['id_producto'] ?? 0);
+        $stocks      = (array) ($_POST['stock'] ?? []);
+
+        if ($id_producto > 0 && $stocks) {
+            (new Producto())->actualizarStockVariantes($id_producto, $stocks);
+        }
+
+        $this->redirect(BASE_URL . '/admin/productos/variantes?id=' . $id_producto . '&ok=stock');
+    }
 }
