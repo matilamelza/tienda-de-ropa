@@ -116,6 +116,10 @@ class Producto extends Conexion
 
     public function guardar($data)
     {
+
+    $data['slug'] = $this->slugUnico($data['slug']);
+
+
         $sql = "INSERT INTO productos 
                 (id_categoria, id_marca, nombre, slug, descripcion, precio_base, precio_costo, activo, destacado)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -140,6 +144,9 @@ class Producto extends Conexion
 
     public function actualizar($id, $data)
     {
+
+    
+    $data['slug'] = $this->slugUnico($data['slug'], (int) $id);
         $sql = "UPDATE productos SET
                     id_categoria = ?,
                     id_marca     = ?,
@@ -657,5 +664,30 @@ class Producto extends Conexion
             'min' => (float)($row['minimo'] ?? 0),
             'max' => (float)($row['maximo'] ?? 0),
         ];
+    }
+
+        /**
+     * Devuelve un slug que no esté usado por otro producto.
+     * Si "new-balance-530" existe, prueba "new-balance-530-2", "-3", etc.
+     */
+    public function slugUnico(string $base, int $excluirId = 0): string
+    {
+        $slug = $base;
+        $n    = 2;
+
+        while ($this->existeSlug($slug, $excluirId)) {
+            $slug = $base . '-' . $n++;
+        }
+
+        return $slug;
+    }
+
+    private function existeSlug(string $slug, int $excluirId): bool
+    {
+        $stmt = $this->db->prepare("SELECT 1 FROM productos WHERE slug = ? AND id_producto <> ? LIMIT 1");
+        $stmt->bind_param("si", $slug, $excluirId);
+        $stmt->execute();
+
+        return $stmt->get_result()->num_rows > 0;
     }
 }
