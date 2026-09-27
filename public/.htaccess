@@ -101,7 +101,7 @@ RewriteRule ^admin/productos/eliminar-foto/?$       index.php?route=productos_el
 RewriteRule ^admin/productos/ordenar-fotos/?$      index.php?route=productos_ordenar_fotos       [L,QSA]
 RewriteRule ^admin/productos/?$                     index.php?route=productos                     [L,QSA]
 RewriteRule ^admin/productos/editar-variantes/?$   index.php?route=productos_editar_variantes    [L,QSA]
-+RewriteRule ^admin/productos/eliminar-variantes/?$ index.php?route=productos_eliminar_variantes  [L,QSA]
+RewriteRule ^admin/productos/eliminar-variantes/?$ index.php?route=productos_eliminar_variantes  [L,QSA]
 
 # Talles
 RewriteRule ^admin/talles/?$            index.php?route=talles             [L,QSA]
