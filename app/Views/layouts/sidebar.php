@@ -16,7 +16,7 @@ $menu = [
         ['/admin',              'Dashboard',    '📊', true],
         ['/admin/estadisticas', 'Estadísticas', '📈', false],
         ['/admin/pedidos',      'Pedidos',      '🧾', false],
-        ['/admin/caja',         'Caja',         '💰', false],
+        // ['/admin/caja',         'Caja',         '💰', false],
         ['/admin/clientes',     'Clientes',     '👥', false],
     ],
     'Catálogo' => [
