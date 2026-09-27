@@ -7,13 +7,17 @@
             $c = (int) ($_GET['c'] ?? 0);
             $o = (int) ($_GET['o'] ?? 0);
             echo "Se crearon $c variante(s)." . ($o > 0 ? " Se omitieron $o que ya existían." : '');
+        } elseif ($_GET['ok'] === 'eliminadas') {
+            $e = (int) ($_GET['e'] ?? 0);
+            $d = (int) ($_GET['d'] ?? 0);
+            echo "Se eliminaron $e variante(s)."
+               . ($d > 0 ? " $d se desactivaron en vez de borrarse porque ya tienen pedidos." : '');
         } else {
             $msgs = [
                 'producto_creado' => 'Producto creado. Ahora cargale los talles y colores.',
-                'creada'          => 'Variante agregada correctamente.',
                 'actualizada'     => 'Variante actualizada correctamente.',
                 'eliminada'       => 'Variante eliminada correctamente.',
-                'stock'           => 'Stock actualizado.',
+                'guardadas'       => 'Cambios guardados.',
             ];
             echo $msgs[$_GET['ok']] ?? 'Operación realizada.';
         }
@@ -23,14 +27,14 @@
 
 <?php if (($_GET['error'] ?? '') === 'sin_combinaciones'): ?>
     <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">
-        Elegí al menos un talle y un color.
+        Elegí al menos un talle.
     </div>
 <?php endif; ?>
 
-<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+<div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
 
     <!-- ══ AGREGAR VARIANTES ══════════════════════════════════════ -->
-    <div class="lg:col-span-2 bg-white rounded-lg shadow p-5 h-fit">
+    <div class="xl:col-span-2 bg-white rounded-lg shadow p-5 h-fit">
         <h3 class="text-lg font-bold text-gray-800 mb-4">Agregar variantes</h3>
 
         <form action="<?= BASE_URL ?>/admin/productos/guardar-variantes" method="POST" id="formMasivo" class="space-y-5">
@@ -58,7 +62,6 @@
                     <?php endforeach; ?>
                 </div>
 
-                <!-- Rango -->
                 <?php if (count($talles) > 2): ?>
                     <div class="flex flex-wrap items-center gap-2 mt-3 text-sm">
                         <span class="text-gray-500">Desde</span>
@@ -78,7 +81,6 @@
                     </div>
                 <?php endif; ?>
 
-                <!-- Nuevo talle -->
                 <div id="nuevoTalle" class="hidden mt-3 p-3 bg-gray-50 border rounded-lg space-y-2">
                     <input type="text" id="nuevoTalleNombre" maxlength="20" placeholder="Ej: 45, XXL, Único"
                            class="w-full border rounded-lg px-3 py-2 text-sm">
@@ -112,7 +114,6 @@
                     <?php endforeach; ?>
                 </div>
 
-                <!-- Nuevo color -->
                 <div id="nuevoColor" class="hidden mt-3 p-3 bg-gray-50 border rounded-lg space-y-2">
                     <input type="text" id="nuevoColorNombre" maxlength="50" placeholder="Ej: Azul marino, Estampado"
                            class="w-full border rounded-lg px-3 py-2 text-sm">
@@ -150,7 +151,6 @@
                 <span class="text-sm">Activas</span>
             </label>
 
-            <!-- VISTA PREVIA -->
             <div id="preview" class="hidden">
                 <p class="text-sm font-medium text-gray-700 mb-2">Vista previa <span class="text-gray-400 font-normal">(podés cambiar el stock de cada una)</span></p>
                 <div id="previewLista" class="max-h-72 overflow-y-auto border rounded-lg divide-y text-sm"></div>
@@ -162,89 +162,123 @@
 
             <button type="submit" id="btnCrear" disabled
                     class="w-full bg-gray-300 text-white py-2.5 rounded-lg font-semibold cursor-not-allowed">
-                Elegí talles y colores
+                Elegí al menos un talle
             </button>
         </form>
     </div>
 
-    <!-- ══ LISTADO DE VARIANTES ═══════════════════════════════════ -->
-    <div class="lg:col-span-3">
+    <!-- ══ VARIANTES (edición múltiple) ═══════════════════════════ -->
+    <div class="xl:col-span-3">
         <div class="bg-white rounded-lg shadow overflow-hidden">
 
-            <form id="formStock" method="POST" action="<?= BASE_URL ?>/admin/productos/stock-variantes"
-                  class="flex items-center justify-between gap-3 px-4 py-3 border-b bg-gray-50">
+            <!-- Guardar todo -->
+            <form id="formEditar" method="POST" action="<?= BASE_URL ?>/admin/productos/editar-variantes"
+                  class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b bg-gray-50">
                 <?= csrf_field() ?>
                 <input type="hidden" name="id_producto" value="<?= (int) $producto['id_producto'] ?>">
                 <p class="text-sm text-gray-600">
                     Total: <strong id="totalStockListado">0</strong> unidades
                 </p>
-                <button id="btnGuardarStock" disabled
+                <button id="btnGuardar" disabled
                         class="text-sm px-4 py-2 rounded-lg bg-gray-300 text-white cursor-not-allowed">
-                    Guardar stock
+                    Guardar cambios
                 </button>
             </form>
+
+            <!-- Eliminar seleccionadas (form aparte) -->
+            <form id="formEliminar" method="POST" action="<?= BASE_URL ?>/admin/productos/eliminar-variantes" class="hidden">
+                <?= csrf_field() ?>
+                <input type="hidden" name="id_producto" value="<?= (int) $producto['id_producto'] ?>">
+                <div id="idsEliminar"></div>
+            </form>
+
+            <!-- Barra de acciones (aparece al seleccionar) -->
+            <div id="barraAcciones" class="hidden flex-wrap items-center gap-2 px-4 py-3 border-b bg-blue-50 text-sm">
+                <span class="font-medium text-blue-900 mr-2"><span id="cantSel">0</span> seleccionada(s)</span>
+
+                <div class="flex items-center gap-1">
+                    <input type="number" id="accStock" min="0" placeholder="Stock" class="w-20 border rounded px-2 py-1">
+                    <button type="button" onclick="aplicar('stock')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Poner stock</button>
+                </div>
+
+                <div class="flex items-center gap-1">
+                    <input type="number" id="accPrecio" min="0" step="0.01" placeholder="Precio" class="w-24 border rounded px-2 py-1">
+                    <button type="button" onclick="aplicar('precio')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Poner precio</button>
+                    <button type="button" onclick="aplicar('precio_base')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Usar precio base</button>
+                </div>
+
+                <button type="button" onclick="aplicar('activar')"    class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Activar</button>
+                <button type="button" onclick="aplicar('desactivar')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Desactivar</button>
+                <button type="button" onclick="eliminarSeleccionadas()" class="px-2 py-1 rounded border border-red-200 bg-white text-red-600 hover:bg-red-50">Eliminar</button>
+            </div>
 
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-100">
                         <tr>
-                            <th class="text-left px-4 py-3">Talle</th>
-                            <th class="text-left px-4 py-3">Color</th>
-                            <th class="text-left px-4 py-3">SKU</th>
-                            <th class="text-right px-4 py-3">Precio</th>
-                            <th class="text-right px-4 py-3">Stock</th>
-                            <th class="text-center px-4 py-3">Estado</th>
-                            <th class="text-right px-4 py-3">Acciones</th>
+                            <th class="px-3 py-3 w-8"><input type="checkbox" id="selTodas" title="Seleccionar todas"></th>
+                            <th class="text-left px-3 py-3">Variante</th>
+                            <th class="text-left px-3 py-3">SKU</th>
+                            <th class="text-right px-3 py-3">Precio especial</th>
+                            <th class="text-right px-3 py-3">Stock</th>
+                            <th class="text-center px-3 py-3">Activa</th>
+                            <th class="px-3 py-3"></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if ($variantes && $variantes->num_rows > 0): ?>
                             <?php while ($v = $variantes->fetch_assoc()): ?>
-                                <tr class="border-t hover:bg-gray-50">
-                                    <td class="px-4 py-3"><?= htmlspecialchars($v['talle'] ?? '—') ?></td>
-                                    <td class="px-4 py-3">
-                                        <span class="inline-flex items-center gap-1">
+                                <?php $id = (int) $v['id_variante']; ?>
+                                <tr class="fila-var border-t hover:bg-gray-50" data-id="<?= $id ?>">
+                                    <td class="px-3 py-2"><input type="checkbox" class="sel-var" value="<?= $id ?>"></td>
+
+                                    <td class="px-3 py-2 whitespace-nowrap">
+                                        <span class="inline-flex items-center gap-1.5">
                                             <?php if (!empty($v['codigo_hex'])): ?>
                                                 <span class="w-3 h-3 rounded-full border" style="background:<?= htmlspecialchars($v['codigo_hex']) ?>"></span>
                                             <?php endif; ?>
-                                            <?= htmlspecialchars($v['color'] ?? '—') ?>
+                                            <?= htmlspecialchars(variante_texto($v['talle'], $v['color'])) ?>
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 font-mono text-xs"><?= htmlspecialchars($v['sku'] ?: '—') ?></td>
-                                    <td class="px-4 py-3 text-right">
-                                        <?= $v['precio'] ? '$' . number_format($v['precio'], 2, ',', '.') : '<span class="text-gray-400">base</span>' ?>
+
+                                    <td class="px-3 py-2">
+                                        <input type="text" form="formEditar" name="var[<?= $id ?>][sku]" maxlength="60"
+                                               value="<?= htmlspecialchars($v['sku'] ?? '') ?>"
+                                               data-original="<?= htmlspecialchars($v['sku'] ?? '') ?>"
+                                               class="campo w-28 border rounded px-2 py-1 font-mono text-xs">
                                     </td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap">
-                                        <input type="number" form="formStock"
-                                               name="stock[<?= (int) $v['id_variante'] ?>]"
-                                               value="<?= (int) $v['stock'] ?>"
+
+                                    <td class="px-3 py-2 text-right">
+                                        <input type="number" form="formEditar" name="var[<?= $id ?>][precio]" min="0" step="0.01"
+                                               value="<?= $v['precio'] !== null ? htmlspecialchars((string) $v['precio']) : '' ?>"
+                                               data-original="<?= $v['precio'] !== null ? htmlspecialchars((string) $v['precio']) : '' ?>"
+                                               placeholder="base"
+                                               class="campo campo-precio w-24 border rounded px-2 py-1 text-right">
+                                    </td>
+
+                                    <td class="px-3 py-2 text-right whitespace-nowrap">
+                                        <input type="number" form="formEditar" name="var[<?= $id ?>][stock]"
                                                min="<?= (int) $v['stock_reservado'] ?>"
+                                               value="<?= (int) $v['stock'] ?>"
                                                data-original="<?= (int) $v['stock'] ?>"
-                                               class="input-stock w-20 border rounded px-2 py-1 text-right
-                                                      <?= $v['stock_disponible'] <= 0 ? 'border-red-300 text-red-600' : '' ?>">
-                                        <?php if (!empty($v['stock_reservado']) && $v['stock_reservado'] > 0): ?>
+                                               class="campo campo-stock w-20 border rounded px-2 py-1 text-right
+                                                      <?= $v['stock_disponible'] <= 0 ? 'text-red-600' : '' ?>">
+                                        <?php if ((int) $v['stock_reservado'] > 0): ?>
                                             <span class="block text-xs text-orange-600 mt-1"><?= (int) $v['stock_reservado'] ?> reservado</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="px-4 py-3 text-center">
-                                        <?php if ($v['activo'] == 1): ?>
-                                            <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-700">Activa</span>
-                                        <?php else: ?>
-                                            <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-700">Inactiva</span>
-                                        <?php endif; ?>
+
+                                    <td class="px-3 py-2 text-center">
+                                        <input type="hidden"   form="formEditar" name="var[<?= $id ?>][activo]" value="0">
+                                        <input type="checkbox" form="formEditar" name="var[<?= $id ?>][activo]" value="1"
+                                               <?= $v['activo'] == 1 ? 'checked' : '' ?>
+                                               data-original="<?= $v['activo'] == 1 ? '1' : '0' ?>"
+                                               class="campo campo-activo">
                                     </td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap">
-                                        <div class="inline-flex items-center gap-3">
-                                            <a href="<?= BASE_URL ?>/admin/productos/editar-variante?id=<?= (int) $v['id_variante'] ?>"
-                                               class="text-gray-600 hover:text-gray-900">Editar</a>
-                                            <?= boton_eliminar(
-                                                BASE_URL . '/admin/productos/eliminar-variante',
-                                                ['id' => $v['id_variante'], 'id_producto' => $producto['id_producto']],
-                                                '¿Eliminar esta variante?',
-                                                'Eliminar',
-                                                'text-red-500 hover:text-red-700'
-                                            ) ?>
-                                        </div>
+
+                                    <td class="px-3 py-2 text-right whitespace-nowrap">
+                                        <a href="<?= BASE_URL ?>/admin/productos/editar-variante?id=<?= $id ?>"
+                                           class="text-gray-500 hover:text-gray-900 text-xs" title="Cambiar talle o color">Editar</a>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>
@@ -272,20 +306,20 @@
     const CSRF       = <?= json_encode(csrf_token()) ?>;
     const BASE       = '<?= BASE_URL ?>';
     const EXISTENTES = <?= json_encode(array_keys($existentes)) ?>;
+    const $          = id => document.getElementById(id);
 
-    const elegidos = { talle: new Set(), color: new Set() };
+    // ══════════════════════════════════════════════════════════════
+    // AGREGAR VARIANTES
+    // ══════════════════════════════════════════════════════════════
+    const elegidos     = { talle: new Set(), color: new Set() };
+    const previewBox   = $('preview');
+    const previewLista = $('previewLista');
+    const hidden       = $('hiddenCombos');
+    const btnCrear     = $('btnCrear');
+    const stockTodas   = $('stockTodas');
+    const cajaTotal    = $('totalUnidades');
+    const stockManual  = {};
 
-    const previewBox   = document.getElementById('preview');
-    const previewLista = document.getElementById('previewLista');
-    const hidden       = document.getElementById('hiddenCombos');
-    const btnCrear     = document.getElementById('btnCrear');
-    const stockTodas   = document.getElementById('stockTodas');
-    const cajaTotal    = document.getElementById('totalUnidades');
-
-    // Stock editado a mano por combinación (clave "talle-color")
-    const stockManual = {};
-
-    // ── Chips ───────────────────────────────────────────────────
     function chips(tipo) {
         return document.querySelectorAll('#chips' + (tipo === 'talle' ? 'Talle' : 'Color') + ' .chip');
     }
@@ -312,10 +346,9 @@
     };
 
     window.marcarRango = function () {
-        let desde = Number(document.getElementById('rangoDesde').value);
-        let hasta = Number(document.getElementById('rangoHasta').value);
+        let desde = Number($('rangoDesde').value);
+        let hasta = Number($('rangoHasta').value);
         if (desde > hasta) [desde, hasta] = [hasta, desde];
-
         chips('talle').forEach(ch => {
             const orden = Number(ch.dataset.orden);
             if (orden >= desde && orden <= hasta) elegidos.talle.add(ch.dataset.id);
@@ -323,7 +356,6 @@
         pintar();
     };
 
-    // ── Vista previa ────────────────────────────────────────────
     function nombreDe(tipo, id) {
         const ch = [...chips(tipo)].find(c => c.dataset.id === id);
         return ch ? ch.dataset.nombre : '';
@@ -333,15 +365,13 @@
         return [...chips(tipo)].map(c => c.dataset.id).filter(id => elegidos[tipo].has(id));
     }
 
-    /** Recalcula el total de unidades y el texto del botón (sin redibujar la lista). */
     function actualizarTotal() {
         const inputs = hidden.querySelectorAll('input[name$="[stock]"]');
         const nuevas = inputs.length;
         const total  = [...inputs].reduce((s, inp) => s + (parseInt(inp.value) || 0), 0);
 
         cajaTotal.classList.toggle('hidden', nuevas === 0);
-        cajaTotal.innerHTML = `<strong>${nuevas}</strong> variante${nuevas !== 1 ? 's' : ''} → `
-            + `<strong>${total}</strong> unidades en total`;
+        cajaTotal.innerHTML = `<strong>${nuevas}</strong> variante${nuevas !== 1 ? 's' : ''} → <strong>${total}</strong> unidades en total`;
 
         btnCrear.disabled = nuevas === 0;
         btnCrear.className = 'w-full py-2.5 rounded-lg font-semibold ' +
@@ -389,16 +419,14 @@
         actualizarTotal();
     }
 
-    // Stock editado en una fila → se guarda para esa combinación y se recalcula el total
     previewLista.addEventListener('input', e => {
         const inp = e.target.closest('input[data-clave]');
         if (!inp) return;
         stockManual[inp.dataset.clave] = inp.value;
-        document.getElementById('stock-' + inp.dataset.i).value = inp.value;
+        $('stock-' + inp.dataset.i).value = inp.value;
         actualizarTotal();
     });
 
-    // "Stock de cada una" pisa todo lo editado a mano
     stockTodas.addEventListener('input', () => {
         Object.keys(stockManual).forEach(k => delete stockManual[k]);
         armarPreview();
@@ -411,7 +439,6 @@
         color: { caja: 'nuevoColor', nombre: 'nuevoColorNombre', error: 'nuevoColorError', boton: 'nuevoColorBtn',
                  url: BASE + '/admin/colores/crear-ajax', texto: 'Crear color', chips: 'chipsColor' }
     };
-    const $ = id => document.getElementById(id);
 
     function mostrarError(tipo, texto) {
         $(cfg[tipo].error).textContent = texto;
@@ -448,7 +475,6 @@
             const json = await resp.json();
             if (!json.ok) { mostrarError(tipo, json.error || 'No se pudo crear.'); return; }
 
-            // Nuevo chip, ya marcado
             const ch = document.createElement('button');
             ch.type = 'button';
             ch.className = 'chip';
@@ -481,30 +507,111 @@
     $('nuevoTalleNombre').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); crearTalle(); } });
     $('nuevoColorNombre').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); crearColor(); } });
 
-    // ── Stock editable del listado ──────────────────────────────
-    const inputsStock  = document.querySelectorAll('.input-stock');
-    const btnGuardar   = document.getElementById('btnGuardarStock');
-    const totalListado = document.getElementById('totalStockListado');
+    // ══════════════════════════════════════════════════════════════
+    // EDICIÓN MÚLTIPLE
+    // ══════════════════════════════════════════════════════════════
+    const filas      = document.querySelectorAll('.fila-var');
+    const btnGuardar = $('btnGuardar');
+    const selTodas   = $('selTodas');
+    const barra      = $('barraAcciones');
 
-    function revisarStock() {
-        let total = 0, cambios = 0;
+    function valorCampo(inp) {
+        return inp.type === 'checkbox' ? (inp.checked ? '1' : '0') : inp.value;
+    }
 
-        inputsStock.forEach(inp => {
-            total += parseInt(inp.value) || 0;
-            const cambio = inp.value !== inp.dataset.original;
-            if (cambio) cambios++;
-            inp.classList.toggle('bg-yellow-50', cambio);
+    /** Marca en amarillo lo modificado, cuenta cambios y total de unidades. */
+    function revisar() {
+        let cambios = 0, total = 0;
+
+        filas.forEach(fila => {
+            let filaCambiada = false;
+            fila.querySelectorAll('.campo').forEach(inp => {
+                const cambio = valorCampo(inp) !== inp.dataset.original;
+                if (inp.type !== 'checkbox') inp.classList.toggle('bg-yellow-50', cambio);
+                if (cambio) filaCambiada = true;
+            });
+            fila.classList.toggle('bg-yellow-50/40', filaCambiada);
+            if (filaCambiada) cambios++;
+            total += parseInt(fila.querySelector('.campo-stock').value) || 0;
         });
 
-        totalListado.textContent = total;
+        $('totalStockListado').textContent = total;
         btnGuardar.disabled  = cambios === 0;
         btnGuardar.className = 'text-sm px-4 py-2 rounded-lg ' +
             (cambios ? 'bg-gray-900 text-white hover:bg-gray-800' : 'bg-gray-300 text-white cursor-not-allowed');
-        btnGuardar.textContent = cambios ? `Guardar stock (${cambios})` : 'Guardar stock';
+        btnGuardar.textContent = cambios ? `Guardar cambios (${cambios} variante${cambios !== 1 ? 's' : ''})` : 'Guardar cambios';
     }
 
-    inputsStock.forEach(inp => inp.addEventListener('input', revisarStock));
-    revisarStock();
+    document.querySelectorAll('.campo').forEach(inp => {
+        inp.addEventListener('input', revisar);
+        inp.addEventListener('change', revisar);
+    });
+
+    // ── Selección ───────────────────────────────────────────────
+    function seleccionadas() {
+        return [...document.querySelectorAll('.sel-var:checked')].map(c => c.closest('.fila-var'));
+    }
+
+    function revisarSeleccion() {
+        const n = seleccionadas().length;
+        $('cantSel').textContent = n;
+        barra.classList.toggle('hidden', n === 0);
+        barra.classList.toggle('flex', n > 0);
+        selTodas.checked = n > 0 && n === filas.length;
+        selTodas.indeterminate = n > 0 && n < filas.length;
+    }
+
+    selTodas.addEventListener('change', () => {
+        document.querySelectorAll('.sel-var').forEach(c => c.checked = selTodas.checked);
+        revisarSeleccion();
+    });
+    document.querySelectorAll('.sel-var').forEach(c => c.addEventListener('change', revisarSeleccion));
+
+    // ── Acciones masivas (rellenan las filas; se confirma con Guardar) ──
+    window.aplicar = function (accion) {
+        const sel = seleccionadas();
+        if (!sel.length) return;
+
+        if (accion === 'stock') {
+            const v = $('accStock').value;
+            if (v === '') { $('accStock').focus(); return; }
+            sel.forEach(f => {
+                const inp = f.querySelector('.campo-stock');
+                inp.value = Math.max(parseInt(v) || 0, parseInt(inp.min) || 0);   // nunca menos que lo reservado
+            });
+        }
+        if (accion === 'precio') {
+            const v = $('accPrecio').value;
+            if (v === '') { $('accPrecio').focus(); return; }
+            sel.forEach(f => f.querySelector('.campo-precio').value = v);
+        }
+        if (accion === 'precio_base') {
+            sel.forEach(f => f.querySelector('.campo-precio').value = '');
+        }
+        if (accion === 'activar' || accion === 'desactivar') {
+            sel.forEach(f => f.querySelector('.campo-activo').checked = accion === 'activar');
+        }
+
+        revisar();
+    };
+
+    window.eliminarSeleccionadas = function () {
+        const sel = seleccionadas();
+        if (!sel.length) return;
+
+        if (!confirm(`¿Eliminar ${sel.length} variante(s)? Las que ya tienen pedidos se van a desactivar en vez de borrarse.`)) return;
+
+        $('idsEliminar').innerHTML = sel
+            .map(f => `<input type="hidden" name="ids[]" value="${f.dataset.id}">`)
+            .join('');
+        $('formEliminar').submit();
+    };
+
+    // Avisar si se va de la página con cambios sin guardar
+    window.addEventListener('beforeunload', e => {
+        if (!btnGuardar.disabled) { e.preventDefault(); e.returnValue = ''; }
+    });
+    $('formEditar').addEventListener('submit', () => { btnGuardar.disabled = true; });
 
     function escapar(t) {
         const d = document.createElement('div');
@@ -512,6 +619,7 @@
         return d.innerHTML;
     }
 
+    revisar();
     pintar();
 })();
 </script>

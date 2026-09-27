@@ -261,6 +261,18 @@ switch ($route) {
         $controller = new ProductoController();
         $controller->guardarVariantesMasivo();
         break;
+
+        case 'productos_editar_variantes':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->actualizarVariantesMasivo();
+        break;
+
+    case 'productos_eliminar_variantes':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->eliminarVariantesMasivo();
+        break;
     // ─── CATEGORÍAS ────────────────────────────────────────────────────────────
 
     case 'categorias':

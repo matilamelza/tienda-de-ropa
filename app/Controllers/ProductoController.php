@@ -538,19 +538,44 @@ class ProductoController extends Controller
         exit;
     }
 
-        public function actualizarStockVariantes()
+       public function actualizarVariantesMasivo()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect(BASE_URL . '/admin/productos');
         }
 
         $id_producto = (int) ($_POST['id_producto'] ?? 0);
-        $stocks      = (array) ($_POST['stock'] ?? []);
+        $filas       = [];
 
-        if ($id_producto > 0 && $stocks) {
-            (new Producto())->actualizarStockVariantes($id_producto, $stocks);
+        foreach ((array) ($_POST['var'] ?? []) as $id_variante => $f) {
+            $precio = trim((string) ($f['precio'] ?? ''));
+
+            $filas[(int) $id_variante] = [
+                'sku'    => mb_substr(trim((string) ($f['sku'] ?? '')), 0, 60),
+                'precio' => $precio !== '' ? max(0, (float) $precio) : null,
+                'stock'  => max(0, (int) ($f['stock'] ?? 0)),
+                'activo' => !empty($f['activo']) ? 1 : 0,
+            ];
         }
 
-        $this->redirect(BASE_URL . '/admin/productos/variantes?id=' . $id_producto . '&ok=stock');
+        if ($id_producto > 0 && $filas) {
+            (new Producto())->actualizarVariantesMasivo($id_producto, $filas);
+        }
+
+        $this->redirect(BASE_URL . '/admin/productos/variantes?id=' . $id_producto . '&ok=guardadas');
+    }
+
+    public function eliminarVariantesMasivo()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
+
+        $id_producto = (int) ($_POST['id_producto'] ?? 0);
+        $ids         = array_filter(array_map('intval', (array) ($_POST['ids'] ?? [])));
+
+        [$e, $d] = $ids ? (new Producto())->eliminarVariantesMasivo($id_producto, $ids) : [0, 0];
+
+        $this->redirect(BASE_URL . '/admin/productos/variantes?id=' . $id_producto . '&ok=eliminadas&e=' . $e . '&d=' . $d);
     }
 }

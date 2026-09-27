@@ -757,7 +757,12 @@ class Producto extends Conexion
      * $stocks: [id_variante => stock]
      * El stock nunca queda por debajo de lo reservado por pedidos.
      */
-    public function actualizarStockVariantes(int $id_producto, array $stocks): int
+        /**
+     * Actualiza varias variantes de un producto a la vez.
+     * $filas: [id_variante => ['sku' => , 'precio' => (float|null), 'stock' => , 'activo' => ]]
+     * El stock nunca queda por debajo de lo reservado.
+     */
+    public function actualizarVariantesMasivo(int $id_producto, array $filas): int
     {
         $cambiadas = 0;
 
@@ -766,15 +771,13 @@ class Producto extends Conexion
 
             $stmt = $this->db->prepare(
                 "UPDATE producto_variantes
-                 SET stock = GREATEST(?, stock_reservado)
+                 SET sku = ?, precio = ?, stock = GREATEST(?, stock_reservado), activo = ?
                  WHERE id_variante = ? AND id_producto = ?"
             );
 
-            foreach ($stocks as $id_variante => $stock) {
+            foreach ($filas as $id_variante => $f) {
                 $id_variante = (int) $id_variante;
-                $stock       = max(0, (int) $stock);
-
-                $stmt->bind_param("iii", $stock, $id_variante, $id_producto);
+                $stmt->bind_param("sdiiii", $f['sku'], $f['precio'], $f['stock'], $f['activo'], $id_variante, $id_producto);
                 $stmt->execute();
                 $cambiadas += $stmt->affected_rows;
             }
@@ -787,6 +790,55 @@ class Producto extends Conexion
         }
 
         return $cambiadas;
+    }
+
+    /**
+     * Elimina varias variantes. Las que figuran en pedidos no se pueden borrar
+     * (se perdería el historial): esas se DESACTIVAN.
+     * Devuelve [eliminadas, desactivadas].
+     */
+    public function eliminarVariantesMasivo(int $id_producto, array $ids): array
+    {
+        $eliminadas   = 0;
+        $desactivadas = 0;
+
+        $borrar = $this->db->prepare(
+            "DELETE FROM producto_variantes
+             WHERE id_variante = ? AND id_producto = ?
+             AND NOT EXISTS (SELECT 1 FROM pedido_items pi WHERE pi.id_variante = ?)"
+        );
+        $desactivar = $this->db->prepare(
+            "UPDATE producto_variantes SET activo = 0 WHERE id_variante = ? AND id_producto = ?"
+        );
+
+        try {
+            $this->db->begin_transaction();
+
+            foreach ($ids as $id) {
+                $id = (int) $id;
+
+                $borrar->bind_param("iii", $id, $id_producto, $id);
+                $borrar->execute();
+
+                if ($borrar->affected_rows > 0) {
+                    $eliminadas++;
+                } else {
+                    $desactivar->bind_param("ii", $id, $id_producto);
+                    $desactivar->execute();
+                    if ($desactivar->affected_rows > 0) {
+                        $desactivadas++;
+                    }
+                }
+            }
+
+            $this->db->commit();
+
+        } catch (Throwable $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+
+        return [$eliminadas, $desactivadas];
     }
 
         /** true si el producto ya tiene otra variante con ese talle y color. */
