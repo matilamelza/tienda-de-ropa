@@ -285,6 +285,12 @@ switch ($route) {
         $controller = new ProductoController();
         $controller->masivo();
         break;
+
+        case 'productos_toggle':
+        requireAdmin();
+        $controller = new ProductoController();
+        $controller->toggle();
+        break;
     // ─── CATEGORÍAS ────────────────────────────────────────────────────────────
 
     case 'categorias':
