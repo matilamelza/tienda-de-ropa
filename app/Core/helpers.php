@@ -30,3 +30,12 @@ function url_listado_productos(): string
     // Solo se acepta una URL del propio listado
     return strpos($url, BASE_URL . '/admin/productos') === 0 ? $url : BASE_URL . '/admin/productos';
 }
+
+/** URL completa (con https y dominio) a partir de una ruta del sitio. Las redes la necesitan así. */
+function url_absoluta(string $ruta = ''): string
+{
+    $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    $host  = $_SERVER['HTTP_HOST'] ?? 'localhost';
+
+    return ($https ? 'https' : 'http') . '://' . $host . BASE_URL . '/' . ltrim($ruta, '/');
+}

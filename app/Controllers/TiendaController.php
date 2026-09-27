@@ -57,6 +57,11 @@ class TiendaController extends Controller
                 // Destacados: solo en el inicio, sin filtros ni búsqueda
         $destacados = $hayFiltros ? [] : $productoModel->listarDestacados(8);
 
+        $meta = [];
+        if ($categoriaActual) {
+            $meta['titulo'] = $categoriaActual['nombre'] . ' | ' . ($cfgModel->get('tienda_nombre', 'Tienda'));
+        }
+
         $this->view('tienda/index', [
             'productos'      => $productos,
             'categoriasMenu' => $categoriasMenu,
@@ -68,6 +73,7 @@ class TiendaController extends Controller
             'rangoPrecio'    => $rangoPrecio,
             'hayFiltros'     => $hayFiltros,
             'destacados'     => $destacados,
+            'meta'           => $meta,
         ], 'tienda');
     }
 
@@ -98,13 +104,39 @@ class TiendaController extends Controller
         $id        = $producto['id_producto'];
         $variantes = $productoModel->listarVariantes($id);
         $fotos     = $productoModel->listarFotos($id);
+        $conf      = $cfgModel->todas();
+
+        // ── Vista previa al compartir ────────────────────────────────────────
+        $tallesDisp = [];
+        while ($v = $variantes->fetch_assoc()) {
+            if ((int) $v['activo'] === 1 && (int) $v['stock_disponible'] > 0 && $v['talle'] !== null) {
+                $tallesDisp[$v['talle']] = true;
+            }
+        }
+        $variantes->data_seek(0);   // la vista la vuelve a recorrer
+
+        $primeraFoto = $fotos->fetch_assoc();
+        $fotos->data_seek(0);
+
+        $precio = '$' . number_format((float) $producto['precio_base'], 0, ',', '.');
+        $talles = $tallesDisp ? 'Talles: ' . implode(', ', array_keys($tallesDisp)) . '. ' : '';
+        $texto  = trim(preg_replace('/\s+/', ' ', strip_tags($producto['descripcion'] ?? '')));
+
+        $meta = [
+            'titulo'      => $producto['nombre'] . ' | ' . ($conf['tienda_nombre'] ?? 'Tienda'),
+            'descripcion' => mb_substr($precio . '. ' . $talles . $texto, 0, 190),
+            'imagen'      => $primeraFoto ? url_absoluta('public/uploads/productos/' . $primeraFoto['imagen']) : '',
+            'tipo'        => 'product',
+            'precio'      => (float) $producto['precio_base'],
+        ];
 
         $this->view('tienda/detalle', [
             'producto'       => $producto,
             'variantes'      => $variantes,
             'fotos'          => $fotos,
             'categoriasMenu' => $categoriaModel->listarMenu(),
-            'config'         => $cfgModel->todas(),
+            'config'         => $conf,
+            'meta'           => $meta,
         ], 'tienda');
     }
 

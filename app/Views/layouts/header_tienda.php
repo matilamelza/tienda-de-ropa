@@ -10,10 +10,26 @@
     $cfg  = new ConfiguracionTienda();
     $conf = $cfg->todas();
 
-    $nombreTienda  = $conf['tienda_nombre'] ?? 'Mi Tienda';
-    $tituloPag     = htmlspecialchars($conf['seo_titulo']      ?? $nombreTienda);
-    $metaDesc      = htmlspecialchars($conf['seo_descripcion'] ?? '');
-    $metaKeys      = htmlspecialchars($conf['seo_keywords']    ?? '');
+    $nombreTienda = $conf['tienda_nombre'] ?? 'Mi Tienda';
+
+    // ── SEO y vista previa al compartir ──────────────────────
+    // Una página puede mandar $meta (titulo, descripcion, imagen, tipo, precio) para personalizarlo.
+    $meta = $meta ?? [];
+
+    $tituloPag = $meta['titulo']      ?? ($conf['seo_titulo'] ?? $nombreTienda);
+    $metaDesc  = $meta['descripcion'] ?? ($conf['seo_descripcion'] ?? '');
+    $metaKeys  = $conf['seo_keywords'] ?? '';
+    $ogTipo    = $meta['tipo'] ?? 'website';
+    $ogUrl     = url_absoluta(strtok($_SERVER['REQUEST_URI'] ?? '/', '?'));
+
+    // Imagen: la de la página, o el logo, o la imagen del banner
+    $ogImagen = $meta['imagen'] ?? '';
+    if ($ogImagen === '' && !empty($conf['tienda_logo'])) {
+        $ogImagen = url_absoluta($conf['tienda_logo']);
+    } elseif ($ogImagen === '' && !empty($conf['hero_imagen'])) {
+        $ogImagen = url_absoluta($conf['hero_imagen']);
+    }
+
     $fuente        = htmlspecialchars($conf['fuente_principal'] ?? 'Inter');
     $fuenteTitulos = htmlspecialchars($conf['fuente_titulos']  ?? 'Inter');
     $favicon       = $conf['tienda_favicon'] ?? '';
@@ -39,14 +55,34 @@
     $inicial = mb_strtoupper(mb_substr(trim($nombreTienda), 0, 1));
     ?>
 
-    <title><?= $tituloPag ?></title>
+    <title><?= htmlspecialchars($tituloPag) ?></title>
 
     <?php if ($metaDesc): ?>
-        <meta name="description" content="<?= $metaDesc ?>">
+        <meta name="description" content="<?= htmlspecialchars($metaDesc) ?>">
     <?php endif; ?>
     <?php if ($metaKeys): ?>
-        <meta name="keywords" content="<?= $metaKeys ?>">
+        <meta name="keywords" content="<?= htmlspecialchars($metaKeys) ?>">
     <?php endif; ?>
+    <link rel="canonical" href="<?= htmlspecialchars($ogUrl) ?>">
+
+    <!-- Vista previa al compartir (WhatsApp, Instagram, Facebook, Telegram) -->
+    <meta property="og:site_name" content="<?= htmlspecialchars($nombreTienda) ?>">
+    <meta property="og:type"      content="<?= htmlspecialchars($ogTipo) ?>">
+    <meta property="og:title"     content="<?= htmlspecialchars($tituloPag) ?>">
+    <?php if ($metaDesc): ?>
+        <meta property="og:description" content="<?= htmlspecialchars($metaDesc) ?>">
+    <?php endif; ?>
+    <meta property="og:url"       content="<?= htmlspecialchars($ogUrl) ?>">
+    <meta property="og:locale"    content="es_AR">
+    <?php if ($ogImagen): ?>
+        <meta property="og:image"     content="<?= htmlspecialchars($ogImagen) ?>">
+        <meta property="og:image:alt" content="<?= htmlspecialchars($tituloPag) ?>">
+    <?php endif; ?>
+    <?php if (isset($meta['precio'])): ?>
+        <meta property="product:price:amount"   content="<?= number_format((float) $meta['precio'], 2, '.', '') ?>">
+        <meta property="product:price:currency" content="ARS">
+    <?php endif; ?>
+    <meta name="twitter:card" content="<?= $ogImagen ? 'summary_large_image' : 'summary' ?>">
 
     <!-- Favicon -->
     <?php if ($favicon): ?>
