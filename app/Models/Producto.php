@@ -788,4 +788,21 @@ class Producto extends Conexion
 
         return $cambiadas;
     }
+
+        /** true si el producto ya tiene otra variante con ese talle y color. */
+    public function existeCombinacion(int $id_producto, ?int $id_talle, ?int $id_color, int $excluirVariante = 0): bool
+    {
+        $stmt = $this->db->prepare(
+            "SELECT 1 FROM producto_variantes
+             WHERE id_producto = ?
+             AND id_variante <> ?
+             AND id_talle <=> ?
+             AND id_color <=> ?
+             LIMIT 1"
+        );
+        $stmt->bind_param("iiii", $id_producto, $excluirVariante, $id_talle, $id_color);
+        $stmt->execute();
+
+        return $stmt->get_result()->num_rows > 0;
+    }
 }

@@ -261,7 +261,7 @@ class ProductoController extends Controller
         $this->redirect($volver . '&ok=masivo&c=' . $creadas . '&o=' . $omitidas);
     }
 
-    public function editarVariante()
+        public function editarVariante()
     {
         $id_variante = (int) ($_GET['id'] ?? 0);
 
@@ -272,13 +272,17 @@ class ProductoController extends Controller
             $this->redirect(BASE_URL . '/admin/productos');
         }
 
-        $talleModel = new Talle();
-        $colorModel = new Color();
+        $producto = $productoModel->buscarPorId((int) $variante['id_producto']);
+
+        if (!$producto) {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
 
         $this->view('productos/variante_form', [
+            'producto' => $producto,
             'variante' => $variante,
-            'talles'   => $talleModel->listarParaVariante($variante['id_talle'] ? (int) $variante['id_talle'] : null),
-            'colores'  => $colorModel->listarParaVariante($variante['id_color'] ? (int) $variante['id_color'] : null)
+            'talles'   => (new Talle())->listarParaVariante($variante['id_talle'] ? (int) $variante['id_talle'] : null),
+            'colores'  => (new Color())->listarParaVariante($variante['id_color'] ? (int) $variante['id_color'] : null),
         ]);
     }
 
@@ -289,7 +293,6 @@ class ProductoController extends Controller
         }
 
         $id_variante = (int) ($_POST['id_variante'] ?? 0);
-        $id_producto = (int) ($_POST['id_producto'] ?? 0);
 
         $productoModel = new Producto();
         $variante      = $productoModel->buscarVariantePorId($id_variante);
@@ -298,20 +301,30 @@ class ProductoController extends Controller
             $this->redirect(BASE_URL . '/admin/productos');
         }
 
+        $id_producto = (int) $variante['id_producto'];   // del registro, no del formulario
+        $id_talle    = !empty($_POST['id_talle']) ? (int) $_POST['id_talle'] : null;
+        $id_color    = !empty($_POST['id_color']) ? (int) $_POST['id_color'] : null;
+
+        if ($id_talle === null) {
+            $this->redirect(BASE_URL . '/admin/productos/editar-variante?id=' . $id_variante . '&error=talle');
+        }
+
+        if ($productoModel->existeCombinacion($id_producto, $id_talle, $id_color, $id_variante)) {
+            $this->redirect(BASE_URL . '/admin/productos/editar-variante?id=' . $id_variante . '&error=duplicada');
+        }
+
         // El stock nunca puede quedar por debajo de lo reservado
         $reservado = (int) ($variante['stock_reservado'] ?? 0);
         $stock     = max($reservado, (int) ($_POST['stock'] ?? 0));
 
-        $data = [
-            'id_talle' => !empty($_POST['id_talle']) ? (int) $_POST['id_talle'] : null,
-            'id_color' => !empty($_POST['id_color']) ? (int) $_POST['id_color'] : null,
+        $productoModel->actualizarVariante($id_variante, [
+            'id_talle' => $id_talle,
+            'id_color' => $id_color,
             'sku'      => trim($_POST['sku'] ?? ''),
             'precio'   => ($_POST['precio'] ?? '') !== '' ? (float) $_POST['precio'] : null,
             'stock'    => $stock,
-            'activo'   => isset($_POST['activo']) ? 1 : 0
-        ];
-
-        $productoModel->actualizarVariante($id_variante, $data);
+            'activo'   => isset($_POST['activo']) ? 1 : 0,
+        ]);
 
         $this->redirect(BASE_URL . '/admin/productos/variantes?id=' . $id_producto . '&ok=actualizada');
     }
