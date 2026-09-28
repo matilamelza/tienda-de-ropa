@@ -556,7 +556,51 @@ class Producto extends Conexion
 
         return $this->db->query($sql)->num_rows > 0;
     }
-    
+
+        /**
+     * Productos relacionados: primero misma categoría y marca, después misma categoría,
+     * después misma marca. Activos, con stock y sin el producto actual.
+     */
+    public function relacionados(array $producto, int $limite = 4): array
+    {
+        $id       = (int) $producto['id_producto'];
+        $idCat    = (int) $producto['id_categoria'];
+        $idMarca  = $producto['id_marca'] !== null ? (int) $producto['id_marca'] : 0;
+
+        $stmt = $this->db->prepare(
+            "SELECT
+                p.*,
+                c.nombre AS categoria,
+                m.nombre AS marca,
+                (SELECT pf.imagen FROM producto_fotos pf
+                 WHERE pf.id_producto = p.id_producto
+                 ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC
+                 LIMIT 1) AS foto_principal,
+                " . Promocion::columnasDescuento('p') . ",
+                (CASE
+                    WHEN p.id_categoria = ? AND p.id_marca = ? THEN 1
+                    WHEN p.id_categoria = ?                    THEN 2
+                    ELSE 3
+                 END) AS cercania
+             FROM productos p
+             INNER JOIN categorias c ON c.id_categoria = p.id_categoria
+             LEFT JOIN marcas m ON m.id_marca = p.id_marca
+             WHERE p.id_producto <> ?
+             AND p.activo = 1
+             AND p.eliminado_at IS NULL
+             AND (p.id_categoria = ? OR (p.id_marca = ? AND ? > 0))
+             AND EXISTS (SELECT 1 FROM producto_variantes pv
+                         WHERE pv.id_producto = p.id_producto AND pv.activo = 1
+                         AND (pv.stock - pv.stock_reservado) > 0)
+             ORDER BY cercania ASC, RAND()
+             LIMIT ?"
+        );
+        $stmt->bind_param("iiiiiiii", $idCat, $idMarca, $idCat, $id, $idCat, $idMarca, $idMarca, $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
     public function listarPorCategoriaSlug($slug)
     {
         $sql = "SELECT 

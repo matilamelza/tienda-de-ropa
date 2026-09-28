@@ -17,6 +17,9 @@ $hayColores     = count(array_filter(array_column($variantesArray, 'color'))) > 
 
 $metodosPago = trim($conf['metodos_pago'] ?? '');
 $politica    = trim($conf['politica_cambios'] ?? '');
+
+// Promoción vigente del producto
+$pctDesc = !empty($descuento) ? (float) $descuento['pct'] : 0;
 ?>
 
 <section class="max-w-7xl mx-auto px-4 py-10">
@@ -31,7 +34,7 @@ $politica    = trim($conf['politica_cambios'] ?? '');
 
         <!-- GALERÍA -->
         <div>
-            <div class="bg-gray-100 rounded-3xl overflow-hidden aspect-[4/5]">
+            <div class="relative bg-gray-100 rounded-3xl overflow-hidden aspect-[4/5]">
                 <?php if ($fotoPrincipal): ?>
                     <img id="imagenPrincipal"
                          src="<?= BASE_URL ?>/public/uploads/productos/<?php echo htmlspecialchars($fotoPrincipal); ?>"
@@ -42,6 +45,8 @@ $politica    = trim($conf['politica_cambios'] ?? '');
                         Sin imagen
                     </div>
                 <?php endif; ?>
+
+                <?= html_badge_oferta($pctDesc, $descuento['etiqueta'] ?? null) ?>
             </div>
 
             <?php if (count($fotosArray) > 1): ?>
@@ -71,9 +76,6 @@ $politica    = trim($conf['politica_cambios'] ?? '');
                 <?php echo htmlspecialchars($producto['nombre']); ?>
             </h1>
 
-            <p class="text-3xl font-bold text-gray-900 mb-6">
-            <?php $pctDesc = !empty($descuento) ? (float) $descuento['pct'] : 0; ?>
-
             <?php if ($pctDesc > 0): ?>
                 <div class="inline-flex flex-wrap items-center gap-2 bg-red-50 text-red-700 text-sm font-semibold px-3 py-1.5 rounded-full mb-3">
                     🔥 <?= $descuento['etiqueta'] ? htmlspecialchars($descuento['etiqueta']) . ' · ' : '' ?>-<?= pct_texto($pctDesc) ?>% OFF
@@ -85,7 +87,6 @@ $politica    = trim($conf['politica_cambios'] ?? '');
 
             <p id="precioProducto" class="text-3xl mb-6">
                 <?= html_precio((float) $producto['precio_base'], $pctDesc, 'font-bold text-gray-900') ?>
-            </p>
             </p>
 
             <?php if (!empty($producto['descripcion'])): ?>
@@ -191,12 +192,47 @@ $politica    = trim($conf['politica_cambios'] ?? '');
 
 </section>
 
+<?php if (!empty($relacionados)): ?>
+<!-- ── También te puede gustar ─────────────────────────────────────────────── -->
+<section class="max-w-7xl mx-auto px-4 pb-16">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">También te puede gustar</h2>
+
+    <!-- Mobile: se desliza de costado · Desktop: grilla -->
+    <div class="flex md:grid md:grid-cols-4 gap-4 md:gap-8 overflow-x-auto md:overflow-visible snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 pb-2">
+        <?php foreach ($relacionados as $r): ?>
+            <a href="<?= BASE_URL ?>/producto/<?= htmlspecialchars($r['slug']) ?>"
+               class="group block shrink-0 w-[65%] sm:w-[40%] md:w-auto snap-start">
+                <div class="relative aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden shadow-sm group-hover:shadow-lg transition">
+                    <?php if (!empty($r['foto_principal'])): ?>
+                        <img src="<?= BASE_URL ?>/public/uploads/productos/<?= htmlspecialchars($r['foto_principal']) ?>"
+                             alt="<?= htmlspecialchars($r['nombre']) ?>"
+                             class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                             loading="lazy">
+                    <?php else: ?>
+                        <div class="w-full h-full flex items-center justify-center text-gray-400 text-sm">Sin imagen</div>
+                    <?php endif; ?>
+
+                    <?= html_badge_oferta((float) ($r['descuento_pct'] ?? 0), $r['descuento_etiqueta'] ?? null) ?>
+                </div>
+                <div class="mt-3">
+                    <p class="text-xs text-gray-400">
+                        <?= htmlspecialchars($r['categoria']) ?><?= !empty($r['marca']) ? ' · ' . htmlspecialchars($r['marca']) : '' ?>
+                    </p>
+                    <h3 class="font-semibold text-gray-900 mt-1 line-clamp-2"><?= htmlspecialchars($r['nombre']) ?></h3>
+                    <p class="mt-1"><?= html_precio((float) $r['precio_base'], (float) ($r['descuento_pct'] ?? 0)) ?></p>
+                </div>
+            </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
+
 <script>
 const variantes   = <?php echo json_encode($variantesArray, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 const HAY_COLORES = <?= $hayColores ? 'true' : 'false' ?>;
 
 const PRECIO_BASE = <?= json_encode((float) $producto['precio_base']) ?>;
-const DESCUENTO   = <?= json_encode(!empty($descuento) ? (float) $descuento['pct'] : 0) ?>;
+const DESCUENTO   = <?= json_encode($pctDesc) ?>;
 
 function formatoPesos(n) {
     return '$' + Math.round(n).toLocaleString('es-AR');

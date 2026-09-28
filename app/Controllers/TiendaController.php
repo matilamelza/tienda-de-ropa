@@ -18,6 +18,7 @@ class TiendaController extends Controller
             'precio_min' => $_GET['precio_min']      ?? '',
             'precio_max' => $_GET['precio_max']      ?? '',
             'orden'      => $_GET['orden']           ?? 'reciente',
+            'oferta'     => !empty($_GET['oferta']),
         ];
 
         $hayFiltros = $filtros['q'] !== ''
@@ -25,7 +26,8 @@ class TiendaController extends Controller
             || $filtros['marca'] > 0
             || $filtros['precio_min'] !== ''
             || $filtros['precio_max'] !== ''
-            || $filtros['orden'] !== 'reciente';
+            || $filtros['orden'] !== 'reciente'
+            || $filtros['oferta'];
 
         // ── Datos para los selects de filtro ─────────────────────────────────
         $categorias  = $categoriaModel->listarActivas();
@@ -54,26 +56,28 @@ class TiendaController extends Controller
             registrar_visita('otra');
         }
 
-                // Destacados: solo en el inicio, sin filtros ni búsqueda
+        // ── Destacados: solo en el inicio, sin filtros ni búsqueda ──────────
         $destacados = $hayFiltros ? [] : $productoModel->listarDestacados(8);
 
+        // ── Vista previa al compartir (categorías con su propio título) ──────
         $meta = [];
         if ($categoriaActual) {
-            $meta['titulo'] = $categoriaActual['nombre'] . ' | ' . ($cfgModel->get('tienda_nombre', 'Tienda'));
+            $meta['titulo'] = $categoriaActual['nombre'] . ' | ' . $cfgModel->get('tienda_nombre', 'Tienda');
         }
 
         $this->view('tienda/index', [
-            'productos'      => $productos,
-            'categoriasMenu' => $categoriasMenu,
-            'categoriaActual'=> $categoriaActual,
-            'config'         => $cfgModel->todas(),
-            'filtros'        => $filtros,
-            'categorias'     => $categorias,
-            'marcas'         => $marcas,
-            'rangoPrecio'    => $rangoPrecio,
-            'hayFiltros'     => $hayFiltros,
-            'destacados'     => $destacados,
-            'meta'           => $meta,
+            'productos'       => $productos,
+            'categoriasMenu'  => $categoriasMenu,
+            'categoriaActual' => $categoriaActual,
+            'config'          => $cfgModel->todas(),
+            'filtros'         => $filtros,
+            'categorias'      => $categorias,
+            'marcas'          => $marcas,
+            'rangoPrecio'     => $rangoPrecio,
+            'hayFiltros'      => $hayFiltros,
+            'destacados'      => $destacados,
+            'meta'            => $meta,
+            'hayOfertas'      => $productoModel->hayOfertasVigentes(),
         ], 'tienda');
     }
 
@@ -101,10 +105,16 @@ class TiendaController extends Controller
 
         registrar_visita('producto', (int) $producto['id_producto']);
 
-        $id        = $producto['id_producto'];
+        $id        = (int) $producto['id_producto'];
         $variantes = $productoModel->listarVariantes($id);
         $fotos     = $productoModel->listarFotos($id);
         $conf      = $cfgModel->todas();
+
+        // ── Promoción vigente ────────────────────────────────────────────────
+        $descuento   = (new Promocion())->descuentoProducto($id);
+        $precioFinal = $descuento
+            ? precio_con_descuento((float) $producto['precio_base'], $descuento['pct'])
+            : (float) $producto['precio_base'];
 
         // ── Vista previa al compartir ────────────────────────────────────────
         $tallesDisp = [];
@@ -118,7 +128,8 @@ class TiendaController extends Controller
         $primeraFoto = $fotos->fetch_assoc();
         $fotos->data_seek(0);
 
-        $precio = '$' . number_format((float) $producto['precio_base'], 0, ',', '.');
+        $precio = '$' . number_format($precioFinal, 0, ',', '.')
+                . ($descuento ? ' (-' . pct_texto($descuento['pct']) . '% OFF)' : '');
         $talles = $tallesDisp ? 'Talles: ' . implode(', ', array_keys($tallesDisp)) . '. ' : '';
         $texto  = trim(preg_replace('/\s+/', ' ', strip_tags($producto['descripcion'] ?? '')));
 
@@ -127,7 +138,7 @@ class TiendaController extends Controller
             'descripcion' => mb_substr($precio . '. ' . $talles . $texto, 0, 190),
             'imagen'      => $primeraFoto ? url_absoluta('public/uploads/productos/' . $primeraFoto['imagen']) : '',
             'tipo'        => 'product',
-            'precio'      => (float) $producto['precio_base'],
+            'precio'      => $precioFinal,
         ];
 
         $this->view('tienda/detalle', [
@@ -137,6 +148,8 @@ class TiendaController extends Controller
             'categoriasMenu' => $categoriaModel->listarMenu(),
             'config'         => $conf,
             'meta'           => $meta,
+            'descuento'      => $descuento,
+            'relacionados'   => $productoModel->relacionados($producto, 4),
         ], 'tienda');
     }
 
