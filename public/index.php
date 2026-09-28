@@ -83,12 +83,14 @@ require_once __DIR__ . '/../app/Models/Caja.php';
 require_once __DIR__ . '/../app/Models/MedioPago.php';
 require_once __DIR__ . '/../app/Models/CategoriaMovimiento.php';
 require_once __DIR__ . '/../app/Models/Movimiento.php';
+require_once __DIR__ . '/../app/Models/Promocion.php';
 require_once __DIR__ . '/../app/Models/ConfiguracionTienda.php';
 
 // ── Controllers ──────────────────────────────────────────────────────────────
 require_once __DIR__ . '/../app/Controllers/DashboardController.php';
 require_once __DIR__ . '/../app/Controllers/EstadisticasController.php';
 require_once __DIR__ . '/../app/Controllers/CajaController.php';
+require_once __DIR__ . '/../app/Controllers/PromocionController.php';
 require_once __DIR__ . '/../app/Controllers/ProductoController.php';
 require_once __DIR__ . '/../app/Controllers/CategoriaController.php';
 require_once __DIR__ . '/../app/Controllers/MarcaController.php';
@@ -302,6 +304,54 @@ switch ($route) {
         requireAdmin();
         $controller = new ProductoController();
         $controller->duplicar();
+        break;
+    
+        // ─── PROMOCIONES ───────────────────────────────────────────────────────────
+
+    case 'promociones':
+        requireAdmin();
+        (new PromocionController())->index();
+        break;
+
+    case 'promociones_nueva':
+        requireAdmin();
+        (new PromocionController())->nueva();
+        break;
+
+    case 'promociones_editar':
+        requireAdmin();
+        (new PromocionController())->editar();
+        break;
+
+    case 'promociones_guardar':
+        requireAdmin();
+        (new PromocionController())->guardar();
+        break;
+
+    case 'promociones_ver':
+        requireAdmin();
+        (new PromocionController())->ver();
+        break;
+
+    case 'promociones_toggle':
+        requireAdmin();
+        (new PromocionController())->toggle();
+        break;
+
+    case 'promociones_eliminar':
+        requireAdmin();
+        (new PromocionController())->eliminar();
+        break;
+
+    case 'promociones_productos':
+        requireAdmin();
+        (new PromocionController())->productos();
+        break;
+
+
+    case 'promociones_oferta_rapida':
+        requireAdmin();
+        (new PromocionController())->ofertaRapida();
         break;
     // ─── CATEGORÍAS ────────────────────────────────────────────────────────────
 

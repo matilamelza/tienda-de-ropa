@@ -179,6 +179,20 @@ $actividad = function (array $p) use ($num): string {
                 <button type="button" onclick="accion('marca', 'accMarca')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Cambiar</button>
             </span>
 
+            <?php if (!empty($promociones)): ?>
+                <span class="flex items-center gap-1">
+                    <select name="id_promocion" id="accPromocion" class="border rounded px-2 py-1 bg-white">
+                        <option value="">Promoción…</option>
+                        <?php foreach ($promociones as $pr): ?>
+                            <option value="<?= (int) $pr['id_promocion'] ?>">
+                                <?= htmlspecialchars($pr['nombre']) ?> (-<?= rtrim(rtrim(number_format($pr['pct'], 2, ',', ''), '0'), ',') ?>%)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" onclick="accion('promocion', 'accPromocion')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">🔥 Agregar</button>
+                </span>
+            <?php endif; ?>
+
             <button type="button" onclick="togglePrecios()" class="px-2 py-1 rounded border bg-white hover:bg-gray-50 font-medium">💲 Precios</button>
             <button type="button" onclick="accion('eliminar')" class="px-2 py-1 rounded border border-red-200 bg-white text-red-600 hover:bg-red-50">Eliminar</button>
         </div>
@@ -600,7 +614,8 @@ $actividad = function (array $p) use ($num): string {
     const textos = {
         activar: 'activar', desactivar: 'desactivar', destacar: 'destacar',
         quitar_destacado: 'quitarle el destacado a', categoria: 'cambiar la categoría de',
-        marca: 'cambiar la marca de', eliminar: 'ELIMINAR', precios: 'cambiar el precio de'
+        marca: 'cambiar la marca de', eliminar: 'ELIMINAR', precios: 'cambiar el precio de', 
+        promocion: 'agregar a la promoción'
     };
 
     function enviar(accion) {

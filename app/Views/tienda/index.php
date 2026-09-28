@@ -87,21 +87,25 @@ function urlFiltro(array $nuevos): string {
                     <?php else: ?>
                         <div class="w-full h-full flex items-center justify-center text-gray-400 text-sm">Sin imagen</div>
                     <?php endif; ?>
+
                     <span class="absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm"
                           style="background: var(--color-acento); color: var(--color-boton-texto)">★ Destacado</span>
+
+                    <?= html_badge_oferta((float) ($d['descuento_pct'] ?? 0), $d['descuento_etiqueta'] ?? null) ?>
                 </div>
                 <div class="mt-3">
                     <p class="text-xs text-gray-400">
                         <?= htmlspecialchars($d['categoria']) ?><?= !empty($d['marca']) ? ' · ' . htmlspecialchars($d['marca']) : '' ?>
                     </p>
                     <h3 class="font-semibold text-gray-900 mt-1 line-clamp-2"><?= htmlspecialchars($d['nombre']) ?></h3>
-                    <p class="font-bold mt-1">$<?= number_format($d['precio_base'], 2, ',', '.') ?></p>
+                    <p class="mt-1"><?= html_precio((float) $d['precio_base'], (float) ($d['descuento_pct'] ?? 0)) ?></p>
                 </div>
             </a>
         <?php endforeach; ?>
     </div>
 </section>
 <?php endif; ?>
+
 <!-- ── Sección de productos ─────────────────────────────────────────────────── -->
 <section id="productos" class="max-w-7xl mx-auto px-4 py-10 scroll-mt-24">
 
@@ -110,9 +114,9 @@ function urlFiltro(array $nuevos): string {
 
         <!-- Buscador -->
         <form method="GET" action="<?= BASE_URL ?>/tienda" class="flex gap-2 flex-1 min-w-[200px]">
-            <?php foreach (['categoria','marca','precio_min','precio_max','orden'] as $k): ?>
+            <?php foreach (['categoria','marca','precio_min','precio_max','orden','oferta'] as $k): ?>
                 <?php if (!empty($filtros[$k])): ?>
-                    <input type="hidden" name="<?= $k ?>" value="<?= htmlspecialchars($filtros[$k]) ?>">
+                    <input type="hidden" name="<?= $k ?>" value="<?= htmlspecialchars((string) $filtros[$k]) ?>">
                 <?php endif; ?>
             <?php endforeach; ?>
             <input type="text" name="q" value="<?= htmlspecialchars($filtros['q']) ?>"
@@ -124,6 +128,18 @@ function urlFiltro(array $nuevos): string {
         </form>
 
         <div class="flex flex-wrap gap-2 items-center">
+
+            <!-- En oferta (solo si hay alguna vigente) -->
+            <?php if (!empty($hayOfertas) || !empty($filtros['oferta'])): ?>
+                <a href="<?= htmlspecialchars(urlFiltro(['oferta' => !empty($filtros['oferta']) ? '' : '1'])) ?>#productos"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium whitespace-nowrap transition
+                          <?= !empty($filtros['oferta'])
+                              ? 'bg-red-600 text-white border-red-600'
+                              : 'bg-white text-red-600 border-red-200 hover:bg-red-50' ?>">
+                    🔥 En oferta
+                    <?php if (!empty($filtros['oferta'])): ?><span class="opacity-75">✕</span><?php endif; ?>
+                </a>
+            <?php endif; ?>
 
             <!-- Categoría -->
             <?php if (!empty($categorias) && $categorias->num_rows > 0): ?>
@@ -192,6 +208,9 @@ function urlFiltro(array $nuevos): string {
     <!-- Tags de filtros activos + contador -->
     <?php if ($hayFiltros): ?>
     <div class="mb-6 flex items-center gap-2 flex-wrap">
+        <?php if (!empty($filtros['oferta'])): ?>
+            <span class="bg-red-50 text-red-700 text-xs px-3 py-1 rounded-full">🔥 En oferta</span>
+        <?php endif; ?>
         <?php if ($filtros['q']): ?>
             <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full">
                 "<?= htmlspecialchars($filtros['q']) ?>"
@@ -204,7 +223,7 @@ function urlFiltro(array $nuevos): string {
         <?php endif; ?>
         <?php if ($filtros['precio_min'] || $filtros['precio_max']): ?>
             <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full">
-                $<?= $filtros['precio_min'] ?: '0' ?> — $<?= $filtros['precio_max'] ?: '∞' ?>
+                $<?= htmlspecialchars((string) ($filtros['precio_min'] ?: '0')) ?> — $<?= htmlspecialchars((string) ($filtros['precio_max'] ?: '∞')) ?>
             </span>
         <?php endif; ?>
         <span class="text-sm text-gray-400 ml-auto">
@@ -225,13 +244,15 @@ function urlFiltro(array $nuevos): string {
                                  class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                                  loading="lazy">
                         <?php else: ?>
-                            <?php if (!empty($p['destacado'])): ?>
+                            <div class="w-full h-full flex items-center justify-center text-gray-400 text-sm">Sin imagen</div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($p['destacado'])): ?>
                             <span class="absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm"
                                   style="background: var(--color-acento); color: var(--color-boton-texto)">★ Destacado</span>
                         <?php endif; ?>
-                            <div class="w-full h-full flex items-center justify-center text-gray-400 text-sm">Sin imagen</div>
-                        <?php endif; ?>
-                        
+
+                        <?= html_badge_oferta((float) ($p['descuento_pct'] ?? 0), $p['descuento_etiqueta'] ?? null) ?>
                     </div>
                     <div class="mt-4">
                         <p class="text-xs text-gray-400">
@@ -239,7 +260,7 @@ function urlFiltro(array $nuevos): string {
                             <?= !empty($p['marca']) ? ' · ' . htmlspecialchars($p['marca']) : '' ?>
                         </p>
                         <h3 class="font-semibold text-gray-900 mt-1"><?= htmlspecialchars($p['nombre']) ?></h3>
-                        <p class="font-bold mt-2">$<?= number_format($p['precio_base'], 2, ',', '.') ?></p>
+                        <p class="mt-2"><?= html_precio((float) $p['precio_base'], (float) ($p['descuento_pct'] ?? 0)) ?></p>
                     </div>
                 </a>
             <?php endforeach; ?>

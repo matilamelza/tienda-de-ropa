@@ -45,6 +45,12 @@ $estados = [
             <?php if ($producto['precio_costo'] === null): ?>
                 <span class="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">💲 Sin costo</span>
             <?php endif; ?>
+
+            <?php if ($descuento): ?>
+                <span class="px-2 py-0.5 text-xs rounded bg-orange-100 text-orange-700">
+                    🔥 <?= $descuento['etiqueta'] ? htmlspecialchars($descuento['etiqueta']) . ' ' : '' ?>-<?= rtrim(rtrim(number_format($descuento['pct'], 2, ',', ''), '0'), ',') ?>%
+                </span>
+            <?php endif; ?>
         </div>
     </div>
     <button type="button" onclick="cerrarModalProducto()" aria-label="Cerrar"
@@ -91,6 +97,9 @@ $estados = [
             <div class="bg-gray-50 rounded-lg p-3">
                 <p class="text-xs text-gray-500">Precio</p>
                 <p class="font-bold text-gray-900"><?= $pesos($producto['precio_base']) ?></p>
+                <?php if ($descuento): ?>
+                    <p class="text-[11px] text-orange-600">En oferta: <?= $pesos(precio_con_descuento((float) $producto['precio_base'], $descuento['pct'])) ?></p>
+                <?php endif; ?>
             </div>
             <div class="bg-gray-50 rounded-lg p-3">
                 <p class="text-xs text-gray-500">Costo</p>

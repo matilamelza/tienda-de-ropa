@@ -544,6 +544,19 @@ class Producto extends Conexion
 
     // ─── TIENDA ────────────────────────────────────────────────────────────────
 
+        /** ¿Hay al menos un producto activo con una promoción vigente? (para mostrar el filtro "En oferta") */
+    public function hayOfertasVigentes(): bool
+    {
+        $sql = "SELECT 1
+                FROM promocion_productos pp
+                INNER JOIN promociones pr ON pr.id_promocion = pp.id_promocion
+                INNER JOIN productos p ON p.id_producto = pp.id_producto
+                WHERE p.activo = 1 AND p.eliminado_at IS NULL AND " . Promocion::SQL_VIGENTE . "
+                LIMIT 1";
+
+        return $this->db->query($sql)->num_rows > 0;
+    }
+    
     public function listarPorCategoriaSlug($slug)
     {
         $sql = "SELECT 
@@ -573,6 +586,7 @@ class Producto extends Conexion
     }
 
         /** Productos destacados para el inicio: activos y con stock. */
+        /** Productos destacados para el inicio: activos y con stock. */
     public function listarDestacados(int $limite = 8): array
     {
         $stmt = $this->db->prepare(
@@ -583,7 +597,8 @@ class Producto extends Conexion
                 (SELECT pf.imagen FROM producto_fotos pf
                  WHERE pf.id_producto = p.id_producto
                  ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC
-                 LIMIT 1) AS foto_principal
+                 LIMIT 1) AS foto_principal,
+                " . Promocion::columnasDescuento('p') . "
              FROM productos p
              INNER JOIN categorias c ON c.id_categoria = p.id_categoria
              LEFT JOIN marcas m ON m.id_marca = p.id_marca
@@ -773,11 +788,11 @@ class Producto extends Conexion
      * Busca y filtra productos para la tienda.
      * Soporta: búsqueda por texto, categoría, marca, precio min/max y orden.
      */
-    public function buscarFiltrado(array $filtros = []): array
+        public function buscarFiltrado(array $filtros = []): array
     {
         $q          = trim($filtros['q']          ?? '');
         $categoria  = trim($filtros['categoria']  ?? '');
-        $marca      = (int)($filtros['marca']      ?? 0);
+        $marca      = (int)($filtros['marca']     ?? 0);
         $precioMin  = ($filtros['precio_min'] ?? '') !== '' ? (float) $filtros['precio_min'] : null;
         $precioMax  = ($filtros['precio_max'] ?? '') !== '' ? (float) $filtros['precio_max'] : null;
         $orden      = $filtros['orden'] ?? 'reciente';
@@ -819,29 +834,40 @@ class Producto extends Conexion
             $types   .= 'd';
         }
 
-        switch ($orden) {
-            case 'precio_asc':  $orderBy = 'p.precio_base ASC';  break;
-            case 'precio_desc': $orderBy = 'p.precio_base DESC'; break;
-            case 'nombre':      $orderBy = 'p.nombre ASC';       break;
-            default:            $orderBy = 'p.destacado DESC, p.id_producto DESC'; break;
+        // Solo productos con una promoción vigente
+        if (!empty($filtros['oferta'])) {
+            $where[] = "EXISTS (SELECT 1 FROM promocion_productos pp
+                                INNER JOIN promociones pr ON pr.id_promocion = pp.id_promocion
+                                WHERE pp.id_producto = p.id_producto AND " . Promocion::SQL_VIGENTE . ")";
         }
 
-        $sql = "SELECT 
-                    p.*,
-                    c.nombre AS categoria,
-                    c.slug   AS categoria_slug,
-                    m.nombre AS marca,
-                    (
-                        SELECT pf.imagen 
-                        FROM producto_fotos pf 
-                        WHERE pf.id_producto = p.id_producto 
-                        ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC 
-                        LIMIT 1
-                    ) AS foto_principal
-                FROM productos p
-                INNER JOIN categorias c ON c.id_categoria = p.id_categoria
-                LEFT JOIN marcas m ON m.id_marca = p.id_marca
-                WHERE " . implode(' AND ', $where) . "
+        // El orden va sobre la consulta de afuera (t), así puede usar el descuento ya calculado
+        switch ($orden) {
+            case 'precio_asc':  $orderBy = 't.precio_base * (1 - COALESCE(t.descuento_pct, 0) / 100) ASC';  break;
+            case 'precio_desc': $orderBy = 't.precio_base * (1 - COALESCE(t.descuento_pct, 0) / 100) DESC'; break;
+            case 'nombre':      $orderBy = 't.nombre ASC'; break;
+            default:            $orderBy = 't.destacado DESC, t.id_producto DESC'; break;
+        }
+
+        $sql = "SELECT t.* FROM (
+                    SELECT
+                        p.*,
+                        c.nombre AS categoria,
+                        c.slug   AS categoria_slug,
+                        m.nombre AS marca,
+                        (
+                            SELECT pf.imagen
+                            FROM producto_fotos pf
+                            WHERE pf.id_producto = p.id_producto
+                            ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC
+                            LIMIT 1
+                        ) AS foto_principal,
+                        " . Promocion::columnasDescuento('p') . "
+                    FROM productos p
+                    INNER JOIN categorias c ON c.id_categoria = p.id_categoria
+                    LEFT JOIN marcas m ON m.id_marca = p.id_marca
+                    WHERE " . implode(' AND ', $where) . "
+                ) t
                 ORDER BY " . $orderBy;
 
         $stmt = $this->db->prepare($sql);
@@ -851,6 +877,7 @@ class Producto extends Conexion
         }
 
         $stmt->execute();
+
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 

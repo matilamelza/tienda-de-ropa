@@ -72,7 +72,20 @@ $politica    = trim($conf['politica_cambios'] ?? '');
             </h1>
 
             <p class="text-3xl font-bold text-gray-900 mb-6">
-                $<?php echo number_format($producto['precio_base'], 2, ',', '.'); ?>
+            <?php $pctDesc = !empty($descuento) ? (float) $descuento['pct'] : 0; ?>
+
+            <?php if ($pctDesc > 0): ?>
+                <div class="inline-flex flex-wrap items-center gap-2 bg-red-50 text-red-700 text-sm font-semibold px-3 py-1.5 rounded-full mb-3">
+                    🔥 <?= $descuento['etiqueta'] ? htmlspecialchars($descuento['etiqueta']) . ' · ' : '' ?>-<?= pct_texto($pctDesc) ?>% OFF
+                    <?php if (!empty($descuento['hasta'])): ?>
+                        <span class="font-normal">· hasta el <?= date('d/m', strtotime($descuento['hasta'])) ?></span>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+
+            <p id="precioProducto" class="text-3xl mb-6">
+                <?= html_precio((float) $producto['precio_base'], $pctDesc, 'font-bold text-gray-900') ?>
+            </p>
             </p>
 
             <?php if (!empty($producto['descripcion'])): ?>
@@ -182,6 +195,27 @@ $politica    = trim($conf['politica_cambios'] ?? '');
 const variantes   = <?php echo json_encode($variantesArray, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 const HAY_COLORES = <?= $hayColores ? 'true' : 'false' ?>;
 
+const PRECIO_BASE = <?= json_encode((float) $producto['precio_base']) ?>;
+const DESCUENTO   = <?= json_encode(!empty($descuento) ? (float) $descuento['pct'] : 0) ?>;
+
+function formatoPesos(n) {
+    return '$' + Math.round(n).toLocaleString('es-AR');
+}
+
+/** Precio de la variante elegida (o del producto), con el descuento aplicado. */
+function mostrarPrecio(variante) {
+    const lista = variante && variante.precio !== null && variante.precio !== '' ? parseFloat(variante.precio) : PRECIO_BASE;
+    const caja  = document.getElementById('precioProducto');
+
+    if (DESCUENTO > 0) {
+        const final = Math.round(lista * (1 - DESCUENTO / 100) * 100) / 100;
+        caja.innerHTML = `<span class="font-bold" style="color: var(--color-acento)">${formatoPesos(final)}</span>
+                          <span class="text-sm text-gray-400 line-through font-normal">${formatoPesos(lista)}</span>`;
+    } else {
+        caja.innerHTML = `<span class="font-bold text-gray-900">${formatoPesos(lista)}</span>`;
+    }
+}
+
 let talleSeleccionado    = null;
 let colorSeleccionado    = null;
 let varianteSeleccionada = null;
@@ -286,6 +320,7 @@ function cargarColores() {
 
 function actualizarStock() {
     const idInput = document.getElementById('id_variante');
+    mostrarPrecio(varianteSeleccionada);
 
     if (!varianteSeleccionada) {
         idInput.value = '';

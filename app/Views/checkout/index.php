@@ -1,6 +1,12 @@
 <?php
 $metodosPago = trim($conf['metodos_pago'] ?? '');
 $politica    = trim($conf['politica_cambios'] ?? '');
+
+// Lo que ahorra el cliente con las promociones
+$ahorro = 0;
+foreach ($items as $it) {
+    $ahorro += ($it['lista'] - $it['precio']) * $it['cantidad'];
+}
 ?>
 
 <section class="max-w-7xl mx-auto px-4 py-10">
@@ -86,23 +92,37 @@ $politica    = trim($conf['politica_cambios'] ?? '');
                             <?php $v = $item['variante']; ?>
 
                             <div class="flex justify-between gap-3 text-sm">
-                                <div>
+                                <div class="min-w-0">
                                     <p class="font-medium">
                                         <?php echo htmlspecialchars($v['producto']); ?>
                                     </p>
                                     <p class="text-gray-500">
-                                         <?= htmlspecialchars(variante_texto($v['talle'], $v['color'])) ?> x <?= (int) $item['cantidad'] ?>
+                                        <?= htmlspecialchars(variante_texto($v['talle'], $v['color'])) ?> x <?= (int) $item['cantidad'] ?>
                                     </p>
                                 </div>
 
-                                <strong class="whitespace-nowrap">
-                                    $<?php echo number_format($item['subtotal'], 2, ',', '.'); ?>
-                                </strong>
+                                <div class="text-right shrink-0">
+                                    <strong class="whitespace-nowrap">
+                                        $<?php echo number_format($item['subtotal'], 2, ',', '.'); ?>
+                                    </strong>
+                                    <?php if ($item['pct'] > 0): ?>
+                                        <span class="block text-xs text-gray-400 line-through">
+                                            $<?= number_format($item['lista'] * $item['cantidad'], 0, ',', '.') ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
 
-                    <div class="flex justify-between py-4 border-t text-lg">
+                    <?php if ($ahorro > 0.009): ?>
+                        <div class="flex justify-between pt-3 border-t text-sm text-green-700">
+                            <span>🔥 Ahorrás</span>
+                            <strong>$<?= number_format($ahorro, 0, ',', '.') ?></strong>
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="flex justify-between py-4 border-t text-lg <?= $ahorro > 0.009 ? 'mt-3' : '' ?>">
                         <span class="font-bold">Total</span>
                         <strong>$<?php echo number_format($total, 2, ',', '.'); ?></strong>
                     </div>

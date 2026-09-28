@@ -4,31 +4,32 @@ require_once __DIR__ . '/Conexion.php';
 
 class Carrito extends Conexion
 {
-    public function buscarVarianteDetalle($id_variante)
+        public function buscarVarianteDetalle($id_variante)
     {
-        $sql = "SELECT 
+        $sql = "SELECT
                     pv.*,
                     (pv.stock - pv.stock_reservado) AS disponible,
-                    p.nombre AS producto,
+                    p.nombre       AS producto,
                     p.precio_base,
                     p.precio_costo,
                     p.id_producto,
+                    p.slug,
                     t.nombre AS talle,
                     c.nombre AS color,
                     (
-                        SELECT pf.imagen 
-                        FROM producto_fotos pf 
-                        WHERE pf.id_producto = p.id_producto 
-                        ORDER BY pf.principal DESC, pf.id_foto ASC 
+                        SELECT pf.imagen
+                        FROM producto_fotos pf
+                        WHERE pf.id_producto = p.id_producto
+                        ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC
                         LIMIT 1
-                    ) AS foto
+                    ) AS foto,
+                    " . Promocion::columnasDescuento('p') . "
                 FROM producto_variantes pv
                 INNER JOIN productos p ON p.id_producto = pv.id_producto
                 LEFT JOIN talles t ON t.id_talle = pv.id_talle
                 LEFT JOIN colores c ON c.id_color = pv.id_color
                 WHERE pv.id_variante = ?
-                AND p.activo = 1
-                   AND p.eliminado_at IS NULL
+                AND p.eliminado_at IS NULL
                 LIMIT 1";
 
         $stmt = $this->db->prepare($sql);

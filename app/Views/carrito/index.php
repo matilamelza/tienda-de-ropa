@@ -47,8 +47,7 @@
                                         </h3>
 
                                         <p class="text-sm text-gray-500 mt-1">
-                                            Talle: <?php echo htmlspecialchars($v['talle']); ?> ·
-                                            <?php if (!empty($v['color'])): ?>Color: <?php echo htmlspecialchars($v['color']); ?><?php endif; ?>
+                                            <?= htmlspecialchars(variante_texto($v['talle'], $v['color'])) ?>
                                         </p>
 
                                         <p class="text-sm text-gray-400 mt-1">
@@ -69,7 +68,7 @@
                                                name="cantidades[<?php echo $v['id_variante']; ?>]"
                                                value="<?php echo $item['cantidad']; ?>"
                                                min="1"
-                                               max="<?php echo $v['stock']; ?>"
+                                                max="<?php echo (int) $v['disponible']; ?>"
                                                class="w-20 border rounded-lg px-3 py-2 ml-2">
                                     </div>
 
@@ -79,7 +78,7 @@
                                         </p>
 
                                         <p class="text-sm text-gray-500">
-                                            $<?php echo number_format($item['precio'], 2, ',', '.'); ?> c/u
+                                            <?= html_precio((float) $item['lista'], (float) $item['pct'], 'font-normal') ?> c/u
                                         </p>
                                     </div>
                                 </div>
@@ -100,6 +99,19 @@
                     <div class="bg-gray-50 rounded-3xl p-6 sticky top-28">
 
                         <h2 class="text-xl font-bold text-gray-900 mb-4">Resumen</h2>
+
+                        <?php
+                        $ahorro = 0;
+                        foreach ($items as $it) {
+                            $ahorro += ($it['lista'] - $it['precio']) * $it['cantidad'];
+                        }
+                        ?>
+                        <?php if ($ahorro > 0.009): ?>
+                            <div class="flex justify-between text-sm text-green-700">
+                                <span>🔥 Ahorrás</span>
+                                <strong>$<?= number_format($ahorro, 0, ',', '.') ?></strong>
+                            </div>
+                        <?php endif; ?>
 
                         <div class="flex justify-between py-3 border-b">
                             <span class="text-gray-600">Subtotal</span>

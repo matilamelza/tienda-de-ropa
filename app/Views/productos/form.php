@@ -34,11 +34,22 @@
     </div>
 <?php endif; ?>
 
-<?php if (isset($_GET['error'])): ?>
-    <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm max-w-2xl">
-        Completá nombre, categoría y precio de venta.
+<?php if (($_GET['ok'] ?? '') === 'oferta'): ?>
+    <div class="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 mb-4 text-sm max-w-2xl">
+        🔥 Oferta creada. Ya se ve en la tienda.
     </div>
 <?php endif; ?>
+<?php if (($_GET['error'] ?? '') === 'oferta'): ?>
+    <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm max-w-2xl">
+        El descuento tiene que estar entre 1% y 99%.
+    </div>
+<?php endif; ?>
+
+<?php if (isset($_GET['error']) && $_GET['error'] !== 'oferta'): ?>
+     <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm max-w-2xl">
+         Completá nombre, categoría y precio de venta.
+     </div>
+ <?php endif; ?>
 
 <form action="<?= BASE_URL ?>/admin/productos/<?php echo $editando ? 'actualizar' : 'guardar'; ?>"
       method="POST"
@@ -165,6 +176,94 @@
     </div>
 
 </form>
+
+
+<?php if ($editando): ?>
+    <?php
+    $precioBase = (float) $producto['precio_base'];
+    $pctTxt     = fn($n) => rtrim(rtrim(number_format((float) $n, 2, ',', ''), '0'), ',');
+    ?>
+    <div class="bg-white rounded-lg shadow p-6 mt-6 max-w-2xl">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-gray-800">🔥 Oferta</h3>
+            <a href="<?= BASE_URL ?>/admin/promociones" class="text-xs text-gray-500 hover:text-gray-900">Ver todas las promociones →</a>
+        </div>
+
+        <?php if (!empty($promocionesProducto)): ?>
+            <ul class="divide-y border rounded-lg mb-4 text-sm">
+                <?php foreach ($promocionesProducto as $promo): ?>
+                    <?php $pctEf = $promo['pct_propio'] !== null ? (float) $promo['pct_propio'] : (float) $promo['pct']; ?>
+                    <li>
+                        <a href="<?= BASE_URL ?>/admin/promociones/ver?id=<?= (int) $promo['id_promocion'] ?>"
+                           class="flex items-center justify-between gap-3 px-3 py-2 hover:bg-gray-50">
+                            <span class="min-w-0 flex items-center gap-2">
+                                <span class="truncate"><?= htmlspecialchars($promo['nombre']) ?></span>
+                                <?php require __DIR__ . '/../admin/promociones/_estado.php'; ?>
+                            </span>
+                            <span class="whitespace-nowrap">
+                                -<?= $pctTxt($pctEf) ?>% →
+                                <strong>$<?= number_format(precio_con_descuento($precioBase, $pctEf), 0, ',', '.') ?></strong>
+                            </span>
+                        </a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+
+        <form method="POST" action="<?= BASE_URL ?>/admin/promociones/oferta-rapida"
+              class="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id_producto" value="<?= (int) $producto['id_producto'] ?>">
+
+            <label class="col-span-1">
+                <span class="block text-xs text-gray-500 mb-1">Descuento</span>
+                <span class="relative block">
+                    <input type="number" name="pct" id="ofertaPct" min="1" max="99" step="0.01" required
+                           class="w-full border rounded-lg px-3 py-2 pr-7" placeholder="20">
+                    <span class="absolute right-3 top-2 text-gray-400">%</span>
+                </span>
+            </label>
+
+            <label class="col-span-1">
+                <span class="block text-xs text-gray-500 mb-1">o precio final</span>
+                <input type="number" id="ofertaPrecio" min="1" step="0.01"
+                       class="w-full border rounded-lg px-3 py-2" placeholder="$">
+            </label>
+
+            <label class="col-span-2 sm:col-span-1">
+                <span class="block text-xs text-gray-500 mb-1">Hasta (opcional)</span>
+                <input type="datetime-local" name="hasta" class="w-full border rounded-lg px-3 py-2">
+            </label>
+
+            <button class="col-span-2 sm:col-span-1 bg-gray-900 text-white rounded-lg px-3 py-2 hover:bg-gray-800">
+                Poner en oferta
+            </button>
+
+            <p class="col-span-2 sm:col-span-4 text-xs text-gray-400">
+                Precio actual: $<?= number_format($precioBase, 0, ',', '.') ?>.
+                Escribí el % o el precio final y el otro se calcula solo.
+            </p>
+        </form>
+    </div>
+
+    <script>
+    (function () {
+        const base   = <?= json_encode($precioBase) ?>;
+        const pct    = document.getElementById('ofertaPct');
+        const precio = document.getElementById('ofertaPrecio');
+
+        pct.addEventListener('input', () => {
+            const p = parseFloat(pct.value);
+            precio.value = p > 0 && p < 100 ? Math.round(base * (1 - p / 100) * 100) / 100 : '';
+        });
+
+        precio.addEventListener('input', () => {
+            const v = parseFloat(precio.value);
+            pct.value = v > 0 && v < base ? Math.round((1 - v / base) * 10000) / 100 : '';
+        });
+    })();
+    </script>
+<?php endif; ?>
 
 <script>
 (function () {

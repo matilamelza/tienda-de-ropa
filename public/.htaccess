@@ -117,6 +117,17 @@ RewriteRule ^admin/talles/actualizar/?$ index.php?route=talles_actualizar  [L,QS
 RewriteRule ^admin/talles/eliminar/?$   index.php?route=talles_eliminar    [L,QSA]
 RewriteRule ^admin/talles/crear-ajax/?$ index.php?route=talles_crear_ajax  [L,QSA]
 
+# Promociones
+RewriteRule ^admin/promociones/?$            index.php?route=promociones            [L,QSA]
+RewriteRule ^admin/promociones/nueva/?$      index.php?route=promociones_nueva      [L,QSA]
+RewriteRule ^admin/promociones/editar/?$     index.php?route=promociones_editar     [L,QSA]
+RewriteRule ^admin/promociones/guardar/?$    index.php?route=promociones_guardar    [L,QSA]
+RewriteRule ^admin/promociones/ver/?$        index.php?route=promociones_ver        [L,QSA]
+RewriteRule ^admin/promociones/toggle/?$     index.php?route=promociones_toggle     [L,QSA]
+RewriteRule ^admin/promociones/eliminar/?$   index.php?route=promociones_eliminar   [L,QSA]
+RewriteRule ^admin/promociones/productos/?$  index.php?route=promociones_productos  [L,QSA]
+RewriteRule ^admin/promociones/oferta-rapida/?$  index.php?route=promociones_oferta_rapida  [L,QSA]
+
 # Colores
 RewriteRule ^admin/colores/?$            index.php?route=colores            [L,QSA]
 RewriteRule ^admin/colores/crear/?$      index.php?route=colores_crear      [L,QSA]
@@ -130,6 +141,8 @@ RewriteRule ^admin/colores/crear-ajax/?$ index.php?route=colores_crear_ajax [L,Q
 RewriteRule ^admin/configuracion/?$                 index.php?route=admin_configuracion                  [L,QSA]
 RewriteRule ^admin/configuracion/guardar/?$         index.php?route=admin_configuracion_guardar          [L,QSA]
 RewriteRule ^admin/configuracion/eliminar-imagen/?$ index.php?route=admin_configuracion_eliminar_imagen  [L,QSA]
+
+
 
 # Auth admin
 RewriteRule ^admin/login/?$ index.php?route=admin_login [L,QSA]

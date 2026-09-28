@@ -34,6 +34,10 @@ class ProductoController extends Controller
             'filtros'      => $filtros,
             'categorias'   => (new Categoria())->listarActivas()->fetch_all(MYSQLI_ASSOC),
             'marcas'       => (new Marca())->listarActivas()->fetch_all(MYSQLI_ASSOC),
+            'promociones'  => array_values(array_filter(
+                (new Promocion())->listar(),
+                fn($pr) => Promocion::estado($pr) !== 'vencida'
+            )),
         ]);
     }
     
@@ -100,7 +104,8 @@ class ProductoController extends Controller
         $this->view('productos/form', [
             'producto'   => $producto,
             'categorias' => $categoriaModel->listarActivas(),
-            'marcas'     => $marcaModel->listarActivas()
+            'marcas'     => $marcaModel->listarActivas(),
+            'promocionesProducto' => (new Promocion())->promocionesDeProducto((int) $producto['id_producto']),
         ]);
     }
 
@@ -170,6 +175,7 @@ class ProductoController extends Controller
         $fotos     = $modelo->listarFotos($id)->fetch_all(MYSQLI_ASSOC);
         $resumen   = $modelo->resumenProducto($id);
         $pedidos   = $modelo->ultimosPedidosProducto($id, 5);
+        $descuento = (new Promocion())->descuentoProducto($id);
 
         require __DIR__ . '/../Views/productos/_modal.php';
         exit;
@@ -311,6 +317,22 @@ class ProductoController extends Controller
 
                 $n   = $modelo->ajustarPrecios($ids, $pct, $redondeo, !empty($_POST['con_costo']), !empty($_POST['con_variantes']));
                 $msg = ($pct > 0 ? 'Aumento' : 'Rebaja') . ' del ' . rtrim(rtrim(number_format(abs($pct), 2, ',', ''), '0'), ',') . "% aplicado a $n producto(s).";
+                break;
+
+            case 'promocion':
+                $promoModel = new Promocion();
+                $promo      = $promoModel->buscarPorId((int) ($_POST['id_promocion'] ?? 0));
+
+                if (!$promo) {
+                    $_SESSION['productos_msg'] = ['error', 'Elegí una promoción.'];
+                    $this->redirect($volver);
+                }
+
+                $sumados = $promoModel->agregarProductos((int) $promo['id_promocion'], $ids);
+                $yaEstaban = $n - $sumados;
+
+                $msg = "Se sumaron $sumados producto(s) a \"{$promo['nombre']}\"."
+                     . ($yaEstaban > 0 ? " $yaEstaban ya estaban." : '');
                 break;
 
             case 'eliminar':

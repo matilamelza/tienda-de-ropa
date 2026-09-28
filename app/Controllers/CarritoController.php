@@ -28,15 +28,16 @@ class CarritoController extends Controller
                 $cantidad = min((int)$item['cantidad'], (int)$variante['disponible']);
                 $_SESSION['carrito'][$id_variante]['cantidad'] = $cantidad;
 
-                $precio = $variante['precio'] !== null && $variante['precio'] !== ''
-                    ? $variante['precio']
-                    : $variante['precio_base'];
-
+                // Precio real, con la promoción vigente aplicada
+                $px       = precio_item($variante);
+                $precio   = $px['precio'];
                 $subtotal = $precio * $cantidad;
 
                 $items[] = [
                     'variante' => $variante,
                     'precio'   => $precio,
+                    'lista'    => $px['lista'],
+                    'pct'      => $px['pct'],
                     'cantidad' => $cantidad,
                     'subtotal' => $subtotal
                 ];
