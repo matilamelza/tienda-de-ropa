@@ -78,6 +78,8 @@ class PromocionController extends Controller
         $this->view('admin/promociones/ver', [
             'promo'     => $promo,
             'productos' => $modelo->productos((int) $promo['id_promocion']),
+            'reporte'   => $modelo->reporte((int) $promo['id_promocion']),
+            'top'       => $modelo->topProductos((int) $promo['id_promocion']),
         ]);
     }
 

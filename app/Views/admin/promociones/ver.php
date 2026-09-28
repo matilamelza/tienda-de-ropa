@@ -53,6 +53,64 @@ $fecha   = fn($f) => $f ? date('d/m/Y H:i', strtotime($f)) : null;
     </div>
 <?php endif; ?>
 
+<!-- ── Resultados de la promoción ───────────────────────────── -->
+<?php if ($reporte['pedidos'] > 0): ?>
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Pedidos</p>
+            <p class="text-2xl font-bold text-gray-900"><?= (int) $reporte['pedidos'] ?></p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Unidades</p>
+            <p class="text-2xl font-bold text-gray-900"><?= (int) $reporte['unidades'] ?></p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Facturado</p>
+            <p class="text-2xl font-bold text-gray-900"><?= $pesos($reporte['facturado']) ?></p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-500">Descuento dado</p>
+            <p class="text-2xl font-bold text-orange-600"><?= $pesos($reporte['descuento']) ?></p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 col-span-2 lg:col-span-1">
+            <p class="text-sm text-gray-500">Ganancia</p>
+            <p class="text-2xl font-bold <?= $reporte['ganancia'] < 0 ? 'text-red-600' : 'text-green-700' ?>"><?= $pesos($reporte['ganancia']) ?></p>
+            <?php if ($reporte['unidades_sin_costo'] > 0): ?>
+                <p class="text-[11px] text-gray-400 mt-1">
+                    Sin contar <?= (int) $reporte['unidades_sin_costo'] ?> unidad(es) sin costo cargado
+                </p>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <?php if (!empty($top)): ?>
+        <div class="bg-white rounded-lg shadow p-5 mb-6">
+            <h3 class="font-bold text-gray-800 mb-3">Lo más vendido en esta promoción</h3>
+            <?php $maxTop = max(array_column($top, 'unidades')) ?: 1; ?>
+            <ul class="space-y-3">
+                <?php foreach ($top as $t): ?>
+                    <li>
+                        <div class="flex justify-between text-sm mb-1 gap-3">
+                            <span class="truncate text-gray-800"><?= htmlspecialchars($t['producto']) ?></span>
+                            <span class="shrink-0 text-gray-500">
+                                <?= (int) $t['unidades'] ?> u. · <?= $pesos($t['facturado']) ?>
+                            </span>
+                        </div>
+                        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full" style="width: <?= round($t['unidades'] / $maxTop * 100) ?>%; background: var(--color-acento, #111827)"></div>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php endif; ?>
+
+<?php elseif (Promocion::estado($promo) !== 'programada'): ?>
+    <div class="bg-white rounded-lg shadow px-5 py-4 mb-6 text-sm text-gray-500">
+        📊 Todavía no hay ventas con esta promoción. Cuando se vendan productos con este descuento, acá vas a ver los resultados.
+    </div>
+<?php endif; ?>
+
 <?php if (empty($productos)): ?>
     <div class="bg-white rounded-lg shadow p-10 text-center">
         <p class="text-4xl mb-3">🛍️</p>

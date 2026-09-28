@@ -226,4 +226,56 @@ class Promocion extends Conexion
 
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
+
+        // ─── REPORTE ───────────────────────────────────────────────────────────────
+
+    /** Números de lo vendido con una promoción (sin pedidos cancelados). */
+    public function reporte(int $id_promocion): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT
+                COUNT(DISTINCT pi.id_pedido)                                   AS pedidos,
+                COALESCE(SUM(pi.cantidad), 0)                                  AS unidades,
+                COALESCE(SUM(pi.subtotal), 0)                                  AS facturado,
+                COALESCE(SUM((pi.precio_lista - pi.precio_unitario) * pi.cantidad), 0) AS descuento,
+                COALESCE(SUM(CASE WHEN pi.costo_unitario IS NOT NULL
+                                  THEN pi.subtotal - pi.costo_unitario * pi.cantidad END), 0) AS ganancia,
+                COALESCE(SUM(CASE WHEN pi.costo_unitario IS NULL THEN pi.cantidad END), 0) AS unidades_sin_costo
+             FROM pedido_items pi
+             INNER JOIN pedidos pe ON pe.id_pedido = pi.id_pedido
+             WHERE pi.id_promocion = ? AND pe.estado <> 'cancelado'"
+        );
+        $stmt->bind_param("i", $id_promocion);
+        $stmt->execute();
+        $r = $stmt->get_result()->fetch_assoc();
+
+        return [
+            'pedidos'            => (int) $r['pedidos'],
+            'unidades'           => (int) $r['unidades'],
+            'facturado'          => (float) $r['facturado'],
+            'descuento'          => (float) $r['descuento'],
+            'ganancia'           => (float) $r['ganancia'],
+            'unidades_sin_costo' => (int) $r['unidades_sin_costo'],
+        ];
+    }
+
+    /** Productos más vendidos dentro de una promoción. */
+    public function topProductos(int $id_promocion, int $limite = 5): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT pi.producto,
+                    SUM(pi.cantidad) AS unidades,
+                    SUM(pi.subtotal) AS facturado
+             FROM pedido_items pi
+             INNER JOIN pedidos pe ON pe.id_pedido = pi.id_pedido
+             WHERE pi.id_promocion = ? AND pe.estado <> 'cancelado'
+             GROUP BY pi.producto
+             ORDER BY unidades DESC, facturado DESC
+             LIMIT ?"
+        );
+        $stmt->bind_param("ii", $id_promocion, $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
 }
