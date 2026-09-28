@@ -91,6 +91,7 @@ require_once __DIR__ . '/../app/Controllers/DashboardController.php';
 require_once __DIR__ . '/../app/Controllers/EstadisticasController.php';
 require_once __DIR__ . '/../app/Controllers/CajaController.php';
 require_once __DIR__ . '/../app/Controllers/PromocionController.php';
+require_once __DIR__ . '/../app/Controllers/CatalogoController.php';
 require_once __DIR__ . '/../app/Controllers/ProductoController.php';
 require_once __DIR__ . '/../app/Controllers/CategoriaController.php';
 require_once __DIR__ . '/../app/Controllers/MarcaController.php';
@@ -352,6 +353,18 @@ switch ($route) {
     case 'promociones_oferta_rapida':
         requireAdmin();
         (new PromocionController())->ofertaRapida();
+        break;
+
+        // ─── CATÁLOGO ──────────────────────────────────────────────────────────────
+
+    case 'catalogo':
+        requireAdmin();
+        (new CatalogoController())->index();
+        break;
+
+    case 'catalogo_ver':
+        requireAdmin();
+        (new CatalogoController())->ver();
         break;
     // ─── CATEGORÍAS ────────────────────────────────────────────────────────────
 

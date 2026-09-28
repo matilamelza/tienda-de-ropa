@@ -544,6 +544,72 @@ class Producto extends Conexion
 
     // ─── TIENDA ────────────────────────────────────────────────────────────────
 
+        /**
+     * Productos para el catálogo.
+     * Filtros: ids (array), categoria (id), marca (id), oferta (bool), con_stock (bool)
+     */
+    public function paraCatalogo(array $f): array
+    {
+        $where  = ['p.activo = 1', 'p.eliminado_at IS NULL'];
+        $params = [];
+        $types  = '';
+
+        if (!empty($f['ids'])) {
+            $ids      = array_map('intval', $f['ids']);
+            $where[]  = 'p.id_producto IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            $params   = array_merge($params, $ids);
+            $types   .= str_repeat('i', count($ids));
+        }
+
+        if (!empty($f['categoria'])) {
+            $where[]  = 'p.id_categoria = ?';
+            $params[] = (int) $f['categoria'];
+            $types   .= 'i';
+        }
+
+        if (!empty($f['marca'])) {
+            $where[]  = 'p.id_marca = ?';
+            $params[] = (int) $f['marca'];
+            $types   .= 'i';
+        }
+
+        if (!empty($f['oferta'])) {
+            $where[] = "EXISTS (SELECT 1 FROM promocion_productos pp
+                                INNER JOIN promociones pr ON pr.id_promocion = pp.id_promocion
+                                WHERE pp.id_producto = p.id_producto AND " . Promocion::SQL_VIGENTE . ")";
+        }
+
+        if (!empty($f['con_stock'])) {
+            $where[] = "EXISTS (SELECT 1 FROM producto_variantes pv
+                                WHERE pv.id_producto = p.id_producto AND pv.activo = 1
+                                AND (pv.stock - pv.stock_reservado) > 0)";
+        }
+
+        $sql = "SELECT
+                    p.*,
+                    c.nombre AS categoria,
+                    m.nombre AS marca,
+                    (SELECT pf.imagen FROM producto_fotos pf
+                     WHERE pf.id_producto = p.id_producto
+                     ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC
+                     LIMIT 1) AS foto_principal,
+                    " . Promocion::columnasDescuento('p') . "
+                FROM productos p
+                INNER JOIN categorias c ON c.id_categoria = p.id_categoria
+                LEFT JOIN marcas m ON m.id_marca = p.id_marca
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY c.nombre ASC, m.nombre ASC, p.nombre ASC
+                LIMIT 300";
+
+        $stmt = $this->db->prepare($sql);
+        if ($params) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
         /** ¿Hay al menos un producto activo con una promoción vigente? (para mostrar el filtro "En oferta") */
     public function hayOfertasVigentes(): bool
     {

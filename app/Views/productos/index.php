@@ -193,6 +193,7 @@ $actividad = function (array $p) use ($num): string {
                 </span>
             <?php endif; ?>
 
+            <button type="button" onclick="catalogoSeleccionados()" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">📄 Catálogo</button>
             <button type="button" onclick="togglePrecios()" class="px-2 py-1 rounded border bg-white hover:bg-gray-50 font-medium">💲 Precios</button>
             <button type="button" onclick="accion('eliminar')" class="px-2 py-1 rounded border border-red-200 bg-white text-red-600 hover:bg-red-50">Eliminar</button>
         </div>
@@ -467,6 +468,7 @@ $actividad = function (array $p) use ($num): string {
     const CSRF         = <?= json_encode(csrf_token()) ?>;
     const URL_TOGGLE   = '<?= BASE_URL ?>/admin/productos/toggle';
     const URL_MODAL    = '<?= BASE_URL ?>/admin/productos/modal';
+    const URL_CATALOGO = '<?= BASE_URL ?>/admin/catalogo';
     const TOTAL_FILTRO = <?= (int) $total ?>;
     const $     = id => document.getElementById(id);
     const barra = $('barraAcciones');
@@ -614,7 +616,7 @@ $actividad = function (array $p) use ($num): string {
     const textos = {
         activar: 'activar', desactivar: 'desactivar', destacar: 'destacar',
         quitar_destacado: 'quitarle el destacado a', categoria: 'cambiar la categoría de',
-        marca: 'cambiar la marca de', eliminar: 'ELIMINAR', precios: 'cambiar el precio de', 
+        marca: 'cambiar la marca de', eliminar: 'ELIMINAR', precios: 'cambiar el precio de',
         promocion: 'agregar a la promoción'
     };
 
@@ -632,6 +634,17 @@ $actividad = function (array $p) use ($num): string {
     window.accion = function (accion, selectId) {
         if (selectId && $(selectId).value === '') { $(selectId).focus(); return; }
         enviar(accion);
+    };
+
+    // Catálogo con los productos seleccionados
+    window.catalogoSeleccionados = function () {
+        if (todoElFiltro) {
+            alert('Para el catálogo, seleccioná productos de esta página, o usá los filtros desde "Catálogo PDF" en el menú.');
+            return;
+        }
+        const ids = idsSeleccionados();
+        if (!ids.length) return;
+        window.location.href = URL_CATALOGO + '?ids=' + ids.join(',');
     };
 
     // ══════════════════════════════════════════════════════════════

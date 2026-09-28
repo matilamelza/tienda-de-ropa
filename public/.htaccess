@@ -128,6 +128,10 @@ RewriteRule ^admin/promociones/eliminar/?$   index.php?route=promociones_elimina
 RewriteRule ^admin/promociones/productos/?$  index.php?route=promociones_productos  [L,QSA]
 RewriteRule ^admin/promociones/oferta-rapida/?$  index.php?route=promociones_oferta_rapida  [L,QSA]
 
+# Catálogo
+RewriteRule ^admin/catalogo/?$      index.php?route=catalogo      [L,QSA]
+RewriteRule ^admin/catalogo/ver/?$  index.php?route=catalogo_ver  [L,QSA]
+
 # Colores
 RewriteRule ^admin/colores/?$            index.php?route=colores            [L,QSA]
 RewriteRule ^admin/colores/crear/?$      index.php?route=colores_crear      [L,QSA]

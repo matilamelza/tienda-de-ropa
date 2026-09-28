@@ -22,6 +22,7 @@ $menu = [
     'Catálogo' => [
         ['/admin/productos',  'Productos',  '👟', false],
         ['/admin/promociones', 'Promociones', '🔥', false],
+        ['/admin/catalogo',    'Catálogo PDF', '📄', false],
         ['/admin/categorias', 'Categorías', '🗂️', false],
         ['/admin/marcas',     'Marcas',     '🏷️', false],
         ['/admin/talles',     'Talles',     '📏', false],
