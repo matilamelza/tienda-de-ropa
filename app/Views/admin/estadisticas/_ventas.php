@@ -6,7 +6,7 @@ $porDia     = [];
 foreach ($diasNombre as $n => $nombre) {
     $porDia[] = ['nombre' => $nombre, 'total' => $momento['dia'][$n]['total'] ?? 0];
 }
-
+$maxDia  = max(array_column($porDia, 'total')) ?: 1;
 $maxHora = max(array_map(fn($x) => $x['total'], $momento['hora']) ?: [0]);
 
 $pctTexto = fn($v) => $v === null ? '—' : number_format($v, 1, ',', '.') . '%';
@@ -133,12 +133,8 @@ $pctTexto = fn($v) => $v === null ? '—' : number_format($v, 1, ',', '.') . '%'
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="bg-white rounded-lg shadow p-5">
         <h3 class="font-bold text-gray-800 mb-4">📅 Qué días se vende más</h3>
-        <?php
-        $porDiaTexto = array_map(fn($x) => ['nombre' => $x['nombre'], 'total' => $x['total']], $porDia);
-        $maxDia = max(array_column($porDiaTexto, 'total')) ?: 1;
-        ?>
         <ul class="space-y-3">
-            <?php foreach ($porDiaTexto as $x): ?>
+            <?php foreach ($porDia as $x): ?>
                 <li>
                     <div class="flex justify-between text-sm mb-1">
                         <span><?= $x['nombre'] ?></span>
