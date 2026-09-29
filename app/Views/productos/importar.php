@@ -17,6 +17,22 @@ $cantCambios = $analisis ? count($analisis['productos']) + count($analisis['vari
 
 <?php if (!$analisis): ?>
 
+    <!-- ── Copia de seguridad ──────────────────────────────────── -->
+    <div class="bg-yellow-50 border border-yellow-300 rounded-lg p-5 mb-6 max-w-3xl flex flex-col sm:flex-row sm:items-center gap-4">
+        <div class="text-3xl">🛟</div>
+        <div class="flex-1 text-sm">
+            <p class="font-semibold text-yellow-900">Antes de importar, bajá una copia de seguridad</p>
+            <p class="text-yellow-800 mt-0.5">
+                Es el archivo con <strong>todos</strong> tus productos como están ahora. Guardalo en tu compu:
+                si algo sale mal, lo subís acá mismo y todo vuelve a como estaba.
+            </p>
+        </div>
+        <a href="<?= BASE_URL ?>/admin/productos/exportar"
+           class="shrink-0 text-center px-4 py-2 rounded-lg bg-yellow-400 text-yellow-950 font-semibold hover:bg-yellow-300">
+            ⬇️ Descargar copia de seguridad
+        </a>
+    </div>
+
     <!-- ── Instrucciones + subir ───────────────────────────────── -->
     <div class="bg-white rounded-lg shadow p-6 max-w-3xl">
         <ol class="space-y-3 text-sm text-gray-700 list-decimal ml-5 mb-6">
@@ -37,6 +53,9 @@ $cantCambios = $analisis ? count($analisis['productos']) + count($analisis['vari
 
         <p class="text-xs text-gray-400 mt-4">
             Tip: si solo querés actualizar el stock, podés borrar las otras columnas (dejá <code>id_variante</code>). Lo que no esté en el archivo no se toca.
+        </p>
+        <p class="text-xs text-gray-400 mt-1">
+            ¿Algo salió mal en una importación? Subí acá la copia de seguridad y confirmá: los productos vuelven a como estaban.
         </p>
     </div>
 
@@ -111,13 +130,22 @@ $cantCambios = $analisis ? count($analisis['productos']) + count($analisis['vari
             </div>
 
             <form method="POST" action="<?= BASE_URL ?>/admin/productos/importar/aplicar"
-                  class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-t"
+                  class="px-5 py-4 border-t space-y-3"
                   onsubmit="return confirm('¿Aplicar <?= $cantCambios ?> cambio(s)? Se guardan todos juntos.')">
                 <?= csrf_field() ?>
-                <a href="<?= BASE_URL ?>/admin/productos/importar" class="text-sm text-gray-500 hover:text-gray-900">Cancelar y subir otro</a>
-                <button class="px-5 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800">
-                    ✓ Confirmar <?= $cantCambios ?> cambio(s)
-                </button>
+
+                <p class="text-xs text-yellow-800 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                    🛟 ¿Tenés una copia de cómo están los productos ahora?
+                    Si no, <a href="<?= BASE_URL ?>/admin/productos/exportar" class="font-semibold underline">descargala acá</a>
+                    antes de confirmar. Se baja aparte y no perdés esta vista previa.
+                </p>
+
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <a href="<?= BASE_URL ?>/admin/productos/importar" class="text-sm text-gray-500 hover:text-gray-900">Cancelar y subir otro</a>
+                    <button class="px-5 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800">
+                        ✓ Confirmar <?= $cantCambios ?> cambio(s)
+                    </button>
+                </div>
             </form>
         </div>
     <?php endif; ?>
