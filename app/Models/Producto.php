@@ -318,7 +318,156 @@ class Producto extends Conexion
         return $stmt->get_result()->fetch_assoc();
     }
 
+        /** Variantes para exportar, con los mismos filtros del listado del admin. */
+    public function exportarVariantes(array $filtros): array
+    {
+        [$where, $params, $types] = $this->filtroAdmin($filtros);
+
+        $sql = "SELECT
+                    pv.id_variante,
+                    p.id_producto,
+                    p.nombre       AS producto,
+                    m.nombre       AS marca,
+                    c.nombre       AS categoria,
+                    t.nombre       AS talle,
+                    co.nombre      AS color,
+                    pv.sku,
+                    p.precio_base,
+                    pv.precio      AS precio_especial,
+                    p.precio_costo,
+                    pv.stock,
+                    pv.stock_reservado,
+                    pv.activo      AS variante_activa
+                FROM producto_variantes pv
+                INNER JOIN productos p  ON p.id_producto  = pv.id_producto
+                INNER JOIN categorias c ON c.id_categoria = p.id_categoria
+                LEFT JOIN marcas m      ON m.id_marca     = p.id_marca
+                LEFT JOIN talles t      ON t.id_talle     = pv.id_talle
+                LEFT JOIN colores co    ON co.id_color    = pv.id_color
+                $where
+                ORDER BY p.nombre ASC, p.id_producto ASC, t.orden ASC, co.nombre ASC";
+
+        $stmt = $this->db->prepare($sql);
+        if ($params) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+        /**
+     * Aplica los cambios de una importación. Todo o nada (transacción).
+     * $productos: [id_producto => ['precio_base' => , 'precio_costo' => ]]  (solo las claves que cambian)
+     * $variantes: [id_variante => ['sku' => , 'precio' => , 'stock' => , 'activo' => ]]
+     * Devuelve [productos actualizados, variantes actualizadas].
+     */
+    public function aplicarImportacion(array $productos, array $variantes): array
+    {
+        $nProd = 0;
+        $nVar  = 0;
+
+        try {
+            $this->db->begin_transaction();
+
+            // ── Productos: precio y costo ────────────────────────────────────
+            $updPrecio = $this->db->prepare("UPDATE productos SET precio_base = ?  WHERE id_producto = ? AND eliminado_at IS NULL");
+            $updCosto  = $this->db->prepare("UPDATE productos SET precio_costo = ? WHERE id_producto = ? AND eliminado_at IS NULL");
+
+            foreach ($productos as $id => $c) {
+                $id = (int) $id;
+
+                if (array_key_exists('precio_base', $c)) {
+                    $v = (float) $c['precio_base'];
+                    $updPrecio->bind_param("di", $v, $id);
+                    $updPrecio->execute();
+                }
+                if (array_key_exists('precio_costo', $c)) {
+                    $v = $c['precio_costo'] !== null ? (float) $c['precio_costo'] : null;
+                    $updCosto->bind_param("di", $v, $id);
+                    $updCosto->execute();
+                }
+                $nProd++;
+            }
+
+            // ── Variantes: SKU, precio especial, stock y activa ──────────────
+            $sql = [
+                'sku'    => "UPDATE producto_variantes SET sku = ?    WHERE id_variante = ?",
+                'precio' => "UPDATE producto_variantes SET precio = ? WHERE id_variante = ?",
+                'stock'  => "UPDATE producto_variantes SET stock = GREATEST(?, stock_reservado) WHERE id_variante = ?",
+                'activo' => "UPDATE producto_variantes SET activo = ? WHERE id_variante = ?",
+            ];
+            $tipos = ['sku' => 'si', 'precio' => 'di', 'stock' => 'ii', 'activo' => 'ii'];
+            $stmts = [];
+            foreach ($sql as $campo => $q) {
+                $stmts[$campo] = $this->db->prepare($q);
+            }
+
+            foreach ($variantes as $id => $c) {
+                $id = (int) $id;
+
+                foreach ($c as $campo => $valor) {
+                    if (!isset($stmts[$campo])) {
+                        continue;   // campo no permitido: se ignora
+                    }
+                    if ($campo === 'precio') {
+                        $valor = $valor !== null ? (float) $valor : null;
+                    } elseif ($campo === 'sku') {
+                        $valor = (string) $valor;
+                    } else {
+                        $valor = (int) $valor;
+                    }
+
+                    $stmts[$campo]->bind_param($tipos[$campo], $valor, $id);
+                    $stmts[$campo]->execute();
+                }
+                $nVar++;
+            }
+
+            $this->db->commit();
+
+        } catch (Throwable $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+
+        return [$nProd, $nVar];
+    }
+
     // ─── VARIANTES ─────────────────────────────────────────────────────────────
+
+        /** Datos actuales de varias variantes, para comparar al importar. Clave: id_variante. */
+    public function variantesParaImportar(array $ids): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $ids    = array_values(array_unique(array_map('intval', $ids)));
+        $marcas = implode(',', array_fill(0, count($ids), '?'));
+
+        $stmt = $this->db->prepare(
+            "SELECT pv.id_variante, pv.id_producto, pv.sku, pv.precio AS precio_especial,
+                    pv.stock, pv.stock_reservado, pv.activo,
+                    p.nombre AS producto, p.precio_base, p.precio_costo,
+                    t.nombre AS talle, co.nombre AS color
+             FROM producto_variantes pv
+             INNER JOIN productos p ON p.id_producto = pv.id_producto
+             LEFT JOIN talles t     ON t.id_talle    = pv.id_talle
+             LEFT JOIN colores co   ON co.id_color   = pv.id_color
+             WHERE p.eliminado_at IS NULL AND pv.id_variante IN ($marcas)"
+        );
+        $stmt->bind_param(str_repeat('i', count($ids)), ...$ids);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        $datos = [];
+        while ($row = $res->fetch_assoc()) {
+            $datos[(int) $row['id_variante']] = $row;
+        }
+
+        return $datos;
+    }
 
     public function listarVariantes($id_producto)
     {

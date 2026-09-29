@@ -107,6 +107,10 @@ RewriteRule ^admin/productos/masivo/?$              index.php?route=productos_ma
 RewriteRule ^admin/productos/toggle/?$              index.php?route=productos_toggle              [L,QSA]
 RewriteRule ^admin/productos/modal/?$               index.php?route=productos_modal               [L,QSA]
 RewriteRule ^admin/productos/duplicar/?$            index.php?route=productos_duplicar            [L,QSA]
+RewriteRule ^admin/productos/exportar/?$            index.php?route=productos_exportar            [L,QSA]
+RewriteRule ^admin/productos/importar/?$              index.php?route=productos_importar               [L,QSA]
+RewriteRule ^admin/productos/importar/previsualizar/?$ index.php?route=productos_importar_previsualizar [L,QSA]
+RewriteRule ^admin/productos/importar/aplicar/?$      index.php?route=productos_importar_aplicar       [L,QSA]
 
 # Talles
 RewriteRule ^admin/talles/?$            index.php?route=talles             [L,QSA]

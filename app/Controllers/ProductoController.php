@@ -796,4 +796,134 @@ class ProductoController extends Controller
 
         $this->redirect($volver . '&ok=color&c=' . $c . '&o=' . $o);
     }
+
+        /** Descarga las variantes (con los filtros del listado) en un CSV que abre Excel. */
+    public function exportar()
+    {
+        $filtros = $this->filtrosDesde($_GET);
+        $filas   = (new Producto())->exportarVariantes($filtros);
+
+        // Descartar cualquier salida previa (el buffer del index.php)
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        $nombre = 'productos_' . date('Y-m-d_H-i') . '.csv';
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $nombre . '"');
+        header('Cache-Control: no-store');
+
+        $out = fopen('php://output', 'w');
+
+        // BOM: para que Excel muestre bien los acentos y la ñ
+        fwrite($out, "\xEF\xBB\xBF");
+
+        fputcsv($out, [
+            'id_variante', 'id_producto', 'Producto', 'Marca', 'Categoria', 'Talle', 'Color',
+            'SKU', 'Precio', 'Precio especial', 'Costo', 'Stock', 'Reservado', 'Variante activa',
+        ], ';');
+
+        foreach ($filas as $f) {
+            fputcsv($out, [
+                $f['id_variante'],
+                $f['id_producto'],
+                $f['producto'],
+                $f['marca'] ?? '',
+                $f['categoria'],
+                $f['talle'] ?? '',
+                $f['color'] ?? '',
+                $f['sku'] ?? '',
+                numero_csv($f['precio_base']),
+                numero_csv($f['precio_especial']),
+                numero_csv($f['precio_costo']),
+                (int) $f['stock'],
+                (int) $f['stock_reservado'],
+                (int) $f['variante_activa'] === 1 ? 'SI' : 'NO',
+            ], ';');
+        }
+
+        fclose($out);
+        exit;
+    }
+
+        // ─── IMPORTAR ──────────────────────────────────────────────────────────────
+
+    /** Pantalla para subir el archivo. */
+    public function importar()
+    {
+        $this->view('productos/importar', ['analisis' => null]);
+    }
+
+    /** Lee el archivo y muestra la vista previa. No guarda nada. */
+    public function previsualizarImportacion()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/productos/importar');
+        }
+
+        $archivo = $_FILES['archivo'] ?? null;
+        $error   = null;
+
+        if (!$archivo || $archivo['error'] !== UPLOAD_ERR_OK) {
+            $error = 'No se pudo subir el archivo. Probá de nuevo.';
+        } elseif ($archivo['size'] > 5 * 1024 * 1024) {
+            $error = 'El archivo pesa más de 5 MB.';
+        } elseif (!in_array(strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION)), ['csv', 'txt'], true)) {
+            $error = 'Tiene que ser un archivo .csv (en Excel: Archivo → Guardar como → CSV UTF-8).';
+        }
+
+        if ($error) {
+            $this->view('productos/importar', ['analisis' => null, 'error' => $error]);
+            return;
+        }
+
+        $analisis = (new ImportacionProductos())->analizar($archivo['tmp_name']);
+
+        // Los cambios quedan en espera hasta que confirme (paso 3)
+        $_SESSION['importacion'] = [
+            'productos' => $analisis['productos'],
+            'variantes' => $analisis['variantes'],
+            'archivo'   => $archivo['name'],
+            'creado'    => time(),
+        ];
+
+        $this->view('productos/importar', [
+            'analisis' => $analisis,
+            'archivo'  => $archivo['name'],
+        ]);
+    }
+
+        /** Aplica los cambios de la vista previa (guardados en la sesión). */
+    public function aplicarImportacion()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/productos/importar');
+        }
+
+        $imp = $_SESSION['importacion'] ?? null;
+        unset($_SESSION['importacion']);   // se usa una sola vez
+
+        if (!$imp) {
+            $this->redirect(BASE_URL . '/admin/productos/importar');
+        }
+
+        // La vista previa vence a los 30 minutos (en ese tiempo pudo haber ventas)
+        if (time() - (int) $imp['creado'] > 30 * 60) {
+            $this->view('productos/importar', [
+                'analisis' => null,
+                'error'    => 'Pasó mucho tiempo desde la vista previa. Subí el archivo de nuevo para revisar los cambios.',
+            ]);
+            return;
+        }
+
+        [$nProd, $nVar] = (new Producto())->aplicarImportacion($imp['productos'], $imp['variantes']);
+
+        $partes = [];
+        if ($nProd) $partes[] = "$nProd producto(s)";
+        if ($nVar)  $partes[] = "$nVar variante(s)";
+
+        $_SESSION['productos_msg'] = ['ok', '✓ Importación aplicada: se actualizaron ' . implode(' y ', $partes) . '.'];
+        $this->redirect(url_listado_productos());
+    }
 }

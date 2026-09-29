@@ -74,10 +74,22 @@ $actividad = function (array $p) use ($num): string {
         <p class="text-gray-500 text-sm"><?= (int) $total ?> producto<?= $total !== 1 ? 's' : '' ?><?= $hayFiltros ? ' con estos filtros' : '' ?></p>
     </div>
 
-    <a href="<?= BASE_URL ?>/admin/productos/crear"
-       class="self-start sm:self-auto bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800">
-        + Nuevo producto
-    </a>
+    <div class="flex gap-2 self-start sm:self-auto">
+        <a href="<?= htmlspecialchars(BASE_URL . '/admin/productos/exportar?' . http_build_query(array_filter($filtros, fn($v) => $v !== '' && $v !== 0))) ?>"
+           class="px-4 py-2 rounded-lg border bg-white text-gray-700 hover:bg-gray-50"
+           title="Descargar los productos de este filtro en un archivo para Excel">
+            ⬇️ Exportar
+        </a>
+        <a href="<?= BASE_URL ?>/admin/productos/importar"
+           class="px-4 py-2 rounded-lg border bg-white text-gray-700 hover:bg-gray-50"
+           title="Subir un archivo editado en Excel para actualizar precios, stock, etc.">
+            ⬆️ Importar
+        </a>
+        <a href="<?= BASE_URL ?>/admin/productos/crear"
+           class="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800">
+            + Nuevo producto
+        </a>
+    </div>
 </div>
 
 <?php if ($flash): ?>

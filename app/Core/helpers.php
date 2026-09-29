@@ -107,3 +107,37 @@ function html_badge_oferta(float $pct, ?string $etiqueta = null): string
     return '<span class="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">'
          . $texto . '</span>';
 }
+
+/** Número para el CSV, como lo entiende el Excel en español: 89000 o 89000,5 */
+function numero_csv($n): string
+{
+    if ($n === null || $n === '') {
+        return '';
+    }
+    $n = (float) $n;
+    return floor($n) == $n ? (string) (int) $n : str_replace('.', ',', rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.'));
+}
+
+/**
+ * Lee un número escrito "a la argentina" o no: "89.000,50", "89000,50", "89000.50", "$ 89.000".
+ * Devuelve null si está vacío, o false si no es un número.
+ */
+function leer_numero($valor)
+{
+    $v = trim(str_replace(['$', ' ', "\xC2\xA0"], '', (string) $valor));
+
+    if ($v === '') {
+        return null;
+    }
+
+    if (strpos($v, ',') !== false) {
+        // Coma decimal: los puntos son de miles
+        $v = str_replace('.', '', $v);
+        $v = str_replace(',', '.', $v);
+    } elseif (substr_count($v, '.') > 1) {
+        // Varios puntos: son de miles (89.000.000)
+        $v = str_replace('.', '', $v);
+    }
+
+    return is_numeric($v) ? (float) $v : false;
+}

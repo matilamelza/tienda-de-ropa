@@ -84,6 +84,7 @@ require_once __DIR__ . '/../app/Models/MedioPago.php';
 require_once __DIR__ . '/../app/Models/CategoriaMovimiento.php';
 require_once __DIR__ . '/../app/Models/Movimiento.php';
 require_once __DIR__ . '/../app/Models/Promocion.php';
+require_once __DIR__ . '/../app/Models/ImportacionProductos.php';
 require_once __DIR__ . '/../app/Models/ConfiguracionTienda.php';
 
 // ── Controllers ──────────────────────────────────────────────────────────────
@@ -305,6 +306,26 @@ switch ($route) {
         requireAdmin();
         $controller = new ProductoController();
         $controller->duplicar();
+        break;
+
+    case 'productos_exportar':
+        requireAdmin();
+        (new ProductoController())->exportar();
+        break;
+
+        case 'productos_importar':
+        requireAdmin();
+        (new ProductoController())->importar();
+        break;
+
+    case 'productos_importar_previsualizar':
+        requireAdmin();
+        (new ProductoController())->previsualizarImportacion();
+        break;
+
+        case 'productos_importar_aplicar':
+        requireAdmin();
+        (new ProductoController())->aplicarImportacion();
         break;
     
         // ─── PROMOCIONES ───────────────────────────────────────────────────────────
