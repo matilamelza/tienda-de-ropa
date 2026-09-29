@@ -97,6 +97,24 @@ class EstadisticasController extends Controller
                     'reactivar'   => $rep->paraReactivar(),
                 ];
                 break;
+
+                        case 'productos':
+                $rep = new Reportes();
+
+                $datos += [
+                    'embudoProd' => $rep->embudoProductos($d, $h),
+                    'talles'     => $rep->tallesElegidos($d, $h),
+                    'agotados'   => $rep->agotadosBuscados($d, $h),
+                    'carritos'   => $rep->carritos($d, $h),
+                    'abandonados'=> $rep->productosAbandonados($d, $h),
+                ];
+                break;
+
+            case 'campanias':
+                $datos += [
+                    'campanias' => (new Reportes())->resultadosCampanias($d, $h),
+                ];
+                break;
         }
 
         $this->view('admin/estadisticas/index', $datos);
@@ -246,5 +264,49 @@ class EstadisticasController extends Controller
         }
         echo '</table></div>';
         exit;
+    }
+
+        /** Crea un link de campaña. */
+    public function crearCampania()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/estadisticas?tab=campanias');
+        }
+
+        $nombre = mb_substr(trim($_POST['nombre'] ?? ''), 0, 100);
+
+        // Destino: se acepta un link completo de la tienda o una ruta (/producto/...). Vacío = inicio.
+        $destino = trim($_POST['destino'] ?? '');
+        if ($destino !== '') {
+            $partes  = parse_url($destino);
+            $destino = ($partes['path'] ?? '/') . (isset($partes['query']) ? '?' . $partes['query'] : '');
+            // Sacar un ?c= viejo, si se pegó un link de otra campaña
+            $destino = preg_replace('/([?&])c=[^&]*&?/', '$1', $destino);
+            $destino = rtrim($destino, '?&');
+        }
+        if ($destino === '' || $destino[0] !== '/') {
+            $destino = '/tienda';
+        }
+
+        if ($nombre === '') {
+            $_SESSION['est_msg'] = ['error', 'Poné un nombre para la campaña.'];
+        } else {
+            $codigo = (new Campania())->crear($nombre, mb_substr($destino, 0, 255));
+            $_SESSION['est_msg'] = ['ok', "Link creado. Copialo y usalo en tu publicación."];
+            $_SESSION['est_nuevo'] = $codigo;
+        }
+
+        $this->redirect($_SERVER['HTTP_REFERER'] ?? BASE_URL . '/admin/estadisticas?tab=campanias');
+    }
+
+    /** Elimina una campaña (sus datos históricos se conservan). */
+    public function eliminarCampania()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            (new Campania())->eliminar((int) ($_POST['id'] ?? 0));
+            $_SESSION['est_msg'] = ['ok', 'Campaña eliminada.'];
+        }
+
+        $this->redirect($_SERVER['HTTP_REFERER'] ?? BASE_URL . '/admin/estadisticas?tab=campanias');
     }
 }

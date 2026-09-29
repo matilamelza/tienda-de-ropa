@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/Conexion.php';
 
-/** Consultas de Estadísticas → Ventas y Clientes. */
+/** Consultas de Estadísticas → Ventas, Clientes, Productos y Campañas. */
 class Reportes extends Conexion
 {
     /**
@@ -107,6 +107,8 @@ class Reportes extends Conexion
                 ? (float) $f['ganancia'] / (float) $f['facturado_con_costo'] * 100
                 : null;
         }
+        unset($f);
+
         return $filas;
     }
 
@@ -208,6 +210,149 @@ class Reportes extends Conexion
              LIMIT ?"
         );
         $stmt->bind_param("i", $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    // ─── PRODUCTOS ─────────────────────────────────────────────────────────────
+
+    /** Embudo por producto: vieron → agregaron al carrito → unidades vendidas. */
+    public function embudoProductos(string $desde, string $hasta, int $limite = 20): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT p.id_producto, p.nombre,
+                    (SELECT COUNT(DISTINCT v.visitante) FROM visitas v
+                     WHERE v.tipo = 'producto' AND v.id_ref = p.id_producto
+                     AND v.fecha >= ? AND v.fecha < ?) AS vieron,
+                    (SELECT COUNT(DISTINCT e.visitante) FROM eventos e
+                     WHERE e.tipo = 'agregar' AND e.id_producto = p.id_producto
+                     AND e.fecha >= ? AND e.fecha < ?) AS agregaron,
+                    (SELECT COALESCE(SUM(pi.cantidad), 0) FROM pedido_items pi
+                     INNER JOIN producto_variantes pv ON pv.id_variante = pi.id_variante
+                     INNER JOIN pedidos pe ON pe.id_pedido = pi.id_pedido
+                     WHERE pv.id_producto = p.id_producto AND " . self::vendido() . "
+                     AND pe.fecha >= ? AND pe.fecha < ?) AS vendidas
+             FROM productos p
+             WHERE p.eliminado_at IS NULL
+             HAVING vieron > 0
+             ORDER BY vieron DESC
+             LIMIT ?"
+        );
+        $stmt->bind_param("ssssssi", $desde, $hasta, $desde, $hasta, $desde, $hasta, $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /** Talles más elegidos en las fichas, y cuántas veces estaban agotados. */
+    public function tallesElegidos(string $desde, string $hasta): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT talle,
+                    COUNT(DISTINCT visitante) AS personas,
+                    COUNT(DISTINCT CASE WHEN con_stock = 0 THEN visitante END) AS sin_stock
+             FROM eventos
+             WHERE tipo = 'talle' AND talle IS NOT NULL AND fecha >= ? AND fecha < ?
+             GROUP BY talle"
+        );
+        $stmt->bind_param("ss", $desde, $hasta);
+        $stmt->execute();
+        $filas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Ordenar como talles: los numéricos de menor a mayor, después el resto
+        usort($filas, function ($a, $b) {
+            $na = is_numeric($a['talle']);
+            $nb = is_numeric($b['talle']);
+            if ($na && $nb) return (float) $a['talle'] <=> (float) $b['talle'];
+            if ($na !== $nb) return $na ? -1 : 1;
+            return strcmp($a['talle'], $b['talle']);
+        });
+
+        return $filas;
+    }
+
+    /** Producto + talle agotados que más intentaron elegir. */
+    public function agotadosBuscados(string $desde, string $hasta, int $limite = 15): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT e.id_producto, p.nombre, e.talle, COUNT(DISTINCT e.visitante) AS personas
+             FROM eventos e
+             INNER JOIN productos p ON p.id_producto = e.id_producto
+             WHERE e.tipo = 'talle' AND e.con_stock = 0 AND p.eliminado_at IS NULL
+             AND e.fecha >= ? AND e.fecha < ?
+             GROUP BY e.id_producto, p.nombre, e.talle
+             ORDER BY personas DESC
+             LIMIT ?"
+        );
+        $stmt->bind_param("ssi", $desde, $hasta, $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /** Cuántos agregaron algo al carrito y cuántos terminaron haciendo un pedido. */
+    public function carritos(string $desde, string $hasta): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) AS agregaron, COALESCE(SUM(t.compro), 0) AS compraron
+             FROM (
+                SELECT e.visitante,
+                       MAX(EXISTS (SELECT 1 FROM pedidos pe
+                                   WHERE pe.visitante = e.visitante AND pe.fecha >= e.fecha
+                                   AND pe.estado <> 'cancelado')) AS compro
+                FROM eventos e
+                WHERE e.tipo = 'agregar' AND e.fecha >= ? AND e.fecha < ?
+                GROUP BY e.visitante
+             ) t"
+        );
+        $stmt->bind_param("ss", $desde, $hasta);
+        $stmt->execute();
+        $r = $stmt->get_result()->fetch_assoc();
+
+        return ['agregaron' => (int) $r['agregaron'], 'compraron' => (int) $r['compraron']];
+    }
+
+    /** Productos que más quedan en carritos sin pedido. */
+    public function productosAbandonados(string $desde, string $hasta, int $limite = 10): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT e.id_producto, p.nombre, COUNT(DISTINCT e.visitante) AS personas
+             FROM eventos e
+             INNER JOIN productos p ON p.id_producto = e.id_producto
+             WHERE e.tipo = 'agregar' AND e.fecha >= ? AND e.fecha < ?
+             AND NOT EXISTS (SELECT 1 FROM pedidos pe
+                             WHERE pe.visitante = e.visitante AND pe.fecha >= e.fecha
+                             AND pe.estado <> 'cancelado')
+             GROUP BY e.id_producto, p.nombre
+             ORDER BY personas DESC
+             LIMIT ?"
+        );
+        $stmt->bind_param("ssi", $desde, $hasta, $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    // ─── CAMPAÑAS ──────────────────────────────────────────────────────────────
+
+    /** Todas las campañas con sus resultados en el período. */
+    public function resultadosCampanias(string $desde, string $hasta): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT c.*,
+                    (SELECT COUNT(DISTINCT v.visitante) FROM visitas v
+                     WHERE v.campania = c.codigo AND v.fecha >= ? AND v.fecha < ?) AS visitantes,
+                    (SELECT COUNT(DISTINCT e.visitante) FROM eventos e
+                     WHERE e.campania = c.codigo AND e.tipo = 'agregar' AND e.fecha >= ? AND e.fecha < ?) AS agregaron,
+                    (SELECT COUNT(*) FROM pedidos pe
+                     WHERE pe.campania = c.codigo AND " . self::vendido() . " AND pe.fecha >= ? AND pe.fecha < ?) AS pedidos,
+                    (SELECT COALESCE(SUM(pe.total), 0) FROM pedidos pe
+                     WHERE pe.campania = c.codigo AND " . self::vendido() . " AND pe.fecha >= ? AND pe.fecha < ?) AS facturado
+             FROM campanias c
+             ORDER BY c.creado_at DESC"
+        );
+        $stmt->bind_param("ssssssss", $desde, $hasta, $desde, $hasta, $desde, $hasta, $desde, $hasta);
         $stmt->execute();
 
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);

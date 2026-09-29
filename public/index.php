@@ -81,6 +81,7 @@ require_once __DIR__ . '/../app/Models/LoginIntento.php';
 require_once __DIR__ . '/../app/Models/Visita.php';
 require_once __DIR__ . '/../app/Models/Evento.php';
 require_once __DIR__ . '/../app/Models/Reportes.php';
+require_once __DIR__ . '/../app/Models/Campania.php';
 require_once __DIR__ . '/../app/Models/Caja.php';
 require_once __DIR__ . '/../app/Models/MedioPago.php';
 require_once __DIR__ . '/../app/Models/CategoriaMovimiento.php';

@@ -53,6 +53,9 @@ RewriteRule ^admin/cliente/?$ index.php?route=admin_cliente_detalle [L,QSA]
 RewriteRule ^admin/cliente/password/?$ index.php?route=admin_cliente_password [L,QSA]
 RewriteRule ^admin/estadisticas/?$ index.php?route=admin_estadisticas [L,QSA]
 
+RewriteRule ^admin/estadisticas/campania/crear/?$     index.php?route=admin_estadisticas_campania_crear     [L,QSA]
+RewriteRule ^admin/estadisticas/campania/eliminar/?$  index.php?route=admin_estadisticas_campania_eliminar  [L,QSA]
+
 RewriteRule ^admin/estadisticas/diagnostico/?$ index.php?route=admin_estadisticas_diagnostico [L,QSA]
 
 # Caja
