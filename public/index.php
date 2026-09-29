@@ -79,6 +79,7 @@ require_once __DIR__ . '/../app/Models/Cliente.php';
 require_once __DIR__ . '/../app/Models/UsuarioAdmin.php';
 require_once __DIR__ . '/../app/Models/LoginIntento.php';
 require_once __DIR__ . '/../app/Models/Visita.php';
+require_once __DIR__ . '/../app/Models/Evento.php';
 require_once __DIR__ . '/../app/Models/Caja.php';
 require_once __DIR__ . '/../app/Models/MedioPago.php';
 require_once __DIR__ . '/../app/Models/CategoriaMovimiento.php';
@@ -93,6 +94,7 @@ require_once __DIR__ . '/../app/Controllers/EstadisticasController.php';
 require_once __DIR__ . '/../app/Controllers/CajaController.php';
 require_once __DIR__ . '/../app/Controllers/PromocionController.php';
 require_once __DIR__ . '/../app/Controllers/CatalogoController.php';
+require_once __DIR__ . '/../app/Controllers/EventoController.php';
 require_once __DIR__ . '/../app/Controllers/ProductoController.php';
 require_once __DIR__ . '/../app/Controllers/CategoriaController.php';
 require_once __DIR__ . '/../app/Controllers/MarcaController.php';
@@ -649,6 +651,10 @@ switch ($route) {
     case 'producto':
         $controller = new TiendaController();
         $controller->detalle();
+        break;
+
+        case 'evento_talle':
+        (new EventoController())->talle();
         break;
 
     // ─── CARRITO Y CHECKOUT ────────────────────────────────────────────────────

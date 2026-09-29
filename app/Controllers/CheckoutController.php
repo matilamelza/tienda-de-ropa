@@ -131,6 +131,11 @@ class CheckoutController extends Controller
 
             $pedidoModel->commit();
 
+                        // Estadísticas: qué visitante hizo el pedido y de qué campaña venía
+            if (!visita_ignorada()) {
+                $pedidoModel->marcarOrigen($id_pedido, visitante_id(), campania_actual());
+            }
+
             unset($_SESSION['carrito']);
             unset($_SESSION['ultimo_pedido_whatsapp']);
 

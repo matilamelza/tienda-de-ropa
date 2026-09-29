@@ -7,17 +7,19 @@ class Visita extends Conexion
     public function registrar(array $d): void
     {
         $stmt = $this->db->prepare(
-            "INSERT INTO visitas (visitante, tipo, id_ref, termino, resultados, origen, dispositivo)
-             VALUES (?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO visitas (visitante, tipo, id_ref, termino, resultados, origen, campania, dispositivo)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         );
+        $campania = $d['campania'] ?? null;
         $stmt->bind_param(
-            "ssisiss",
+            "ssisisss",
             $d['visitante'],
             $d['tipo'],
             $d['id_ref'],
             $d['termino'],
             $d['resultados'],
             $d['origen'],
+            $campania,
             $d['dispositivo']
         );
         $stmt->execute();
@@ -26,9 +28,11 @@ class Visita extends Conexion
     /** Borra visitas de más de N días. */
     public function limpiarViejas(int $dias = 365): void
     {
-        $stmt = $this->db->prepare("DELETE FROM visitas WHERE fecha < NOW() - INTERVAL ? DAY");
-        $stmt->bind_param("i", $dias);
-        $stmt->execute();
+        foreach (['visitas', 'eventos'] as $tabla) {
+            $stmt = $this->db->prepare("DELETE FROM $tabla WHERE fecha < NOW() - INTERVAL ? DAY");
+            $stmt->bind_param("i", $dias);
+            $stmt->execute();
+        }
     }
 
         /** Visitantes únicos y páginas vistas del período. */

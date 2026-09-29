@@ -537,6 +537,14 @@ class Pedido extends Conexion
         return $conteo;
     }
 
+        /** Guarda qué visitante hizo el pedido y de qué campaña venía (para estadísticas). */
+    public function marcarOrigen(int $id_pedido, ?string $visitante, ?string $campania): void
+    {
+        $stmt = $this->db->prepare("UPDATE pedidos SET visitante = ?, campania = ? WHERE id_pedido = ?");
+        $stmt->bind_param("ssi", $visitante, $campania, $id_pedido);
+        $stmt->execute();
+    }
+
     // ─── TRANSACCIONES ─────────────────────────────────────────────────────────
 
     public function begin()

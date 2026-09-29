@@ -89,6 +89,13 @@ class CarritoController extends Controller
             'cantidad' => min($actual + $cantidad, $disponible)
         ];
 
+        registrar_evento('agregar', [
+            'id_producto' => (int) $variante['id_producto'],
+            'id_variante' => $id_variante,
+            'talle'       => $variante['talle'],
+            'cantidad'    => $cantidad,
+        ]);
+
         $this->redirect(BASE_URL . '/carrito');
     }
 

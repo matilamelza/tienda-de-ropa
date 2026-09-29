@@ -4,9 +4,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
 # Tienda
+RewriteRule ^evento/talle/?$ index.php?route=evento_talle [L,QSA]
 RewriteRule ^tienda/?$ index.php?route=tienda [L,QSA]
 RewriteRule ^producto/([a-zA-Z0-9-]+)/?$ index.php?route=producto&slug=$1 [L,QSA]
 RewriteRule ^categoria/([a-zA-Z0-9-]+)/?$ index.php?route=tienda&categoria=$1 [L,QSA]
+
 
 # Carrito
 RewriteRule ^carrito/?$ index.php?route=carrito [L,QSA]

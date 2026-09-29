@@ -266,8 +266,27 @@ function cambiarImagen(imagen) {
     document.getElementById('imagenPrincipal').src = '<?= BASE_URL ?>/public/uploads/productos/' + imagen;
 }
 
+/** Estadísticas: avisa de fondo qué talle eligió (y si había stock). No frena nada. */
+function avisarTalle(talle) {
+    try {
+        const token = document.querySelector('input[name="csrf_token"]');
+        if (!token || !navigator.sendBeacon) return;
+
+        const conStock = variantes.some(v => v.talle === talle && parseInt(v.stock_disponible) > 0);
+
+        const datos = new FormData();
+        datos.append('csrf_token', token.value);
+        datos.append('id_producto', <?= (int) $producto['id_producto'] ?>);
+        datos.append('talle', talle);
+        datos.append('con_stock', conStock ? '1' : '');
+
+        navigator.sendBeacon('<?= BASE_URL ?>/evento/talle', datos);
+    } catch (e) {}
+}
+
 /** Elegir un talle: si tiene un solo color (o ninguno), se elige solo. */
 function seleccionarTalle(talle) {
+    avisarTalle(talle);
     talleSeleccionado    = talle;
     colorSeleccionado    = null;
     varianteSeleccionada = null;

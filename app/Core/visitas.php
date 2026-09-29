@@ -1,8 +1,84 @@
 <?php
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Estadísticas de la tienda: visitas, eventos y campañas.
+// Todo es anónimo (código aleatorio en una cookie) y nunca rompe la página.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** ¿Esta visita se tiene que ignorar? (admin logueado o robot) */
+function visita_ignorada(): bool
+{
+    if (isset($_SESSION['admin'])) {
+        return true;
+    }
+
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+    return $ua === ''
+        || (bool) preg_match('/bot|crawl|spider|slurp|facebookexternalhit|whatsapp|telegram|preview|curl|wget|python|headless|lighthouse/i', $ua);
+}
+
+/** Código anónimo del visitante (cookie de 1 año). Lo crea si no existe. */
+function visitante_id(): string
+{
+    static $id = null;
+    if ($id !== null) {
+        return $id;
+    }
+
+    $id = $_COOKIE['vid'] ?? '';
+
+    if (!preg_match('/^[a-f0-9]{32}$/', $id)) {
+        $id = bin2hex(random_bytes(16));
+        setcookie('vid', $id, [
+            'expires'  => time() + 365 * 24 * 3600,
+            'path'     => '/',
+            'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    }
+
+    return $id;
+}
+
+/** Código de campaña que viene en ESTE link (?c=historia-lunes), o null. */
+function campania_del_link(): ?string
+{
+    $c = strtolower(trim($_GET['c'] ?? ''));
+    return preg_match('/^[a-z0-9-]{1,40}$/', $c) ? $c : null;
+}
+
+/**
+ * Campaña activa del visitante: la del link actual, o la que trajo en los últimos 7 días.
+ * Si viene en el link, se recuerda en una cookie.
+ */
+function campania_actual(): ?string
+{
+    static $campania = false;
+    if ($campania !== false) {
+        return $campania;
+    }
+
+    $delLink = campania_del_link();
+
+    if ($delLink !== null) {
+        setcookie('camp', $delLink, [
+            'expires'  => time() + 7 * 24 * 3600,
+            'path'     => '/',
+            'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+        return $campania = $delLink;
+    }
+
+    $cookie = strtolower($_COOKIE['camp'] ?? '');
+    return $campania = preg_match('/^[a-z0-9-]{1,40}$/', $cookie) ? $cookie : null;
+}
+
 /**
  * Registra una visita de la tienda.
- * Nunca rompe la página: si algo falla, lo anota en el log y sigue.
  *
  * @param string      $tipo        inicio|producto|categoria|marca|busqueda|carrito|checkout|otra
  * @param int|null    $idRef       id del producto / categoría / marca
@@ -12,16 +88,12 @@
 function registrar_visita(string $tipo, ?int $idRef = null, ?string $termino = null, ?int $resultados = null): void
 {
     try {
-        // No contar al admin ni pedidos que no sean GET
-        if (isset($_SESSION['admin']) || ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        if (visita_ignorada() || ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
             return;
         }
 
-        // No contar robots ni vistas previas de links (Google, WhatsApp, Facebook, etc.)
-        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
-        if ($ua === '' || preg_match('/bot|crawl|spider|slurp|facebookexternalhit|whatsapp|telegram|preview|curl|wget|python|headless|lighthouse/i', $ua)) {
-            return;
-        }
+        // Guardar la campaña ya (setea la cookie aunque la visita sea una recarga)
+        campania_actual();
 
         // No contar recargas de la misma página en menos de 30 segundos
         $clave = $tipo . '|' . $idRef . '|' . $termino;
@@ -31,36 +103,57 @@ function registrar_visita(string $tipo, ?int $idRef = null, ?string $termino = n
         }
         $_SESSION['ultima_visita'] = ['clave' => $clave, 'hora' => time()];
 
-        // Identificador anónimo del visitante (cookie de 1 año, código aleatorio)
-        $visitante = $_COOKIE['vid'] ?? '';
-        if (!preg_match('/^[a-f0-9]{32}$/', $visitante)) {
-            $visitante = bin2hex(random_bytes(16));
-            setcookie('vid', $visitante, [
-                'expires'  => time() + 365 * 24 * 3600,
-                'path'     => '/',
-                'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-                'httponly' => true,
-                'samesite' => 'Lax',
-            ]);
-        }
-
         (new Visita())->registrar([
-            'visitante'   => $visitante,
+            'visitante'   => visitante_id(),
             'tipo'        => $tipo,
             'id_ref'      => $idRef,
             'termino'     => $termino !== null ? mb_substr(mb_strtolower(trim($termino)), 0, 100) : null,
             'resultados'  => $resultados,
             'origen'      => visita_origen(),
-            'dispositivo' => preg_match('/Mobi|Android|iPhone|iPad/i', $ua) ? 'mobile' : 'desktop',
+            'campania'    => campania_del_link(),   // solo la visita que entró por el link
+            'dispositivo' => preg_match('/Mobi|Android|iPhone|iPad/i', $_SERVER['HTTP_USER_AGENT'] ?? '') ? 'mobile' : 'desktop',
         ]);
 
-        // Limpieza ocasional de visitas de más de un año (1 de cada 500)
+        // Limpieza ocasional de visitas y eventos de más de un año (1 de cada 500)
         if (random_int(1, 500) === 1) {
             (new Visita())->limpiarViejas(365);
         }
 
     } catch (Throwable $e) {
         error_log('registrar_visita: ' . $e->getMessage());
+        if (defined('MOSTRAR_ERRORES') && MOSTRAR_ERRORES) {
+            throw $e;
+        }
+    }
+}
+
+/**
+ * Registra un evento: 'talle' (eligió un talle) o 'agregar' (agregó al carrito).
+ * $datos: id_producto, id_variante, talle, con_stock, cantidad (los que correspondan)
+ */
+function registrar_evento(string $tipo, array $datos): void
+{
+    try {
+        if (visita_ignorada()) {
+            return;
+        }
+
+        (new Evento())->registrar([
+            'visitante'   => visitante_id(),
+            'tipo'        => $tipo,
+            'id_producto' => (int) $datos['id_producto'],
+            'id_variante' => isset($datos['id_variante']) ? (int) $datos['id_variante'] : null,
+            'talle'       => isset($datos['talle']) ? mb_substr((string) $datos['talle'], 0, 20) : null,
+            'con_stock'   => isset($datos['con_stock']) ? (int) (bool) $datos['con_stock'] : null,
+            'cantidad'    => isset($datos['cantidad']) ? (int) $datos['cantidad'] : null,
+            'campania'    => campania_actual(),
+        ]);
+
+    } catch (Throwable $e) {
+        error_log('registrar_evento: ' . $e->getMessage());
+        if (defined('MOSTRAR_ERRORES') && MOSTRAR_ERRORES) {
+            throw $e;
+        }
     }
 }
 
@@ -76,10 +169,10 @@ function visita_origen(): ?string
         return 'directo';
     }
 
-    $host  = strtolower(parse_url($referer, PHP_URL_HOST) ?? '');
+    $host   = strtolower(parse_url($referer, PHP_URL_HOST) ?? '');
     $propio = strtolower($_SERVER['HTTP_HOST'] ?? '');
 
-    if ($host === '' ) {
+    if ($host === '') {
         return 'directo';
     }
     if ($host === $propio) {
@@ -87,14 +180,14 @@ function visita_origen(): ?string
     }
 
     $conocidos = [
-        'instagram' => 'instagram',
-        'facebook'  => 'facebook',
-        'fb.'       => 'facebook',
-        'google'    => 'google',
-        'whatsapp'  => 'whatsapp',
-        'wa.me'     => 'whatsapp',
-        'tiktok'    => 'tiktok',
-        'bing'      => 'bing',
+        'instagram'    => 'instagram',
+        'facebook'     => 'facebook',
+        'fb.'          => 'facebook',
+        'google'       => 'google',
+        'whatsapp'     => 'whatsapp',
+        'wa.me'        => 'whatsapp',
+        'tiktok'       => 'tiktok',
+        'bing'         => 'bing',
         'mercadolibre' => 'mercadolibre',
     ];
 
