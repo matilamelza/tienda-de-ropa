@@ -10,6 +10,8 @@ RewriteRule ^producto/([a-zA-Z0-9-]+)/?$ index.php?route=producto&slug=$1 [L,QSA
 RewriteRule ^categoria/([a-zA-Z0-9-]+)/?$ index.php?route=tienda&categoria=$1 [L,QSA]
 
 
+
+
 # Carrito
 RewriteRule ^carrito/?$ index.php?route=carrito [L,QSA]
 RewriteRule ^carrito/agregar/?$ index.php?route=carrito_agregar [L,QSA]
@@ -50,6 +52,8 @@ RewriteRule ^admin/clientes/?$ index.php?route=admin_clientes [L,QSA]
 RewriteRule ^admin/cliente/?$ index.php?route=admin_cliente_detalle [L,QSA]
 RewriteRule ^admin/cliente/password/?$ index.php?route=admin_cliente_password [L,QSA]
 RewriteRule ^admin/estadisticas/?$ index.php?route=admin_estadisticas [L,QSA]
+
+RewriteRule ^admin/estadisticas/diagnostico/?$ index.php?route=admin_estadisticas_diagnostico [L,QSA]
 
 # Caja
 RewriteRule ^admin/caja/config/?$            index.php?route=caja_config            [L,QSA]

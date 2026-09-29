@@ -241,4 +241,54 @@ class Visita extends Conexion
 
         return array_map('intval', $embudo);
     }
+
+        /**
+     * Diagnóstico temporal de estadísticas: revisa la base e intenta guardar
+     * una visita y un evento de prueba (y los borra). Devuelve lo que encontró.
+     */
+    public function diagnostico(): array
+    {
+        $r = [];
+
+        $r['Base de datos en uso'] = $this->db->query("SELECT DATABASE() AS b")->fetch_assoc()['b'];
+        $r['Hora de MySQL']        = $this->db->query("SELECT NOW() AS n")->fetch_assoc()['n'];
+        $r['Hora de PHP']          = date('Y-m-d H:i:s');
+
+        $r['Columna visitas.campania'] = $this->db->query("SHOW COLUMNS FROM visitas LIKE 'campania'")->num_rows ? 'OK' : 'FALTA';
+        $r['Tabla eventos']            = $this->db->query("SHOW TABLES LIKE 'eventos'")->num_rows ? 'OK' : 'FALTA';
+        $r['Columna pedidos.visitante'] = $this->db->query("SHOW COLUMNS FROM pedidos LIKE 'visitante'")->num_rows ? 'OK' : 'FALTA';
+
+        $r['Última visita guardada'] = $this->db->query("SELECT MAX(fecha) AS f FROM visitas")->fetch_assoc()['f'] ?? '(ninguna)';
+
+        // Prueba real: guardar una visita
+        try {
+            $this->registrar([
+                'visitante' => str_repeat('0', 32), 'tipo' => 'otra', 'id_ref' => null, 'termino' => 'diagnostico',
+                'resultados' => null, 'origen' => 'directo', 'campania' => 'diagnostico', 'dispositivo' => 'desktop',
+            ]);
+            $this->db->query("DELETE FROM visitas WHERE termino = 'diagnostico' AND visitante = '" . str_repeat('0', 32) . "'");
+            $r['Guardar una visita'] = 'OK';
+        } catch (Throwable $e) {
+            $r['Guardar una visita'] = 'ERROR: ' . $e->getMessage();
+        }
+
+        // Prueba real: guardar un evento
+        try {
+            $idProd = (int) ($this->db->query("SELECT id_producto FROM productos LIMIT 1")->fetch_assoc()['id_producto'] ?? 0);
+            (new Evento())->registrar([
+                'visitante' => str_repeat('0', 32), 'tipo' => 'talle', 'id_producto' => $idProd, 'id_variante' => null,
+                'talle' => 'diag', 'con_stock' => 1, 'cantidad' => null, 'campania' => 'diagnostico',
+            ]);
+            $this->db->query("DELETE FROM eventos WHERE talle = 'diag' AND visitante = '" . str_repeat('0', 32) . "'");
+            $r['Guardar un evento'] = 'OK';
+        } catch (Throwable $e) {
+            $r['Guardar un evento'] = 'ERROR: ' . $e->getMessage();
+        }
+
+        $r['Últimos 5 eventos'] = $this->db->query(
+            "SELECT fecha, tipo, id_producto, talle, con_stock, cantidad, campania FROM eventos ORDER BY id_evento DESC LIMIT 5"
+        )->fetch_all(MYSQLI_ASSOC);
+
+        return $r;
+    }
 }

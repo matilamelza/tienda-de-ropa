@@ -164,6 +164,11 @@ switch ($route) {
         $controller->index();
         break;
 
+        case 'admin_estadisticas_diagnostico':
+        requireAdmin();
+        (new EstadisticasController())->diagnostico();
+        break;
+
     // ─── PRODUCTOS ─────────────────────────────────────────────────────────────
 
     case 'productos':
