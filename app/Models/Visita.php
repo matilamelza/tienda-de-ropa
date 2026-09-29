@@ -291,4 +291,141 @@ class Visita extends Conexion
 
         return $r;
     }
+
+        // ─── TRÁFICO ───────────────────────────────────────────────────────────────
+
+    /** Visitantes únicos y vistas por mes. Clave: 'Y-m'. */
+    public function porMes(string $desde, string $hasta): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, COUNT(DISTINCT visitante) AS visitantes, COUNT(*) AS vistas
+             FROM visitas WHERE fecha >= ? AND fecha < ?
+             GROUP BY mes"
+        );
+        $stmt->bind_param("ss", $desde, $hasta);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        $meses = [];
+        while ($row = $res->fetch_assoc()) {
+            $meses[$row['mes']] = ['total' => (int) $row['visitantes'], 'pedidos' => (int) $row['vistas']];
+        }
+        return $meses;
+    }
+
+    /** Mapa de calor: visitantes únicos por día de la semana (1=domingo … 7=sábado) y hora. */
+    public function mapaCalor(string $desde, string $hasta): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT DAYOFWEEK(fecha) AS dia, HOUR(fecha) AS hora, COUNT(DISTINCT visitante) AS visitantes
+             FROM visitas WHERE fecha >= ? AND fecha < ?
+             GROUP BY dia, hora"
+        );
+        $stmt->bind_param("ss", $desde, $hasta);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        $mapa = [];
+        while ($row = $res->fetch_assoc()) {
+            $mapa[(int) $row['dia']][(int) $row['hora']] = (int) $row['visitantes'];
+        }
+        return $mapa;
+    }
+
+    /** Visitantes nuevos (primera visita dentro del período) y los que ya habían venido antes. */
+    public function nuevosVsRecurrentes(string $desde, string $hasta): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) AS total,
+                    COALESCE(SUM(t.primera >= ?), 0) AS nuevos
+             FROM (
+                SELECT v.visitante,
+                       (SELECT MIN(v2.fecha) FROM visitas v2 WHERE v2.visitante = v.visitante) AS primera
+                FROM (SELECT DISTINCT visitante FROM visitas WHERE fecha >= ? AND fecha < ?) v
+             ) t"
+        );
+        $stmt->bind_param("sss", $desde, $desde, $hasta);
+        $stmt->execute();
+        $r = $stmt->get_result()->fetch_assoc();
+
+        $total  = (int) $r['total'];
+        $nuevos = (int) $r['nuevos'];
+
+        return ['total' => $total, 'nuevos' => $nuevos, 'recurrentes' => $total - $nuevos];
+    }
+
+    /**
+     * Sesiones: una sesión termina si pasan más de 30 minutos sin actividad.
+     * Devuelve sesiones, páginas por sesión, rebote (sesiones de 1 página) y duración promedio.
+     */
+    public function sesiones(string $desde, string $hasta): array
+    {
+        $stmt = $this->db->prepare(
+            "WITH v AS (
+                SELECT visitante, fecha,
+                       CASE WHEN LAG(fecha) OVER w IS NULL
+                                 OR TIMESTAMPDIFF(MINUTE, LAG(fecha) OVER w, fecha) > 30
+                            THEN 1 ELSE 0 END AS nueva
+                FROM visitas
+                WHERE fecha >= ? AND fecha < ?
+                WINDOW w AS (PARTITION BY visitante ORDER BY fecha)
+             ),
+             s AS (
+                SELECT visitante, fecha,
+                       SUM(nueva) OVER (PARTITION BY visitante ORDER BY fecha ROWS UNBOUNDED PRECEDING) AS nro
+                FROM v
+             ),
+             ses AS (
+                SELECT COUNT(*) AS paginas, TIMESTAMPDIFF(SECOND, MIN(fecha), MAX(fecha)) AS duracion
+                FROM s GROUP BY visitante, nro
+             )
+             SELECT COUNT(*)                                       AS sesiones,
+                    COALESCE(AVG(paginas), 0)                      AS paginas_por_sesion,
+                    COALESCE(SUM(paginas = 1), 0)                  AS rebotes,
+                    COALESCE(AVG(CASE WHEN paginas > 1 THEN duracion END), 0) AS duracion
+             FROM ses"
+        );
+        $stmt->bind_param("ss", $desde, $hasta);
+        $stmt->execute();
+        $r = $stmt->get_result()->fetch_assoc();
+
+        $sesiones = (int) $r['sesiones'];
+
+        return [
+            'sesiones'           => $sesiones,
+            'paginas_por_sesion' => (float) $r['paginas_por_sesion'],
+            'rebote_pct'         => $sesiones > 0 ? (int) $r['rebotes'] / $sesiones * 100 : 0,
+            'duracion'           => (int) round($r['duracion']),
+        ];
+    }
+
+    /** Primera página de cada sesión: por dónde entra la gente. */
+    public function paginasEntrada(string $desde, string $hasta, int $limite = 10): array
+    {
+        $stmt = $this->db->prepare(
+            "WITH v AS (
+                SELECT visitante, fecha, tipo, id_ref, termino,
+                       CASE WHEN LAG(fecha) OVER w IS NULL
+                                 OR TIMESTAMPDIFF(MINUTE, LAG(fecha) OVER w, fecha) > 30
+                            THEN 1 ELSE 0 END AS nueva
+                FROM visitas
+                WHERE fecha >= ? AND fecha < ?
+                WINDOW w AS (PARTITION BY visitante ORDER BY fecha)
+             )
+             SELECT v.tipo, v.id_ref, COUNT(*) AS entradas,
+                    COALESCE(p.nombre, c.nombre, m.nombre, v.termino) AS nombre
+             FROM v
+             LEFT JOIN productos  p ON v.tipo = 'producto'  AND p.id_producto  = v.id_ref
+             LEFT JOIN categorias c ON v.tipo = 'categoria' AND c.id_categoria = v.id_ref
+             LEFT JOIN marcas     m ON v.tipo = 'marca'     AND m.id_marca     = v.id_ref
+             WHERE v.nueva = 1
+             GROUP BY v.tipo, v.id_ref, nombre
+             ORDER BY entradas DESC
+             LIMIT ?"
+        );
+        $stmt->bind_param("ssi", $desde, $hasta, $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
 }
