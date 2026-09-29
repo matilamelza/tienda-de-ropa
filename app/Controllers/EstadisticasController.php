@@ -57,6 +57,46 @@ class EstadisticasController extends Controller
                     'dispositivos' => $visitaModel->dispositivos($d, $h),
                 ];
                 break;
+
+                        case 'ventas':
+                $rep = new Reportes();
+
+                $ventas    = $rep->resumenVentas($d, $h);
+                $ventasAnt = $ad ? $rep->resumenVentas($ad, $ah) : null;
+                $var       = fn($k) => $ventasAnt ? DashboardController::variacion($ventas[$k], $ventasAnt[$k]) : null;
+
+                $dias   = (int) $rango['desde']->diff(min($rango['hasta'], new DateTimeImmutable('tomorrow')))->days;
+                $porMes = $dias > 62;
+                $serie  = $rep->ventasSerie($d, $h, $porMes);
+
+                $datos += [
+                    'ventas'        => $ventas,
+                    'varVentas'     => [
+                        'facturado' => $var('facturado'),
+                        'ganancia'  => $var('ganancia'),
+                        'pedidos'   => $var('pedidos'),
+                        'ticket'    => $var('ticket'),
+                    ],
+                    'grafico'       => $porMes
+                        ? $this->graficoPorMes($serie, $rango['desde'], $rango['hasta'])
+                        : DashboardController::armarGrafico($serie, $rango['desde'], $rango['hasta']),
+                    'graficoTitulo' => $porMes ? 'Facturado por mes' : 'Facturado por día',
+                    'porCategoria'  => $rep->ventasPor('categoria', $d, $h),
+                    'porMarca'      => $rep->ventasPor('marca', $d, $h),
+                    'momento'       => $rep->ventasPorMomento($d, $h),
+                ];
+                break;
+
+            case 'clientes':
+                $rep = new Reportes();
+
+                $datos += [
+                    'clientesPer' => $rep->clientesPeriodo($d, $h),
+                    'recompra'    => $rep->recompra(),
+                    'mejores'     => $rep->mejoresClientes($d, $h),
+                    'reactivar'   => $rep->paraReactivar(),
+                ];
+                break;
         }
 
         $this->view('admin/estadisticas/index', $datos);
