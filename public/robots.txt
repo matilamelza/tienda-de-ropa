@@ -1,0 +1,14 @@
+User-agent: *
+Disallow: /admin
+Disallow: /carrito
+Disallow: /checkout
+Disallow: /ingresar
+Disallow: /registro
+Disallow: /salir
+Disallow: /olvide-mi-password
+Disallow: /nueva-password
+Disallow: /mi-cuenta
+Disallow: /pedido
+Disallow: /evento
+Disallow: /*?*q=
+Allow: /
