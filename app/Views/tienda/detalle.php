@@ -22,18 +22,25 @@ $politica    = trim($conf['politica_cambios'] ?? '');
 // Promoción vigente del producto
 $pctDesc = !empty($descuento) ? (float) $descuento['pct'] : 0;
 
-// Para compartir
-$urlProducto   = url_absoluta('producto/' . $producto['slug']);
-$textoCompartir = $producto['nombre'] . ' 👟';
+// Ruta de navegación (si el modelo trae el slug de la categoría, se linkea)
+$catSlug = $producto['categoria_slug'] ?? null;
+$marca   = $producto['marca'] ?? null;
 ?>
 
 <section class="max-w-7xl mx-auto px-4 py-10">
 
-    <div class="mb-6">
-        <a href="<?= BASE_URL ?>/tienda" class="text-sm text-gray-500 hover:text-gray-900">
-            ← Volver a la tienda
-        </a>
-    </div>
+    <!-- Ruta de navegación -->
+    <nav class="mb-6 text-sm text-gray-500 flex flex-wrap items-center gap-1.5" aria-label="Estás en">
+        <a href="<?= BASE_URL ?>/tienda" class="hover:text-gray-900">Inicio</a>
+        <span class="text-gray-300">›</span>
+        <?php if ($catSlug): ?>
+            <a href="<?= BASE_URL ?>/categoria/<?= htmlspecialchars($catSlug) ?>" class="hover:text-gray-900"><?= htmlspecialchars($producto['categoria']) ?></a>
+        <?php else: ?>
+            <span><?= htmlspecialchars($producto['categoria']) ?></span>
+        <?php endif; ?>
+        <span class="text-gray-300">›</span>
+        <span class="text-gray-900 truncate max-w-[60vw]"><?= htmlspecialchars($producto['nombre']) ?></span>
+    </nav>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
 
@@ -100,7 +107,7 @@ $textoCompartir = $producto['nombre'] . ' 👟';
         <div class="lg:pt-6">
 
             <p class="text-sm uppercase tracking-widest text-gray-400 mb-2">
-                <?php echo htmlspecialchars($producto['categoria']); ?>
+                <?= htmlspecialchars($marca ?: $producto['categoria']) ?>
             </p>
 
             <h1 class="text-4xl font-bold text-gray-900 mb-4">
@@ -182,19 +189,6 @@ $textoCompartir = $producto['nombre'] . ' 👟';
                 </button>
 
             </form>
-
-            <!-- COMPARTIR -->
-            <div class="flex gap-2 mt-4">
-                <button type="button" onclick="compartirProducto()" id="btnCompartir"
-                        class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full border text-sm font-medium hover:bg-gray-50">
-                    📤 <span>Compartir</span>
-                </button>
-                <a href="https://wa.me/?text=<?= rawurlencode('Mirá esta: ' . $textoCompartir . ' ' . $urlProducto) ?>"
-                   target="_blank" rel="noopener"
-                   class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full border border-green-200 text-green-700 text-sm font-medium hover:bg-green-50">
-                    💬 WhatsApp
-                </a>
-            </div>
 
             <!-- INFO DE COMPRA -->
             <div class="mt-10 space-y-3 text-sm">
@@ -381,8 +375,18 @@ function visorMover(paso) {
     pintarVisor();
 }
 
+function mostrarFotoPaso(paso) { mostrarFoto(fotoActual + paso); }
+
 if (visor) {
     // Compu: clic = zoom donde está el mouse; mover el mouse recorre la foto; otro clic vuelve
+    const moverZoom = e => {
+        const r = visorImg.getBoundingClientRect();
+        const x = ((e.clientX - r.left) / r.width) * 100;
+        const y = ((e.clientY - r.top) / r.height) * 100;
+        visorImg.style.transformOrigin = x + '% ' + y + '%';
+        visorImg.style.transform = 'scale(2.2)';
+    };
+
     visorImg.addEventListener('click', e => {
         if (window.matchMedia('(hover: none)').matches) return;   // en el celular se usa el pellizco
         visorZoom = !visorZoom;
@@ -393,14 +397,6 @@ if (visor) {
             visorImg.style.transform = '';
         }
     });
-
-    function moverZoom(e) {
-        const r = visorImg.getBoundingClientRect();
-        const x = ((e.clientX - r.left) / r.width) * 100;
-        const y = ((e.clientY - r.top) / r.height) * 100;
-        visorImg.style.transformOrigin = x + '% ' + y + '%';
-        visorImg.style.transform = 'scale(2.2)';
-    }
     visorImg.addEventListener('mousemove', e => { if (visorZoom) moverZoom(e); });
 
     document.addEventListener('keydown', e => {
@@ -416,39 +412,16 @@ if (visor) {
     }
 }
 
-function mostrarFotoPaso(paso) { mostrarFoto(fotoActual + paso); }
-
-// ══════════════════════════════════════════════════════════════
-// COMPARTIR
-// ══════════════════════════════════════════════════════════════
-const URL_PRODUCTO = <?= json_encode($urlProducto) ?>;
-const TEXTO_COMP   = <?= json_encode($textoCompartir) ?>;
-
-async function compartirProducto() {
-    // Celular: menú nativo del teléfono (WhatsApp, Instagram, mensajes…)
-    if (navigator.share) {
-        try {
-            await navigator.share({ title: TEXTO_COMP, text: 'Mirá esta: ' + TEXTO_COMP, url: URL_PRODUCTO });
-        } catch (e) { /* canceló: no pasa nada */ }
-        return;
-    }
-
-    // Compu: copiar el link
-    const txt = document.querySelector('#btnCompartir span');
-    try {
-        await navigator.clipboard.writeText(URL_PRODUCTO);
-        txt.textContent = '✓ Link copiado';
-    } catch (e) {
-        prompt('Copiá el link:', URL_PRODUCTO);
-    }
-    setTimeout(() => txt.textContent = 'Compartir', 2000);
-}
-
 // ══════════════════════════════════════════════════════════════
 // TALLES, COLORES, STOCK Y PRECIO
 // ══════════════════════════════════════════════════════════════
 function formatoPesos(n) {
     return '$' + Math.round(n).toLocaleString('es-AR');
+}
+
+/** ¿Hay stock de este talle (en algún color)? */
+function talleConStock(talle) {
+    return variantes.some(v => v.talle === talle && parseInt(v.stock_disponible) > 0);
 }
 
 /** Precio de la variante elegida (o del producto), con el descuento aplicado. */
@@ -481,13 +454,11 @@ function avisarTalle(talle) {
         const token = document.querySelector('input[name="csrf_token"]');
         if (!token || !navigator.sendBeacon) return;
 
-        const conStock = variantes.some(v => v.talle === talle && parseInt(v.stock_disponible) > 0);
-
         const datos = new FormData();
         datos.append('csrf_token', token.value);
         datos.append('id_producto', <?= (int) $producto['id_producto'] ?>);
         datos.append('talle', talle);
-        datos.append('con_stock', conStock ? '1' : '');
+        datos.append('con_stock', talleConStock(talle) ? '1' : '');
 
         navigator.sendBeacon('<?= BASE_URL ?>/evento/talle', datos);
     } catch (e) {}
@@ -522,12 +493,24 @@ function cargarTalles() {
     tallesBox.innerHTML = '';
 
     talles.forEach(talle => {
+        const hay     = talleConStock(talle);
+        const elegido = talleSeleccionado === talle;
+
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.textContent = talle;
-        btn.className = talleSeleccionado === talle
-            ? 'px-5 py-3 rounded-full border text-sm bg-gray-900 text-white border-gray-900'
-            : 'px-5 py-3 rounded-full border text-sm hover:border-gray-900';
+        btn.title = hay ? '' : 'Sin stock';
+
+        if (elegido) {
+            btn.className = hay
+                ? 'px-5 py-3 rounded-full border text-sm bg-gray-900 text-white border-gray-900'
+                : 'px-5 py-3 rounded-full border text-sm bg-gray-200 text-gray-500 border-gray-300 line-through';
+        } else {
+            btn.className = hay
+                ? 'px-5 py-3 rounded-full border text-sm hover:border-gray-900'
+                : 'px-5 py-3 rounded-full border border-gray-200 text-sm text-gray-300 line-through';
+        }
+
         btn.onclick = () => seleccionarTalle(talle);
         tallesBox.appendChild(btn);
     });
@@ -553,15 +536,23 @@ function cargarColores() {
 
     colores.forEach(color => {
         const variante = delTalle.find(v => v.color === color);
+        const hay      = parseInt(variante.stock_disponible) > 0;
+        const elegido  = colorSeleccionado === color;
 
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = colorSeleccionado === color
-            ? 'flex items-center gap-2 px-4 py-3 rounded-full border text-sm bg-gray-900 text-white border-gray-900'
-            : 'flex items-center gap-2 px-4 py-3 rounded-full border text-sm hover:border-gray-900';
+        btn.title = hay ? '' : 'Sin stock en este talle';
+
+        if (elegido) {
+            btn.className = 'flex items-center gap-2 px-4 py-3 rounded-full border text-sm '
+                + (hay ? 'bg-gray-900 text-white border-gray-900' : 'bg-gray-200 text-gray-500 border-gray-300 line-through');
+        } else {
+            btn.className = 'flex items-center gap-2 px-4 py-3 rounded-full border text-sm '
+                + (hay ? 'hover:border-gray-900' : 'border-gray-200 text-gray-300 line-through');
+        }
 
         const muestra = document.createElement('span');
-        muestra.className = 'w-4 h-4 rounded-full border';
+        muestra.className = 'w-4 h-4 rounded-full border' + (hay ? '' : ' opacity-40');
         muestra.style.background = variante.codigo_hex || '#fff';
 
         const nombre = document.createElement('span');
