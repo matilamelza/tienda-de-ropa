@@ -191,6 +191,13 @@ $varSes = $sesionesAnt ? DashboardController::variacion($sesiones['sesiones'], $
         </div>
     <?php endif; ?>
 
+        <?php if ($afuera['total'] > 0): ?>
+        <p class="text-xs text-gray-500 mt-4 pt-3 border-t">
+            🌎 <strong><?= $num($afuera['total']) ?></strong> visitante(s) de otros países
+            (<?= htmlspecialchars(implode(', ', array_map(fn($p) => $p['pais'] . ' ' . $p['visitantes'], $afuera['paises']))) ?>).
+            En general son robots, servidores o personas con VPN, así que no se muestran arriba.
+        </p>
+    <?php endif; ?>
         <p class="text-[10px] text-gray-300 mt-4">Incluye datos de GeoLite2 creados por MaxMind (maxmind.com).</p>
 </div>
 

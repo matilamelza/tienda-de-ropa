@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** ¿Esta visita se tiene que ignorar? (admin logueado o robot) */
+/** ¿Esta visita se tiene que ignorar? (admin logueado o robot) */
 function visita_ignorada(): bool
 {
     if (isset($_SESSION['admin'])) {
@@ -14,8 +15,24 @@ function visita_ignorada(): bool
 
     $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
 
-    return $ua === ''
-        || (bool) preg_match('/bot|crawl|spider|slurp|facebookexternalhit|whatsapp|telegram|preview|curl|wget|python|headless|lighthouse/i', $ua);
+    if ($ua === '') {
+        return true;
+    }
+
+    // Robots, vistas previas de links, herramientas y librerías (muchos no dicen "bot")
+    $robots = 'bot|crawl|spider|slurp|scrap|facebookexternalhit|meta-externalagent|whatsapp|telegram|'
+            . 'preview|embed|iframely|skypeuri|discord|slack|twitter|linkedin|pinterest|'
+            . 'curl|wget|python|java\/|okhttp|axios|node-fetch|go-http|libwww|httpclient|guzzle|'
+            . 'headless|lighthouse|pagespeed|gtmetrix|pingdom|uptime|monitor|statuscake|'
+            . 'check|validator|scan|semrush|ahrefs|mj12|dotbot|petal|bytespider|gptbot|'
+            . 'claude|anthropic|perplexity|ccbot|amazonbot|applebot|yandex|baidu|seznam';
+
+    if (preg_match('/' . $robots . '/i', $ua)) {
+        return true;
+    }
+
+    // Un navegador de verdad siempre dice "Mozilla/"; si no, es una herramienta
+    return stripos($ua, 'mozilla/') === false;
 }
 
 /** Código anónimo del visitante (cookie de 1 año). Lo crea si no existe. */

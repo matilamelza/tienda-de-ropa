@@ -33,7 +33,8 @@ class Visita extends Conexion
     }
 
         /** Visitantes únicos por ciudad (con su provincia) o por provincia. Aproximado. */
-    public function ubicaciones(string $desde, string $hasta, string $nivel = 'ciudad', int $limite = 15): array
+        /** Visitantes únicos por ciudad (con su provincia) o por provincia, solo de un país. Aproximado. */
+    public function ubicaciones(string $desde, string $hasta, string $nivel = 'ciudad', int $limite = 15, string $pais = 'AR'): array
     {
         $campos = $nivel === 'provincia'
             ? "provincia AS nombre"
@@ -43,15 +44,36 @@ class Visita extends Conexion
         $stmt = $this->db->prepare(
             "SELECT $campos, COUNT(DISTINCT visitante) AS visitantes
              FROM visitas
-             WHERE $filtro AND fecha >= ? AND fecha < ?
+             WHERE $filtro AND pais = ? AND fecha >= ? AND fecha < ?
              GROUP BY nombre
              ORDER BY visitantes DESC
              LIMIT ?"
         );
-        $stmt->bind_param("ssi", $desde, $hasta, $limite);
+        $stmt->bind_param("sssi", $pais, $desde, $hasta, $limite);
         $stmt->execute();
 
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /** Visitantes de otros países (en general, robots o VPN), con los países más comunes. */
+    public function fueraDelPais(string $desde, string $hasta, string $pais = 'AR'): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT pais, COUNT(DISTINCT visitante) AS visitantes
+             FROM visitas
+             WHERE pais IS NOT NULL AND pais <> ? AND fecha >= ? AND fecha < ?
+             GROUP BY pais
+             ORDER BY visitantes DESC"
+        );
+        $stmt->bind_param("sss", $pais, $desde, $hasta);
+        $stmt->execute();
+        $filas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        return [
+            'total'  => array_sum(array_column($filas, 'visitantes')),
+            'paises' => array_slice($filas, 0, 5),
+            'afuera'       => $visitaModel->fueraDelPais($d, $h),
+        ];
     }
 
     /** Borra visitas de más de N días. */
