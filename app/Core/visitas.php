@@ -112,6 +112,11 @@ function registrar_visita(string $tipo, ?int $idRef = null, ?string $termino = n
         // Guardar la campaña ya (setea la cookie aunque la visita sea una recarga)
         campania_actual();
 
+        $geo = ubicacion_visitante();
+        if ($geo['pais'] !== null && $geo['pais'] !== 'AR') {
+            return;
+        }
+
         // No contar recargas de la misma página en menos de 30 segundos
         $clave = $tipo . '|' . $idRef . '|' . $termino;
         if (($_SESSION['ultima_visita']['clave'] ?? '') === $clave
@@ -129,7 +134,7 @@ function registrar_visita(string $tipo, ?int $idRef = null, ?string $termino = n
             'origen'      => visita_origen(),
             'campania'    => campania_del_link(),   // solo la visita que entró por el link
             'dispositivo' => preg_match('/Mobi|Android|iPhone|iPad/i', $_SERVER['HTTP_USER_AGENT'] ?? '') ? 'mobile' : 'desktop',
-        ] + ubicacion_visitante());                 // país, provincia y ciudad (aproximados)
+        ] + $geo);                                  // país, provincia y ciudad (aproximados)      // país, provincia y ciudad (aproximados)
 
         // Limpieza ocasional de visitas y eventos de más de un año (1 de cada 500)
         if (random_int(1, 500) === 1) {
@@ -210,6 +215,11 @@ function registrar_evento(string $tipo, array $datos): void
 {
     try {
         if (visita_ignorada()) {
+            return;
+        }
+
+         $geo = ubicacion_visitante();
+        if ($geo['pais'] !== null && $geo['pais'] !== 'AR') {
             return;
         }
 
