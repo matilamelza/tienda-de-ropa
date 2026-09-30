@@ -545,6 +545,20 @@ class Pedido extends Conexion
         $stmt->execute();
     }
 
+        /** Estados que significan "entró y nadie lo atendió todavía" (actuales y de la etapa 2). */
+    public const ESTADOS_SIN_ATENDER = ['pendiente_contacto', 'nuevo'];
+
+    public function contarSinAtender(): int
+    {
+        $marcas = implode(',', array_fill(0, count(self::ESTADOS_SIN_ATENDER), '?'));
+
+        $stmt = $this->db->prepare("SELECT COUNT(*) AS total FROM pedidos WHERE estado IN ($marcas)");
+        $stmt->bind_param(str_repeat('s', count(self::ESTADOS_SIN_ATENDER)), ...self::ESTADOS_SIN_ATENDER);
+        $stmt->execute();
+
+        return (int) $stmt->get_result()->fetch_assoc()['total'];
+    }
+
     // ─── TRANSACCIONES ─────────────────────────────────────────────────────────
 
     public function begin()

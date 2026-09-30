@@ -9,7 +9,11 @@ $claseLink = function (string $ruta, bool $exacta = false) use ($rutaActual): st
          . ($activo ? 'bg-white/10 text-white font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-white');
 };
 
-$cantResets = (new UsuarioCliente())->contarResetsPendientes();
+// Números rojos al lado de cada sección
+$badges = [
+    '/admin/pedidos' => (new Pedido())->contarSinAtender(),
+    '/admin/resets'  => (new UsuarioCliente())->contarResetsPendientes(),
+];
 
 $menu = [
     'Tienda' => [
