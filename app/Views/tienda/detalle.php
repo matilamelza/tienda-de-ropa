@@ -5,6 +5,7 @@ while ($f = $fotos->fetch_assoc()) {
 }
 
 $fotoPrincipal = $fotosArray[0]['imagen'] ?? null;
+$urlsFotos     = array_map(fn($f) => BASE_URL . '/public/uploads/productos/' . $f['imagen'], $fotosArray);
 
 $variantesArray = [];
 while ($v = $variantes->fetch_assoc()) {
@@ -20,6 +21,10 @@ $politica    = trim($conf['politica_cambios'] ?? '');
 
 // Promoción vigente del producto
 $pctDesc = !empty($descuento) ? (float) $descuento['pct'] : 0;
+
+// Para compartir
+$urlProducto   = url_absoluta('producto/' . $producto['slug']);
+$textoCompartir = $producto['nombre'] . ' 👟';
 ?>
 
 <section class="max-w-7xl mx-auto px-4 py-10">
@@ -34,12 +39,38 @@ $pctDesc = !empty($descuento) ? (float) $descuento['pct'] : 0;
 
         <!-- GALERÍA -->
         <div>
-            <div class="relative bg-gray-100 rounded-3xl overflow-hidden aspect-[4/5]">
+            <div id="galeria" class="relative bg-gray-100 rounded-3xl overflow-hidden aspect-[4/5] select-none group">
                 <?php if ($fotoPrincipal): ?>
                     <img id="imagenPrincipal"
-                         src="<?= BASE_URL ?>/public/uploads/productos/<?php echo htmlspecialchars($fotoPrincipal); ?>"
+                         src="<?= htmlspecialchars($urlsFotos[0]) ?>"
                          alt="<?php echo htmlspecialchars($producto['nombre']); ?>"
-                         class="w-full h-full object-cover">
+                         class="w-full h-full object-cover cursor-zoom-in transition-opacity duration-200"
+                         draggable="false"
+                         onclick="abrirVisor(fotoActual)">
+
+                    <!-- Lupa -->
+                    <span class="absolute bottom-3 right-3 bg-white/85 text-gray-700 text-xs px-2.5 py-1 rounded-full shadow-sm pointer-events-none">
+                        🔍 Tocá para ampliar
+                    </span>
+
+                    <?php if (count($urlsFotos) > 1): ?>
+                        <!-- Flechas (compu) -->
+                        <button type="button" onclick="mostrarFoto(fotoActual - 1)" aria-label="Foto anterior"
+                                class="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 items-center justify-center rounded-full bg-white/85 shadow opacity-0 group-hover:opacity-100 transition">
+                            ‹
+                        </button>
+                        <button type="button" onclick="mostrarFoto(fotoActual + 1)" aria-label="Foto siguiente"
+                                class="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 items-center justify-center rounded-full bg-white/85 shadow opacity-0 group-hover:opacity-100 transition">
+                            ›
+                        </button>
+
+                        <!-- Puntitos (celular) -->
+                        <div class="md:hidden absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                            <?php foreach ($urlsFotos as $i => $u): ?>
+                                <span class="punto-foto w-2 h-2 rounded-full <?= $i === 0 ? 'bg-white' : 'bg-white/50' ?> shadow"></span>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 <?php else: ?>
                     <div class="w-full h-full flex items-center justify-center text-gray-400">
                         Sin imagen
@@ -51,11 +82,11 @@ $pctDesc = !empty($descuento) ? (float) $descuento['pct'] : 0;
 
             <?php if (count($fotosArray) > 1): ?>
                 <div class="grid grid-cols-5 gap-3 mt-4">
-                    <?php foreach ($fotosArray as $foto): ?>
+                    <?php foreach ($urlsFotos as $i => $u): ?>
                         <button type="button"
-                                onclick="cambiarImagen('<?php echo htmlspecialchars($foto['imagen']); ?>')"
-                                class="aspect-square rounded-xl overflow-hidden border bg-gray-100 hover:border-gray-900">
-                            <img src="<?= BASE_URL ?>/public/uploads/productos/<?php echo htmlspecialchars($foto['imagen']); ?>"
+                                onclick="mostrarFoto(<?= $i ?>)"
+                                class="miniatura aspect-square rounded-xl overflow-hidden border-2 bg-gray-100 <?= $i === 0 ? 'border-gray-900' : 'border-transparent hover:border-gray-400' ?>">
+                            <img src="<?= htmlspecialchars($u) ?>"
                                  alt="<?php echo htmlspecialchars($producto['nombre']); ?>"
                                  loading="lazy"
                                  class="w-full h-full object-cover">
@@ -152,6 +183,19 @@ $pctDesc = !empty($descuento) ? (float) $descuento['pct'] : 0;
 
             </form>
 
+            <!-- COMPARTIR -->
+            <div class="flex gap-2 mt-4">
+                <button type="button" onclick="compartirProducto()" id="btnCompartir"
+                        class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full border text-sm font-medium hover:bg-gray-50">
+                    📤 <span>Compartir</span>
+                </button>
+                <a href="https://wa.me/?text=<?= rawurlencode('Mirá esta: ' . $textoCompartir . ' ' . $urlProducto) ?>"
+                   target="_blank" rel="noopener"
+                   class="flex-1 flex items-center justify-center gap-2 py-3 rounded-full border border-green-200 text-green-700 text-sm font-medium hover:bg-green-50">
+                    💬 WhatsApp
+                </a>
+            </div>
+
             <!-- INFO DE COMPRA -->
             <div class="mt-10 space-y-3 text-sm">
 
@@ -227,6 +271,30 @@ $pctDesc = !empty($descuento) ? (float) $descuento['pct'] : 0;
 </section>
 <?php endif; ?>
 
+<!-- ── Visor de fotos a pantalla completa ──────────────────────────────────── -->
+<?php if ($fotoPrincipal): ?>
+<div id="visor" class="hidden fixed inset-0 z-[60] bg-black/95 select-none" role="dialog" aria-modal="true">
+    <div class="absolute top-0 inset-x-0 flex items-center justify-between p-4 text-white z-10">
+        <span id="visorContador" class="text-sm opacity-80"></span>
+        <button type="button" onclick="cerrarVisor()" aria-label="Cerrar"
+                class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-2xl">✕</button>
+    </div>
+
+    <div id="visorArea" class="absolute inset-0 flex items-center justify-center overflow-hidden" onclick="if (event.target === this) cerrarVisor()">
+        <img id="visorImg" src="" alt=""
+             class="max-w-full max-h-full object-contain transition-transform duration-200 md:cursor-zoom-in"
+             style="touch-action: pan-y pinch-zoom" draggable="false">
+    </div>
+
+    <?php if (count($urlsFotos) > 1): ?>
+        <button type="button" onclick="visorMover(-1)" aria-label="Foto anterior"
+                class="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-3xl">‹</button>
+        <button type="button" onclick="visorMover(1)" aria-label="Foto siguiente"
+                class="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-3xl">›</button>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
+
 <script>
 const variantes   = <?php echo json_encode($variantesArray, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 const HAY_COLORES = <?= $hayColores ? 'true' : 'false' ?>;
@@ -234,6 +302,151 @@ const HAY_COLORES = <?= $hayColores ? 'true' : 'false' ?>;
 const PRECIO_BASE = <?= json_encode((float) $producto['precio_base']) ?>;
 const DESCUENTO   = <?= json_encode($pctDesc) ?>;
 
+// ══════════════════════════════════════════════════════════════
+// FOTOS: galería, deslizar y visor a pantalla completa
+// ══════════════════════════════════════════════════════════════
+const FOTOS    = <?= json_encode(array_values($urlsFotos), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+let fotoActual = 0;
+
+/** Muestra la foto i en la galería (da la vuelta al llegar al final). */
+function mostrarFoto(i) {
+    if (!FOTOS.length) return;
+    fotoActual = (i + FOTOS.length) % FOTOS.length;
+
+    const img = document.getElementById('imagenPrincipal');
+    img.style.opacity = '0.4';
+    img.src = FOTOS[fotoActual];
+    img.onload = () => img.style.opacity = '1';
+
+    document.querySelectorAll('.miniatura').forEach((m, k) => {
+        m.className = 'miniatura aspect-square rounded-xl overflow-hidden border-2 bg-gray-100 '
+            + (k === fotoActual ? 'border-gray-900' : 'border-transparent hover:border-gray-400');
+    });
+    document.querySelectorAll('.punto-foto').forEach((p, k) => {
+        p.className = 'punto-foto w-2 h-2 rounded-full shadow ' + (k === fotoActual ? 'bg-white' : 'bg-white/50');
+    });
+}
+
+/** Detecta un deslizamiento horizontal sobre un elemento y llama a alMover(-1 | 1). */
+function activarDeslizar(elemento, alMover) {
+    let x0 = null, y0 = null;
+
+    elemento.addEventListener('touchstart', e => {
+        if (e.touches.length !== 1) { x0 = null; return; }   // dos dedos = zoom, no deslizar
+        x0 = e.touches[0].clientX;
+        y0 = e.touches[0].clientY;
+    }, { passive: true });
+
+    elemento.addEventListener('touchend', e => {
+        if (x0 === null) return;
+        const dx = e.changedTouches[0].clientX - x0;
+        const dy = e.changedTouches[0].clientY - y0;
+        x0 = null;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+            alMover(dx < 0 ? 1 : -1);
+        }
+    }, { passive: true });
+}
+
+// ── Visor ─────────────────────────────────────────────────────
+const visor    = document.getElementById('visor');
+const visorImg = document.getElementById('visorImg');
+let visorFoto  = 0;
+let visorZoom  = false;
+
+function pintarVisor() {
+    visorImg.src = FOTOS[visorFoto];
+    visorZoom = false;
+    visorImg.style.transform = '';
+    visorImg.classList.remove('md:cursor-zoom-out');
+    document.getElementById('visorContador').textContent = FOTOS.length > 1 ? (visorFoto + 1) + ' / ' + FOTOS.length : '';
+}
+
+function abrirVisor(i) {
+    if (!visor) return;
+    visorFoto = i;
+    pintarVisor();
+    visor.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function cerrarVisor() {
+    visor.classList.add('hidden');
+    document.body.style.overflow = '';
+    mostrarFoto(visorFoto);   // la galería queda en la última foto vista
+}
+
+function visorMover(paso) {
+    visorFoto = (visorFoto + paso + FOTOS.length) % FOTOS.length;
+    pintarVisor();
+}
+
+if (visor) {
+    // Compu: clic = zoom donde está el mouse; mover el mouse recorre la foto; otro clic vuelve
+    visorImg.addEventListener('click', e => {
+        if (window.matchMedia('(hover: none)').matches) return;   // en el celular se usa el pellizco
+        visorZoom = !visorZoom;
+        visorImg.classList.toggle('md:cursor-zoom-out', visorZoom);
+        if (visorZoom) {
+            moverZoom(e);
+        } else {
+            visorImg.style.transform = '';
+        }
+    });
+
+    function moverZoom(e) {
+        const r = visorImg.getBoundingClientRect();
+        const x = ((e.clientX - r.left) / r.width) * 100;
+        const y = ((e.clientY - r.top) / r.height) * 100;
+        visorImg.style.transformOrigin = x + '% ' + y + '%';
+        visorImg.style.transform = 'scale(2.2)';
+    }
+    visorImg.addEventListener('mousemove', e => { if (visorZoom) moverZoom(e); });
+
+    document.addEventListener('keydown', e => {
+        if (visor.classList.contains('hidden')) return;
+        if (e.key === 'Escape')     cerrarVisor();
+        if (e.key === 'ArrowLeft')  visorMover(-1);
+        if (e.key === 'ArrowRight') visorMover(1);
+    });
+
+    if (FOTOS.length > 1) {
+        activarDeslizar(document.getElementById('galeria'), mostrarFotoPaso);
+        activarDeslizar(document.getElementById('visorArea'), visorMover);
+    }
+}
+
+function mostrarFotoPaso(paso) { mostrarFoto(fotoActual + paso); }
+
+// ══════════════════════════════════════════════════════════════
+// COMPARTIR
+// ══════════════════════════════════════════════════════════════
+const URL_PRODUCTO = <?= json_encode($urlProducto) ?>;
+const TEXTO_COMP   = <?= json_encode($textoCompartir) ?>;
+
+async function compartirProducto() {
+    // Celular: menú nativo del teléfono (WhatsApp, Instagram, mensajes…)
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: TEXTO_COMP, text: 'Mirá esta: ' + TEXTO_COMP, url: URL_PRODUCTO });
+        } catch (e) { /* canceló: no pasa nada */ }
+        return;
+    }
+
+    // Compu: copiar el link
+    const txt = document.querySelector('#btnCompartir span');
+    try {
+        await navigator.clipboard.writeText(URL_PRODUCTO);
+        txt.textContent = '✓ Link copiado';
+    } catch (e) {
+        prompt('Copiá el link:', URL_PRODUCTO);
+    }
+    setTimeout(() => txt.textContent = 'Compartir', 2000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// TALLES, COLORES, STOCK Y PRECIO
+// ══════════════════════════════════════════════════════════════
 function formatoPesos(n) {
     return '$' + Math.round(n).toLocaleString('es-AR');
 }
@@ -261,10 +474,6 @@ const coloresBox    = document.getElementById('coloresBox');
 const stockBox      = document.getElementById('stockBox');
 const btnAgregar    = document.getElementById('btnAgregar');
 const cantidadInput = document.getElementById('cantidad');
-
-function cambiarImagen(imagen) {
-    document.getElementById('imagenPrincipal').src = '<?= BASE_URL ?>/public/uploads/productos/' + imagen;
-}
 
 /** Estadísticas: avisa de fondo qué talle eligió (y si había stock). No frena nada. */
 function avisarTalle(talle) {
