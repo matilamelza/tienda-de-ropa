@@ -160,4 +160,38 @@ $varSes = $sesionesAnt ? DashboardController::variacion($sesiones['sesiones'], $
     </div>
 </div>
 
+<!-- ── Ubicación aproximada ──────────────────────────────────────── -->
+<div class="bg-white rounded-lg shadow p-5 mt-6">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+        <div>
+            <h3 class="font-bold text-gray-800">📍 Desde dónde nos visitan</h3>
+            <p class="text-xs text-gray-400">Personas por ciudad y provincia.</p>
+        </div>
+        <p class="text-xs bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-3 py-2 sm:max-w-sm">
+            ⚠️ <strong>Es aproximado.</strong> Se calcula por la conexión a internet, no por GPS.
+            Desde el celular (datos móviles), muchas veces aparece la ciudad de la antena o de la compañía
+            (por ejemplo, Buenos Aires o Córdoba) y no la real. La provincia suele ser más confiable que la ciudad.
+        </p>
+    </div>
+
+    <?php if (empty($ciudades) && empty($provincias)): ?>
+        <p class="text-sm text-gray-400 py-4 text-center">
+            Todavía no hay datos de ubicación en este período. Se registran desde que se activó esta función.
+        </p>
+    <?php else: ?>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <p class="text-sm font-semibold text-gray-700 mb-3">Ciudades</p>
+                <?= $listaConBarras($ciudades, 'nombre', 'visitantes') ?>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-gray-700 mb-3">Provincias</p>
+                <?= $listaConBarras($provincias, 'nombre', 'visitantes') ?>
+            </div>
+        </div>
+    <?php endif; ?>
+
+        <p class="text-[10px] text-gray-300 mt-4">Incluye datos de GeoLite2 creados por MaxMind (maxmind.com).</p>
+</div>
+
 <?php endif; ?>

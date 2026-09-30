@@ -7,12 +7,16 @@ class Visita extends Conexion
     public function registrar(array $d): void
     {
         $stmt = $this->db->prepare(
-            "INSERT INTO visitas (visitante, tipo, id_ref, termino, resultados, origen, campania, dispositivo)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO visitas (visitante, tipo, id_ref, termino, resultados, origen, campania, pais, provincia, ciudad, dispositivo)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        $campania = $d['campania'] ?? null;
+        $campania  = $d['campania']  ?? null;
+        $pais      = $d['pais']      ?? null;
+        $provincia = $d['provincia'] ?? null;
+        $ciudad    = $d['ciudad']    ?? null;
+
         $stmt->bind_param(
-            "ssisisss",
+            "ssisissssss",
             $d['visitante'],
             $d['tipo'],
             $d['id_ref'],
@@ -20,9 +24,34 @@ class Visita extends Conexion
             $d['resultados'],
             $d['origen'],
             $campania,
+            $pais,
+            $provincia,
+            $ciudad,
             $d['dispositivo']
         );
         $stmt->execute();
+    }
+
+        /** Visitantes únicos por ciudad (con su provincia) o por provincia. Aproximado. */
+    public function ubicaciones(string $desde, string $hasta, string $nivel = 'ciudad', int $limite = 15): array
+    {
+        $campos = $nivel === 'provincia'
+            ? "provincia AS nombre"
+            : "CONCAT(ciudad, IF(provincia IS NULL OR provincia = ciudad, '', CONCAT(', ', provincia))) AS nombre";
+        $filtro = $nivel === 'provincia' ? "provincia IS NOT NULL" : "ciudad IS NOT NULL";
+
+        $stmt = $this->db->prepare(
+            "SELECT $campos, COUNT(DISTINCT visitante) AS visitantes
+             FROM visitas
+             WHERE $filtro AND fecha >= ? AND fecha < ?
+             GROUP BY nombre
+             ORDER BY visitantes DESC
+             LIMIT ?"
+        );
+        $stmt->bind_param("ssi", $desde, $hasta, $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
     /** Borra visitas de más de N días. */

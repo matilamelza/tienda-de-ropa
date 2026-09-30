@@ -55,6 +55,8 @@ class EstadisticasController extends Controller
                     'entradas'     => $visitaModel->paginasEntrada($d, $h),
                     'origenes'     => $visitaModel->origenes($d, $h),
                     'dispositivos' => $visitaModel->dispositivos($d, $h),
+                    'ciudades'     => $visitaModel->ubicaciones($d, $h, 'ciudad'),
+                    'provincias'   => $visitaModel->ubicaciones($d, $h, 'provincia', 8),
                 ];
                 break;
 

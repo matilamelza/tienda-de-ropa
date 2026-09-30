@@ -112,7 +112,7 @@ function registrar_visita(string $tipo, ?int $idRef = null, ?string $termino = n
             'origen'      => visita_origen(),
             'campania'    => campania_del_link(),   // solo la visita que entró por el link
             'dispositivo' => preg_match('/Mobi|Android|iPhone|iPad/i', $_SERVER['HTTP_USER_AGENT'] ?? '') ? 'mobile' : 'desktop',
-        ]);
+        ] + ubicacion_visitante());                 // país, provincia y ciudad (aproximados)
 
         // Limpieza ocasional de visitas y eventos de más de un año (1 de cada 500)
         if (random_int(1, 500) === 1) {
@@ -124,6 +124,64 @@ function registrar_visita(string $tipo, ?int $idRef = null, ?string $termino = n
         if (defined('MOSTRAR_ERRORES') && MOSTRAR_ERRORES) {
             throw $e;
         }
+    }
+}
+
+/**
+ * Ubicación aproximada del visitante por su IP (GeoLite2 / DB-IP). La IP no se guarda.
+ * Se calcula una vez por sesión. Devuelve ['pais' =>, 'provincia' =>, 'ciudad' =>] (null si no se sabe).
+ */
+function ubicacion_visitante(): array
+{
+    $vacio = ['pais' => null, 'provincia' => null, 'ciudad' => null];
+
+    if (isset($_SESSION['geo'])) {
+        return $_SESSION['geo'];
+    }
+
+    try {
+        $config = require __DIR__ . '/../../config/database.php';
+        $ruta   = $config['geoip_path'] ?? '';
+        $ip     = $_SERVER['REMOTE_ADDR'] ?? '';
+
+        // En la compu la IP es local (127.0.0.1): para probar, se puede definir una IP en el config
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            $ip = $config['geoip_ip_prueba'] ?? '';
+        }
+
+        if ($ruta === '' || !is_file($ruta) || !class_exists('MaxMind\Db\Reader') || $ip === '') {
+            return $_SESSION['geo'] = $vacio;
+        }
+
+        $lector = new MaxMind\Db\Reader($ruta);
+        $datos  = $lector->get($ip);
+        $lector->close();
+
+        if (!$datos) {
+            return $_SESSION['geo'] = $vacio;   // IP que no está en la base
+        }
+
+        $nombre = fn($x) => $x['names']['es'] ?? $x['names']['en'] ?? null;
+
+        $pais      = $datos['country']['iso_code'] ?? null;
+        $provincia = isset($datos['subdivisions'][0]) ? trim((string) $nombre($datos['subdivisions'][0])) : '';
+        $ciudad    = isset($datos['city']) ? trim((string) $nombre($datos['city'])) : '';
+
+        // CABA: viene como "provincia" (ej: "Buenos Aires C.F.") y sin ciudad
+        if ($ciudad === '' && preg_match('/C\.?F\.?|Ciudad Aut|Capital Federal/i', $provincia)) {
+            $ciudad    = 'Ciudad de Buenos Aires';
+            $provincia = 'CABA';
+        }
+
+        return $_SESSION['geo'] = [
+            'pais'      => $pais,
+            'provincia' => $provincia !== '' ? mb_substr($provincia, 0, 80) : null,
+            'ciudad'    => $ciudad !== '' ? mb_substr($ciudad, 0, 80) : null,
+        ];
+
+    } catch (Throwable $e) {
+        error_log('ubicacion_visitante: ' . $e->getMessage());
+        return $_SESSION['geo'] = $vacio;
     }
 }
 

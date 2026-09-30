@@ -12,6 +12,11 @@ date_default_timezone_set('America/Argentina/Buenos_Aires');
 // ── Buffer de salida: permite reemplazar una página a medias por la de error ──
 ob_start();
 
+// ── Librerías de Composer ────────────────────────────────────────────────────
+if (is_file(__DIR__ . '/../vendor/autoload.php')) {
+    require_once __DIR__ . '/../vendor/autoload.php';
+}
+
 // ── Manejo de errores (lo antes posible) ─────────────────────────────────────
 require_once __DIR__ . '/../app/Core/errores.php';
 
