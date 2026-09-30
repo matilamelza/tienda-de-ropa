@@ -79,6 +79,7 @@ require_once __DIR__ . '/../app/Models/Talle.php';
 require_once __DIR__ . '/../app/Models/Color.php';
 require_once __DIR__ . '/../app/Models/Carrito.php';
 require_once __DIR__ . '/../app/Models/Pedido.php';
+require_once __DIR__ . '/../app/Models/GestionPedido.php';
 require_once __DIR__ . '/../app/Models/UsuarioCliente.php';
 require_once __DIR__ . '/../app/Models/Cliente.php';
 require_once __DIR__ . '/../app/Models/UsuarioAdmin.php';

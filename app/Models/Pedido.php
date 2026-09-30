@@ -546,7 +546,7 @@ class Pedido extends Conexion
     }
 
         /** Estados que significan "entró y nadie lo atendió todavía" (actuales y de la etapa 2). */
-    public const ESTADOS_SIN_ATENDER = ['pendiente_contacto', 'nuevo'];
+    public const ESTADOS_SIN_ATENDER = ['pendiente_contacto', 'pendiente'];
 
     public function contarSinAtender(): int
     {
