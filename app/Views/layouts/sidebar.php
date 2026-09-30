@@ -87,9 +87,11 @@ $menu = [
                         <a href="<?= BASE_URL . $ruta ?>" class="<?= $claseLink($ruta, $exacta) ?>">
                             <span class="w-5 text-center text-base leading-none"><?= $icono ?></span>
                             <span class="flex-1 truncate"><?= $texto ?></span>
-                            <?php if ($ruta === '/admin/resets' && $cantResets > 0): ?>
-                                <span class="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
-                                    <?= $cantResets ?>
+                             <?php if (array_key_exists($ruta, $badges)): ?>
+                                <?php $cant = (int) $badges[$ruta]; ?>
+                                <span data-badge="<?= htmlspecialchars($ruta) ?>"
+                                      class="<?= $cant > 0 ? 'flex' : 'hidden' ?> bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 items-center justify-center">
+                                    <?= $cant > 99 ? '99+' : $cant ?>
                                 </span>
                             <?php endif; ?>
                         </a>
