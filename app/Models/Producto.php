@@ -772,6 +772,18 @@ class Producto extends Conexion
         return $this->db->query($sql)->num_rows > 0;
     }
 
+    /** Productos activos para el sitemap: slug y última modificación aproximada. */
+    public function paraSitemap(): array
+    {
+        $sql = "SELECT p.slug,
+                       (SELECT MAX(pf.id_foto) FROM producto_fotos pf WHERE pf.id_producto = p.id_producto) AS ultima_foto
+                FROM productos p
+                WHERE p.activo = 1 AND p.eliminado_at IS NULL
+                ORDER BY p.id_producto DESC";
+
+        return $this->db->query($sql)->fetch_all(MYSQLI_ASSOC);
+    }
+
         /**
      * Productos relacionados: primero misma categoría y marca, después misma categoría,
      * después misma marca. Activos, con stock y sin el producto actual.

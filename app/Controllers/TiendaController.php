@@ -166,4 +166,33 @@ class TiendaController extends Controller
             'categoriasMenu' => $categoriaModel->listarMenu(),
         ], 'tienda');
     }
+
+    /** sitemap.xml: inicio, categorías y productos activos (para Google). */
+    public function sitemap()
+    {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        header('Content-Type: application/xml; charset=UTF-8');
+
+        $urls = [url_absoluta('tienda')];
+
+        $categorias = (new Categoria())->listarActivas();
+        while ($c = $categorias->fetch_assoc()) {
+            $urls[] = url_absoluta('categoria/' . $c['slug']);
+        }
+
+        foreach ((new Producto())->paraSitemap() as $p) {
+            $urls[] = url_absoluta('producto/' . $p['slug']);
+        }
+
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        foreach ($urls as $u) {
+            echo '  <url><loc>' . htmlspecialchars($u, ENT_XML1) . '</loc></url>' . "\n";
+        }
+        echo '</urlset>';
+        exit;
+    }
 }

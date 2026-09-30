@@ -669,6 +669,10 @@ switch ($route) {
         (new EventoController())->talle();
         break;
 
+    case 'sitemap':
+        (new TiendaController())->sitemap();
+        break;
+
     // ─── CARRITO Y CHECKOUT ────────────────────────────────────────────────────
 
     case 'carrito':

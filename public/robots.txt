@@ -12,3 +12,5 @@ Disallow: /pedido
 Disallow: /evento
 Disallow: /*?*q=
 Allow: /
+
+Sitemap: https://dbcalzados.store/sitemap.xml
