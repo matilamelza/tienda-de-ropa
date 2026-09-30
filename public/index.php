@@ -588,6 +588,41 @@ switch ($route) {
 
     // ─── PEDIDOS ───────────────────────────────────────────────────────────────
 
+        case 'pedido_cobro':
+        requireAdmin();
+        (new PedidoController())->cobro();
+        break;
+
+    case 'pedido_anular_cobro':
+        requireAdmin();
+        (new PedidoController())->anularCobro();
+        break;
+
+    case 'pedido_usar_saldo':
+        requireAdmin();
+        (new PedidoController())->usarSaldo();
+        break;
+
+    case 'pedido_condiciones':
+        requireAdmin();
+        (new PedidoController())->condiciones();
+        break;
+
+    case 'pedido_nota':
+        requireAdmin();
+        (new PedidoController())->nota();
+        break;
+
+    case 'pedido_cancelar':
+        requireAdmin();
+        (new PedidoController())->cancelar();
+        break;
+
+    case 'pedido_contactado':
+        requireAdmin();
+        (new PedidoController())->contactado();
+        break;
+
     case 'admin_pedidos':
         requireAdmin();
         $controller = new PedidoController();
