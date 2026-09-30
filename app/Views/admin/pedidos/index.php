@@ -1,15 +1,6 @@
 <?php
-$estados = [
-    'pendiente_contacto' => ['Esperando contacto', 'bg-yellow-100 text-yellow-800'],
-    'contactado'         => ['Contactado',         'bg-blue-100 text-blue-800'],
-    'pendiente_pago'     => ['Pendiente de pago',  'bg-orange-100 text-orange-800'],
-    'pagado'             => ['Pagado',             'bg-green-100 text-green-800'],
-    'entregado'          => ['Entregado',          'bg-gray-200 text-gray-800'],
-    'cancelado'          => ['Cancelado',          'bg-red-100 text-red-700'],
-];
-
 $pestanas = ['' => ['Todos', $conteo['todos']]];
-foreach ($estados as $clave => [$texto]) {
+foreach (GestionPedido::ESTADOS as $clave => [$texto]) {
     $pestanas[$clave] = [$texto, $conteo[$clave] ?? 0];
 }
 $pestanas['vencidos'] = ['Sin pagar +' . Pedido::DIAS_PAGO_VENCIDO . ' días', $conteo['vencidos']];
@@ -18,6 +9,15 @@ $pestanas['vencidos'] = ['Sin pagar +' . Pedido::DIAS_PAGO_VENCIDO . ' días', $
 $url = function (array $cambios = []) use ($busqueda, $estado): string {
     $q = array_filter(array_merge(['q' => $busqueda, 'estado' => $estado], $cambios), fn($v) => $v !== '' && $v !== null);
     return BASE_URL . '/admin/pedidos' . ($q ? '?' . http_build_query($q) : '');
+};
+
+/** Badge de pago (no se muestra en cancelados) */
+$badgePago = function (array $p): string {
+    if ($p['estado'] === 'cancelado') {
+        return '';
+    }
+    [$txt, $cls] = GestionPedido::ESTADOS_PAGO[GestionPedido::estadoPago((float) $p['total'], (float) $p['cobrado'])];
+    return '<span class="px-2 py-0.5 text-xs rounded whitespace-nowrap ' . $cls . '">' . $txt . '</span>';
 };
 ?>
 
@@ -31,8 +31,8 @@ $url = function (array $cambios = []) use ($busqueda, $estado): string {
     <div class="inline-flex gap-2 pb-1">
         <?php foreach ($pestanas as $clave => [$texto, $cant]): ?>
             <?php
-            $activa   = $estado === $clave;
-            $alerta   = in_array($clave, ['pendiente_contacto', 'vencidos'], true) && $cant > 0;
+            $activa = $estado === $clave;
+            $alerta = in_array($clave, ['pendiente_contacto', 'vencidos', 'listo'], true) && $cant > 0;
             ?>
             <a href="<?= $url(['estado' => $clave, 'pagina' => null]) ?>"
                class="whitespace-nowrap px-3 py-1.5 rounded-full text-sm border transition
@@ -61,6 +61,12 @@ $url = function (array $cambios = []) use ($busqueda, $estado): string {
     <?php endif; ?>
 </form>
 
+<?php if ($estado === 'vencidos'): ?>
+    <p class="mb-4 text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-4 py-2">
+        Confirmados o listos hace más de <?= Pedido::DIAS_PAGO_VENCIDO ?> días que todavía no terminaron de pagar. Tienen stock reservado.
+    </p>
+<?php endif; ?>
+
 <?php if (empty($pedidos)): ?>
     <div class="bg-white rounded-lg shadow px-4 py-10 text-center text-gray-400 text-sm">
         <?php if ($busqueda): ?>
@@ -76,12 +82,14 @@ $url = function (array $cambios = []) use ($busqueda, $estado): string {
     <!-- Mobile: tarjetas -->
     <div class="md:hidden space-y-3">
         <?php foreach ($pedidos as $p): ?>
-            <?php [$txt, $cls] = $estados[$p['estado']] ?? [$p['estado'], 'bg-gray-100 text-gray-700']; ?>
             <a href="<?= BASE_URL ?>/admin/pedido/<?= (int) $p['id_pedido'] ?>"
                class="block bg-white rounded-lg shadow p-4 active:bg-gray-50">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-2">
                     <span class="font-semibold">#<?= (int) $p['id_pedido'] ?></span>
-                    <span class="px-2 py-0.5 rounded text-xs <?= $cls ?>"><?= $txt ?></span>
+                    <span class="flex gap-1">
+                        <span class="px-2 py-0.5 rounded text-xs <?= GestionPedido::clase($p['estado']) ?>"><?= GestionPedido::etiqueta($p['estado']) ?></span>
+                        <?= $badgePago($p) ?>
+                    </span>
                 </div>
                 <p class="text-sm text-gray-800 mt-2 truncate">
                     <?= htmlspecialchars(trim(($p['nombre'] ?? '') . ' ' . ($p['apellido'] ?? ''))) ?: '—' ?>
@@ -106,21 +114,28 @@ $url = function (array $cambios = []) use ($busqueda, $estado): string {
                         <th class="px-4 py-3 text-left">Fecha</th>
                         <th class="px-4 py-3 text-right">Total</th>
                         <th class="px-4 py-3 text-center">Estado</th>
+                        <th class="px-4 py-3 text-center">Pago</th>
                         <th class="px-4 py-3 text-right"></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($pedidos as $p): ?>
-                        <?php [$txt, $cls] = $estados[$p['estado']] ?? [$p['estado'], 'bg-gray-100 text-gray-700']; ?>
                         <tr class="border-t hover:bg-gray-50">
                             <td class="px-4 py-3 font-medium">#<?= (int) $p['id_pedido'] ?></td>
                             <td class="px-4 py-3"><?= htmlspecialchars(trim(($p['nombre'] ?? '') . ' ' . ($p['apellido'] ?? ''))) ?: '—' ?></td>
                             <td class="px-4 py-3"><?= htmlspecialchars($p['telefono'] ?? '-') ?></td>
                             <td class="px-4 py-3 text-gray-500 whitespace-nowrap"><?= date('d/m/Y H:i', strtotime($p['fecha'])) ?></td>
-                            <td class="px-4 py-3 text-right font-semibold whitespace-nowrap">$<?= number_format($p['total'], 2, ',', '.') ?></td>
-                            <td class="px-4 py-3 text-center">
-                                <span class="px-2 py-1 text-xs rounded whitespace-nowrap <?= $cls ?>"><?= $txt ?></span>
+                            <td class="px-4 py-3 text-right font-semibold whitespace-nowrap">
+                                $<?= number_format($p['total'], 2, ',', '.') ?>
+                                <?php $falta = (float) $p['total'] - (float) $p['cobrado']; ?>
+                                <?php if ($p['estado'] !== 'cancelado' && $falta > 0.009 && (float) $p['cobrado'] > 0): ?>
+                                    <span class="block text-xs font-normal text-red-600">falta $<?= number_format($falta, 0, ',', '.') ?></span>
+                                <?php endif; ?>
                             </td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-1 text-xs rounded whitespace-nowrap <?= GestionPedido::clase($p['estado']) ?>"><?= GestionPedido::etiqueta($p['estado']) ?></span>
+                            </td>
+                            <td class="px-4 py-3 text-center"><?= $badgePago($p) ?></td>
                             <td class="px-4 py-3 text-right">
                                 <a href="<?= BASE_URL ?>/admin/pedido/<?= (int) $p['id_pedido'] ?>"
                                    class="text-gray-700 hover:underline font-medium">Ver</a>

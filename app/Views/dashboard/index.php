@@ -1,15 +1,6 @@
 <?php
 $pesos = fn($n) => '$' . number_format((float) $n, 0, ',', '.');
 
-$estados = [
-    'pendiente_contacto' => ['Pendiente de contacto', 'bg-yellow-100 text-yellow-800'],
-    'contactado'         => ['Contactado',            'bg-blue-100 text-blue-800'],
-    'pendiente_pago'     => ['Pendiente de pago',     'bg-orange-100 text-orange-800'],
-    'pagado'             => ['Pagado',                'bg-green-100 text-green-800'],
-    'entregado'          => ['Entregado',             'bg-gray-200 text-gray-800'],
-    'cancelado'          => ['Cancelado',             'bg-red-100 text-red-700'],
-];
-
 /** Badge ▲/▼ con el % de variación. */
 $badgeVariacion = function (?float $v): string {
     if ($v === null) {
@@ -23,7 +14,7 @@ $badgeVariacion = function (?float $v): string {
 
 $maxGrafico = max(array_column($grafico, 'total') ?: [0]);
 
-$totalAlertas = $alertasPedidos['pendientes_contacto'] + $alertasPedidos['pagos_vencidos']
+$totalAlertas = $alertasPedidos['pendientes_contacto'] + $alertasPedidos['pagos_vencidos'] + $alertasPedidos['para_entregar']
               + $alertasCatalogo['variantes_sin_stock'] + $alertasCatalogo['productos_sin_foto']
               + $alertasCatalogo['productos_sin_costo'];
 ?>
@@ -71,7 +62,7 @@ $totalAlertas = $alertasPedidos['pendientes_contacto'] + $alertasPedidos['pagos_
 
     <div class="bg-white rounded-lg shadow p-5">
         <div class="flex items-center justify-between mb-2">
-            <p class="text-sm text-gray-500">Pedidos concretados</p>
+            <p class="text-sm text-gray-500" title="Confirmados, listos o entregados">Pedidos concretados</p>
             <?= $badgeVariacion($variaciones['pedidos']) ?>
         </div>
         <p class="text-2xl md:text-3xl font-bold text-gray-900"><?= (int) $resumen['pedidos'] ?></p>
@@ -168,10 +159,19 @@ $totalAlertas = $alertasPedidos['pendientes_contacto'] + $alertasPedidos['pagos_
                     </li>
                 <?php endif; ?>
 
+                                <?php if ($alertasPedidos['para_entregar'] > 0): ?>
+                    <li>
+                        <a href="<?= BASE_URL ?>/admin/pedidos?estado=listo" class="flex items-center justify-between p-3 rounded-lg bg-amber-50 hover:bg-amber-100">
+                            <span>📦 Listos para entregar</span>
+                            <strong><?= $alertasPedidos['para_entregar'] ?></strong>
+                        </a>
+                    </li>
+                <?php endif; ?>
+
                 <?php if ($alertasPedidos['pagos_vencidos'] > 0): ?>
                     <li>
                         <a href="<?= BASE_URL ?>/admin/pedidos?estado=vencidos" class="flex items-center justify-between p-3 rounded-lg bg-orange-50 hover:bg-orange-100">
-                            <span>⏰ Sin pagar hace +3 días <span class="block text-xs text-orange-700">Tienen stock reservado</span></span>
+                            <span>⏰ Sin pagar hace +<?= Pedido::DIAS_PAGO_VENCIDO ?> días <span class="block text-xs text-orange-700">Confirmados con saldo pendiente</span></span>
                             <strong><?= $alertasPedidos['pagos_vencidos'] ?></strong>
                         </a>
                     </li>
@@ -262,7 +262,7 @@ $totalAlertas = $alertasPedidos['pendientes_contacto'] + $alertasPedidos['pagos_
                 <tbody>
                     <?php if ($ultimosPedidos && $ultimosPedidos->num_rows > 0): ?>
                         <?php while ($p = $ultimosPedidos->fetch_assoc()): ?>
-                            <?php [$estadoTexto, $estadoClase] = $estados[$p['estado']] ?? [$p['estado'], 'bg-gray-100 text-gray-700']; ?>
+                            <?php $estadoTexto = GestionPedido::etiqueta($p['estado']); $estadoClase = GestionPedido::clase($p['estado']); ?>
                             <tr class="border-t hover:bg-gray-50">
                                 <td class="px-5 py-3">
                                     <a href="<?= BASE_URL ?>/admin/pedido/<?= (int) $p['id_pedido'] ?>" class="font-medium text-gray-900 hover:underline">

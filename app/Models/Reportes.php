@@ -9,7 +9,7 @@ class Reportes extends Conexion
      * Qué estados cuentan como venta. Cuando se mergee la etapa 2 (cobros),
      * se ajusta solo acá.
      */
-    public const ESTADOS_VENDIDO = "('pagado', 'entregado')";
+    public const ESTADOS_VENDIDO = Pedido::ESTADOS_VENDIDO;
 
     private static function vendido(string $alias = 'pe'): string
     {
