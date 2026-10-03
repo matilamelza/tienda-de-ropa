@@ -6,31 +6,42 @@ class PedidoController extends Controller
     // LISTADO
     // ═══════════════════════════════════════════════════════════════════════
 
-    public function index()
+        public function index()
     {
         $porPagina = 20;
         $pagina    = max(1, (int) ($_GET['pagina'] ?? 1));
-        $busqueda  = trim($_GET['q'] ?? '');
-        $estado    = $_GET['estado'] ?? '';
 
-        if ($estado !== 'vencidos' && !isset(GestionPedido::ESTADOS[$estado])) {
+        $estado = $_GET['estado'] ?? '';
+        if (!in_array($estado, ['vencidos', 'por_entregar'], true) && !isset(GestionPedido::ESTADOS[$estado])) {
             $estado = '';
         }
 
-        $pedidoModel = new Pedido();
+        $fecha = function ($v) {
+            $d = DateTime::createFromFormat('Y-m-d', (string) $v);
+            return $d && $d->format('Y-m-d') === $v ? $v : '';
+        };
 
-        $total        = $pedidoModel->contarPedidos($busqueda, $estado);
-        $pedidos      = $pedidoModel->listarPaginado($pagina, $porPagina, $busqueda, $estado);
-        $totalPaginas = (int) ceil($total / $porPagina);
+        $filtros = [
+            'q'       => mb_substr(trim($_GET['q'] ?? ''), 0, 60),
+            'estado'  => $estado,
+            'pago'    => in_array($_GET['pago'] ?? '', ['sin_pagar', 'senado', 'pagado', 'debe'], true) ? $_GET['pago'] : '',
+            'entrega' => in_array($_GET['entrega'] ?? '', ['retiro', 'envio', 'sin'], true) ? $_GET['entrega'] : '',
+            'desde'   => $fecha($_GET['desde'] ?? ''),
+            'hasta'   => $fecha($_GET['hasta'] ?? ''),
+            'orden'   => isset(Pedido::ORDENES_LISTADO[$_GET['orden'] ?? '']) ? $_GET['orden'] : '',
+        ];
+
+        $pedidoModel = new Pedido();
+        $total       = $pedidoModel->contarPedidos($filtros);
 
         $this->view('admin/pedidos/index', [
-            'pedidos'      => $pedidos,
+            'pedidos'      => $pedidoModel->listarPaginado($pagina, $porPagina, $filtros),
             'pagina'       => $pagina,
-            'totalPaginas' => $totalPaginas,
+            'totalPaginas' => (int) ceil($total / $porPagina),
             'total'        => $total,
-            'busqueda'     => $busqueda,
-            'estado'       => $estado,
+            'filtros'      => $filtros,
             'conteo'       => $pedidoModel->contarPorEstado(),
+            'resumen'      => $pedidoModel->resumenListado(),
         ]);
     }
 

@@ -180,47 +180,106 @@ class Pedido extends Conexion
 
     // ─── LISTADO DEL ADMIN ─────────────────────────────────────────────────────
 
-    /** $estado: '' (todos), uno de ESTADOS, o 'vencidos'. */
-    private function filtroPedidos(string $busqueda, string $estado): array
+     /** Órdenes del listado: clave => [texto, ORDER BY] */
+    public const ORDENES_LISTADO = [
+        'recientes' => ['Más nuevos',   'p.id_pedido DESC'],
+        'antiguos'  => ['Más viejos',   'p.id_pedido ASC'],
+        'total'     => ['Mayor total',  'p.total DESC'],
+        'deuda'     => ['Más deuda',    'falta DESC, p.id_pedido DESC'],
+    ];
+
+    /**
+     * Filtros del listado del admin:
+     *   q, estado ('' | uno de ESTADOS | 'vencidos' | 'por_entregar'),
+     *   pago ('' | 'sin_pagar' | 'senado' | 'pagado' | 'debe'),
+     *   entrega ('' | 'retiro' | 'envio' | 'sin'), desde, hasta ('Y-m-d')
+     */
+    private function filtroPedidos(array $f): array
     {
         $where  = [];
         $params = [];
         $types  = '';
+        $cobrado = self::SQL_COBRADO;
 
-        if ($busqueda !== '') {
-            $like     = '%' . $busqueda . '%';
-            $where[]  = '(c.nombre LIKE ? OR c.apellido LIKE ? OR c.telefono LIKE ? OR c.email LIKE ? OR p.id_pedido LIKE ?)';
-            $params   = array_merge($params, [$like, $like, $like, $like, $like]);
-            $types   .= 'sssss';
+        if (($f['q'] ?? '') !== '') {
+            $like     = '%' . $f['q'] . '%';
+            $where[]  = '(c.nombre LIKE ? OR c.apellido LIKE ? OR c.telefono LIKE ? OR c.email LIKE ? OR p.id_pedido = ?)';
+            $params   = array_merge($params, [$like, $like, $like, $like, (int) ltrim($f['q'], '#')]);
+            $types   .= 'ssssi';
         }
 
+        $estado = $f['estado'] ?? '';
         if ($estado === 'vencidos') {
             $where[]  = self::sqlVencidos();
             $params[] = self::DIAS_PAGO_VENCIDO;
             $types   .= 'i';
+        } elseif ($estado === 'por_entregar') {
+            $where[] = "p.estado IN ('confirmado', 'listo')";
         } elseif (in_array($estado, self::ESTADOS, true)) {
             $where[]  = 'p.estado = ?';
             $params[] = $estado;
             $types   .= 's';
         }
 
+        switch ($f['pago'] ?? '') {
+            case 'sin_pagar':
+                $where[] = "p.estado <> 'cancelado' AND $cobrado <= 0.009";
+                break;
+            case 'senado':
+                $where[] = "p.estado <> 'cancelado' AND $cobrado > 0.009 AND $cobrado < p.total - 0.009";
+                break;
+            case 'pagado':
+                $where[] = "p.estado <> 'cancelado' AND $cobrado >= p.total - 0.009";
+                break;
+            case 'debe':
+                $where[] = "p.estado IN " . self::ESTADOS_VENDIDO . " AND p.total - $cobrado > 0.009";
+                break;
+        }
+
+        switch ($f['entrega'] ?? '') {
+            case 'retiro': $where[] = "p.entrega = 'retiro'"; break;
+            case 'envio':  $where[] = "p.entrega = 'envio'";  break;
+            case 'sin':    $where[] = "p.entrega IS NULL";    break;
+        }
+
+        if (!empty($f['desde'])) {
+            $where[]  = 'p.fecha >= ?';
+            $params[] = $f['desde'] . ' 00:00:00';
+            $types   .= 's';
+        }
+        if (!empty($f['hasta'])) {
+            $where[]  = 'p.fecha < ?';
+            $params[] = date('Y-m-d', strtotime($f['hasta'] . ' +1 day')) . ' 00:00:00';
+            $types   .= 's';
+        }
+
         return [$where ? 'WHERE ' . implode(' AND ', $where) : '', $params, $types];
     }
 
-    public function listarPaginado(int $pagina = 1, int $porPagina = 20, string $busqueda = '', string $estado = ''): array
+    public function listarPaginado(int $pagina, int $porPagina, array $f): array
     {
-        [$where, $params, $types] = $this->filtroPedidos($busqueda, $estado);
+        [$where, $params, $types] = $this->filtroPedidos($f);
+
+        $orden = self::ORDENES_LISTADO[$f['orden'] ?? ''][1] ?? self::ORDENES_LISTADO['recientes'][1];
 
         $params[] = $porPagina;
         $params[] = ($pagina - 1) * $porPagina;
         $types   .= 'ii';
 
         $stmt = $this->db->prepare(
-            "SELECT p.*, c.nombre, c.apellido, c.telefono, c.email, " . self::SQL_COBRADO . " AS cobrado
+            "SELECT p.*, c.nombre, c.apellido, c.telefono, c.email, c.localidad,
+                    " . self::SQL_COBRADO . " AS cobrado,
+                    p.total - " . self::SQL_COBRADO . " AS falta,
+                    (SELECT GROUP_CONCAT(
+                                CONCAT(pi.cantidad, '× ', pi.producto,
+                                       IF(COALESCE(pi.talle, '') <> '', CONCAT(' · ', pi.talle), ''))
+                                ORDER BY pi.id_item SEPARATOR '||')
+                     FROM pedido_items pi WHERE pi.id_pedido = p.id_pedido) AS items_txt,
+                    (SELECT COALESCE(SUM(pi.cantidad), 0) FROM pedido_items pi WHERE pi.id_pedido = p.id_pedido) AS unidades
              FROM pedidos p
              LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
              $where
-             ORDER BY p.id_pedido DESC
+             ORDER BY $orden
              LIMIT ? OFFSET ?"
         );
         $stmt->bind_param($types, ...$params);
@@ -229,9 +288,9 @@ class Pedido extends Conexion
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function contarPedidos(string $busqueda = '', string $estado = ''): int
+    public function contarPedidos(array $f): int
     {
-        [$where, $params, $types] = $this->filtroPedidos($busqueda, $estado);
+        [$where, $params, $types] = $this->filtroPedidos($f);
 
         $stmt = $this->db->prepare(
             "SELECT COUNT(*) AS total FROM pedidos p LEFT JOIN clientes c ON c.id_cliente = p.id_cliente $where"
@@ -242,6 +301,25 @@ class Pedido extends Conexion
         $stmt->execute();
 
         return (int) $stmt->get_result()->fetch_assoc()['total'];
+    }
+
+    /** Las tarjetas de "qué hay que hacer" del listado. */
+    public function resumenListado(): array
+    {
+        $cobrado = self::SQL_COBRADO;
+
+        $r = $this->db->query(
+            "SELECT
+                COALESCE(SUM(p.estado = 'pendiente_contacto'), 0)                AS para_contactar,
+                COALESCE(SUM(p.estado = 'contactado'), 0)                        AS contactados,
+                COALESCE(SUM(p.estado IN ('confirmado', 'listo')), 0)            AS por_entregar,
+                COALESCE(SUM(CASE WHEN p.estado IN " . self::ESTADOS_VENDIDO . " AND p.total - $cobrado > 0.009
+                                  THEN p.total - $cobrado END), 0)               AS falta_cobrar,
+                COALESCE(SUM(p.estado IN " . self::ESTADOS_VENDIDO . " AND p.total - $cobrado > 0.009), 0) AS con_deuda
+             FROM pedidos p"
+        )->fetch_assoc();
+
+        return array_map('floatval', $r);
     }
 
     /** Cantidad por estado (para las pestañas), más 'vencidos' y 'todos'. */
