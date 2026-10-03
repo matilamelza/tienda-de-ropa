@@ -44,6 +44,13 @@ class Producto extends Conexion
             $types   .= 'i';
         }
 
+        $guia = (int) ($f['guia'] ?? 0);
+        if ($guia > 0) {
+            $where[]  = 'p.id_guia = ?';
+            $params[] = $guia;
+            $types   .= 'i';
+        }
+
         switch ($f['estado'] ?? '') {
             case 'activos':   $where[] = 'p.activo = 1'; break;
             case 'inactivos': $where[] = 'p.activo = 0'; break;
@@ -65,6 +72,10 @@ class Producto extends Conexion
                 break;
             case 'sin_costo':
                 $where[] = 'p.precio_costo IS NULL';
+                break;
+
+            case 'sin_guia':
+                $where[] = 'p.id_guia IS NULL';
                 break;
         }
 

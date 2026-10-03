@@ -33,6 +33,7 @@ class ProductoController extends Controller
             'totalPaginas' => (int) ceil($total / $porPagina),
             'filtros'      => $filtros,
             'categorias'   => (new Categoria())->listarActivas()->fetch_all(MYSQLI_ASSOC),
+            'guias'       => (new GuiaTalles())->opciones(),
             'marcas'       => (new Marca())->listarActivas()->fetch_all(MYSQLI_ASSOC),
             'promociones'  => array_values(array_filter(
                 (new Promocion())->listar(),
@@ -246,6 +247,7 @@ class ProductoController extends Controller
         return [
             'q'         => trim($src['q'] ?? ''),
             'categoria' => (int) ($src['categoria'] ?? 0),
+            'guia'      => (int) ($src['guia'] ?? 0),
             'estado'    => in_array($src['estado'] ?? '', ['activos', 'inactivos'], true) ? $src['estado'] : '',
             'problema'  => in_array($src['problema'] ?? '', ['agotados', 'faltantes', 'sin_foto', 'sin_costo'], true) ? $src['problema'] : '',
             'orden'     => isset(Producto::ORDENES[$src['orden'] ?? '']) ? $src['orden'] : '',
@@ -305,6 +307,17 @@ class ProductoController extends Controller
                 }
                 $modelo->actualizarCampoMasivo($ids, 'id_categoria', $idCat);
                 $msg = "Se cambió la categoría de $n producto(s).";
+                break;
+
+            case 'guia':
+                $idGuia  = (int) ($_POST['id_guia'] ?? -1);
+                $validas = array_map('intval', array_column((new GuiaTalles())->opciones(), 'id_guia'));
+                if ($idGuia !== 0 && !in_array($idGuia, $validas, true)) {
+                    $_SESSION['productos_msg'] = ['error', 'Elegí una guía de talles.'];
+                    $this->redirect($volver);
+                }
+                (new GuiaTalles())->asignarVarios($ids, $idGuia ?: null);
+                $msg = $idGuia ? "Se asignó la guía de talles a $n producto(s)." : "Se quitó la guía de talles de $n producto(s).";
                 break;
 
             case 'marca':

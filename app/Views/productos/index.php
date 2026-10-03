@@ -1,5 +1,5 @@
 <?php
-$hayFiltros = $filtros['q'] !== '' || $filtros['categoria'] > 0 || $filtros['estado'] !== '' || $filtros['problema'] !== '';
+$hayFiltros = $filtros['q'] !== '' || $filtros['categoria'] > 0 || $filtros['estado'] !== '' || $filtros['problema'] !== '' || ($filtros['guia'] ?? 0) > 0;
 
 $url = function (array $cambios = []) use ($filtros): string {
     $q = array_filter(array_merge($filtros, $cambios), fn($v) => $v !== '' && $v !== 0 && $v !== null);
@@ -103,6 +103,14 @@ $actividad = function (array $p) use ($num): string {
 <form method="GET" action="<?= BASE_URL ?>/admin/productos" id="formFiltros"
       class="bg-white rounded-lg shadow p-3 mb-4 grid grid-cols-2 md:grid-cols-6 gap-2">
 
+          <?php if (($filtros['guia'] ?? 0) > 0): ?>
+        <input type="hidden" name="guia" value="<?= (int) $filtros['guia'] ?>">
+        <p class="col-span-2 md:col-span-6 text-sm text-gray-600">
+            📏 Productos con la guía <strong><?= htmlspecialchars(array_column($guias, 'nombre', 'id_guia')[$filtros['guia']] ?? '') ?></strong>
+            · <a href="<?= $url(['guia' => 0, 'pagina' => null]) ?>" class="underline">ver todos</a>
+        </p>
+    <?php endif; ?>
+
     <input type="text" name="q" value="<?= htmlspecialchars($filtros['q']) ?>"
            placeholder="Buscar por nombre o marca…"
            class="col-span-2 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
@@ -128,6 +136,7 @@ $actividad = function (array $p) use ($num): string {
         <option value="faltantes" <?= $filtros['problema'] === 'faltantes' ? 'selected' : '' ?>>📦 Con talles agotados</option>
         <option value="sin_foto"  <?= $filtros['problema'] === 'sin_foto'  ? 'selected' : '' ?>>🖼️ Sin foto</option>
         <option value="sin_costo" <?= $filtros['problema'] === 'sin_costo' ? 'selected' : '' ?>>💲 Sin costo</option>
+        <option value="sin_guia"  <?= $filtros['problema'] === 'sin_guia'  ? 'selected' : '' ?>>📏 Sin guía de talles</option>
     </select>
 
     <select name="orden" class="auto-filtro border rounded-lg px-3 py-2 text-sm bg-white">
@@ -139,7 +148,7 @@ $actividad = function (array $p) use ($num): string {
     </select>
 
     <?php if ($hayFiltros): ?>
-        <a href="<?= $url(['q' => '', 'categoria' => 0, 'estado' => '', 'problema' => '', 'pagina' => null]) ?>"
+        <a href="<?= $url(['q' => '', 'categoria' => 0, 'estado' => '', 'problema' => '', 'guia' => 0, 'pagina' => null]) ?>"
            class="col-span-2 md:col-span-6 text-center text-sm text-gray-500 hover:text-red-600">
             ✕ Limpiar filtros
         </a>
@@ -190,6 +199,19 @@ $actividad = function (array $p) use ($num): string {
                 </select>
                 <button type="button" onclick="accion('marca', 'accMarca')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">Cambiar</button>
             </span>
+
+            <?php if (!empty($guias)): ?>
+                <span class="flex items-center gap-1">
+                    <select name="id_guia" id="accGuia" class="border rounded px-2 py-1 bg-white">
+                        <option value="">Guía de talles…</option>
+                        <option value="0">Sin guía</option>
+                        <?php foreach ($guias as $g): ?>
+                            <option value="<?= (int) $g['id_guia'] ?>"><?= htmlspecialchars($g['nombre']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" onclick="accion('guia', 'accGuia')" class="px-2 py-1 rounded border bg-white hover:bg-gray-50">📏 Asignar</button>
+                </span>
+            <?php endif; ?>
 
             <?php if (!empty($promociones)): ?>
                 <span class="flex items-center gap-1">
@@ -629,7 +651,7 @@ $actividad = function (array $p) use ($num): string {
         activar: 'activar', desactivar: 'desactivar', destacar: 'destacar',
         quitar_destacado: 'quitarle el destacado a', categoria: 'cambiar la categoría de',
         marca: 'cambiar la marca de', eliminar: 'ELIMINAR', precios: 'cambiar el precio de',
-        promocion: 'agregar a la promoción'
+        promocion: 'agregar a la promoción', guia: 'asignarle la guía de talles a'
     };
 
     function enviar(accion) {
