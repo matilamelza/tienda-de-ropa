@@ -56,4 +56,16 @@ class MedioPago extends Conexion
 
         return $stmt->execute();
     }
+
+        /** Guarda el orden según la posición en el array de ids. */
+    public function ordenar(array $ids): void
+    {
+        $stmt = $this->db->prepare("UPDATE medios_pago SET orden = ? WHERE id_medio = ?");
+        foreach (array_values($ids) as $pos => $id) {
+            $orden = $pos + 1;
+            $id    = (int) $id;
+            $stmt->bind_param("ii", $orden, $id);
+            $stmt->execute();
+        }
+    }
 }

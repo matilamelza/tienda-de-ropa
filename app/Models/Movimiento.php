@@ -258,6 +258,16 @@ class Movimiento extends Conexion
             $types   .= 's';
         }
 
+        if (!empty($f['q'])) {
+            $q        = trim($f['q']);
+            $like     = '%' . $q . '%';
+            $where[]  = '(m.concepto LIKE ? OR m.comprobante LIKE ? OR m.id_pedido = ?)';
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = (int) ltrim($q, '#');
+            $types   .= 'ssi';
+        }
+
         return [$where ? 'WHERE ' . implode(' AND ', $where) : '', $params, $types];
     }
 
@@ -328,5 +338,91 @@ class Movimiento extends Conexion
         $row = $stmt->get_result()->fetch_assoc();
 
         return array_map('floatval', $row);
+    }
+
+        /** Agrega una condición al WHERE que devuelve filtro(). */
+    private function sumarCondicion(string $where, string $condicion): string
+    {
+        return $where === '' ? "WHERE $condicion" : "$where AND $condicion";
+    }
+
+    /** Totales del período, separados por tipo. No cuenta anulados. */
+    public function totalesDetalle(array $filtros): array
+    {
+        $filtros['anulados'] = false;
+        [$where, $params, $types] = $this->filtro($filtros);
+
+        $stmt = $this->db->prepare(
+            "SELECT
+                COALESCE(SUM(CASE WHEN m.tipo = 'cobro'          THEN m.monto END), 0) AS cobros,
+                COALESCE(SUM(CASE WHEN m.tipo = 'cobro'          THEN m.comision END), 0) AS comisiones,
+                COALESCE(SUM(CASE WHEN m.tipo = 'ingreso'        THEN m.monto END), 0) AS ingresos,
+                COALESCE(SUM(CASE WHEN m.tipo = 'gasto'          THEN m.monto END), 0) AS gastos,
+                COALESCE(SUM(CASE WHEN m.tipo = 'devolucion'     THEN m.monto END), 0) AS devoluciones,
+                COALESCE(SUM(CASE WHEN m.tipo = 'pago_proveedor' THEN m.monto END), 0) AS proveedores,
+                COUNT(DISTINCT CASE WHEN m.tipo = 'cobro' THEN m.id_pedido END) AS pedidos_cobrados
+             FROM movimientos m
+             $where"
+        );
+        if ($params) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $r = array_map('floatval', $stmt->get_result()->fetch_assoc());
+
+        $r['cobros_netos'] = $r['cobros'] - $r['comisiones'];
+        $r['entradas']     = $r['cobros_netos'] + $r['ingresos'];
+        $r['salidas']      = $r['gastos'] + $r['devoluciones'] + $r['proveedores'];
+        $r['resultado']    = $r['entradas'] - $r['salidas'];
+
+        return $r;
+    }
+
+    /** Gastos y pagos a proveedores del período, por categoría. */
+    public function gastosPorCategoria(array $filtros): array
+    {
+        $filtros['anulados'] = false;
+        [$where, $params, $types] = $this->filtro($filtros);
+        $where = $this->sumarCondicion($where, "m.tipo IN ('gasto', 'pago_proveedor')");
+
+        $stmt = $this->db->prepare(
+            "SELECT COALESCE(cm.nombre, IF(m.tipo = 'pago_proveedor', 'Proveedores', 'Sin categoría')) AS nombre,
+                    SUM(m.monto) AS total, COUNT(*) AS cantidad
+             FROM movimientos m
+             LEFT JOIN categorias_movimiento cm ON cm.id_categoria_mov = m.id_categoria_mov
+             $where
+             GROUP BY nombre
+             ORDER BY total DESC"
+        );
+        if ($params) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /** Cobros del período por medio de pago, con su comisión. */
+    public function cobrosPorMedio(array $filtros): array
+    {
+        $filtros['anulados'] = false;
+        [$where, $params, $types] = $this->filtro($filtros);
+        $where = $this->sumarCondicion($where, "m.tipo = 'cobro'");
+
+        $stmt = $this->db->prepare(
+            "SELECT COALESCE(mp.nombre, '—') AS nombre,
+                    SUM(m.monto) AS total, SUM(m.comision) AS comision, COUNT(*) AS cantidad
+             FROM movimientos m
+             LEFT JOIN medios_pago mp ON mp.id_medio = m.id_medio
+             $where
+             GROUP BY nombre
+             ORDER BY total DESC"
+        );
+        if ($params) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 }

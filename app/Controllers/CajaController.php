@@ -4,22 +4,48 @@ class CajaController extends Controller
 {
     // ─── PANTALLA PRINCIPAL ────────────────────────────────────────────────────
 
-    public function index()
+        public function index()
     {
-        // Período: por defecto, el mes actual
-        $desde = $this->fechaValida($_GET['desde'] ?? '') ?: date('Y-m-01');
-        $hasta = $this->fechaValida($_GET['hasta'] ?? '') ?: date('Y-m-d');
+        // ── Período ────────────────────────────────────────────────────────
+        $periodo = $_GET['periodo'] ?? '';
+        $hoy     = date('Y-m-d');
+
+        switch ($periodo) {
+            case 'hoy':
+                $desde = $hasta = $hoy;
+                break;
+            case 'semana':
+                $desde = date('Y-m-d', strtotime('-' . (date('N') - 1) . ' days'));   // lunes
+                $hasta = $hoy;
+                break;
+            case 'mes_pasado':
+                $desde = date('Y-m-01', strtotime('first day of last month'));
+                $hasta = date('Y-m-t', strtotime('last day of last month'));
+                break;
+            case 'mes':
+                $desde = date('Y-m-01');
+                $hasta = $hoy;
+                break;
+            default:
+                $desde   = $this->fechaValida($_GET['desde'] ?? '') ?: date('Y-m-01');
+                $hasta   = $this->fechaValida($_GET['hasta'] ?? '') ?: $hoy;
+                $periodo = (isset($_GET['desde']) || isset($_GET['hasta'])) ? 'personalizado' : 'mes';
+        }
+        if ($desde > $hasta) {
+            [$desde, $hasta] = [$hasta, $desde];
+        }
 
         $filtros = [
             'caja'      => (int) ($_GET['caja'] ?? 0),
             'tipo'      => $_GET['tipo'] ?? '',
             'categoria' => (int) ($_GET['categoria'] ?? 0),
             'anulados'  => !empty($_GET['anulados']),
+            'q'         => mb_substr(trim($_GET['q'] ?? ''), 0, 60),
             'desde'     => $desde . ' 00:00:00',
-            'hasta'     => date('Y-m-d', strtotime($hasta . ' +1 day')) . ' 00:00:00', // rango semiabierto
+            'hasta'     => date('Y-m-d', strtotime($hasta . ' +1 day')) . ' 00:00:00',   // rango semiabierto
         ];
 
-        $porPagina = 30;
+        $porPagina = 50;
         $pagina    = max(1, (int) ($_GET['pagina'] ?? 1));
 
         $movModel = new Movimiento();
@@ -29,11 +55,14 @@ class CajaController extends Controller
         $this->view('admin/caja/index', [
             'cajas'        => (new Caja())->listarConSaldo(true),
             'movimientos'  => $movModel->listar($filtros, $pagina, $porPagina),
-            'totales'      => $movModel->totales($filtros),
+            'totales'      => $movModel->totalesDetalle($filtros),
+            'porCategoria' => $movModel->gastosPorCategoria($filtros),
+            'porMedio'     => $movModel->cobrosPorMedio($filtros),
             'total'        => $total,
             'pagina'       => $pagina,
             'totalPaginas' => (int) ceil($total / $porPagina),
             'filtros'      => $filtros,
+            'periodo'      => $periodo,
             'desde'        => $desde,
             'hasta'        => $hasta,
             'catGastos'    => $catModel->listarActivas('gasto'),
@@ -135,7 +164,7 @@ class CajaController extends Controller
 
         $datos = [
             'nombre' => mb_substr($nombre, 0, 60),
-            'orden'  => (int) ($_POST['orden'] ?? 0),
+            'orden'  => (int) ($_POST['orden'] ?? 0) ?: 999,
             'activo' => isset($_POST['activo']) ? 1 : 0,
         ];
 
@@ -168,7 +197,7 @@ class CajaController extends Controller
             'id_caja'      => $id_caja,
             'comision_pct' => round($comision, 2),
             'ajuste_pct'   => round($ajuste, 2),
-            'orden'        => (int) ($_POST['orden'] ?? 0),
+            'orden'        => (int) ($_POST['orden'] ?? 0) ?: 999,
             'activo'       => isset($_POST['activo']) ? 1 : 0,
         ];
 
@@ -200,6 +229,25 @@ class CajaController extends Controller
         $id > 0 ? $modelo->actualizar($id, $datos) : $modelo->crear($datos);
 
         $this->volverConfig('ok', 'Categoría guardada.');
+    }
+
+        /** AJAX: nuevo orden de cajas o medios después de arrastrar. */
+    public function ordenar()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['ok' => false], 405);
+        }
+
+        $tipo = $_POST['tipo'] ?? '';
+        $ids  = array_filter(array_map('intval', (array) ($_POST['ids'] ?? [])));
+
+        if (!$ids || !in_array($tipo, ['cajas', 'medios'], true)) {
+            $this->json(['ok' => false], 400);
+        }
+
+        $tipo === 'cajas' ? (new Caja())->ordenar($ids) : (new MedioPago())->ordenar($ids);
+
+        $this->json(['ok' => true]);
     }
 
     // ─── HELPERS ───────────────────────────────────────────────────────────────

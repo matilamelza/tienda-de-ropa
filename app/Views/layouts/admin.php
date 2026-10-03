@@ -46,6 +46,6 @@ window.matchMedia('(min-width: 1024px)').addEventListener('change', function (e)
     }
 });
 </script>
-
+<script src="<?= BASE_URL ?>/public/js/montos.js?v=1"></script>
 </body>
 </html>

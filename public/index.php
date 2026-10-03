@@ -867,6 +867,11 @@ switch ($route) {
         $controller->anular();
         break;
 
+        case 'caja_config_orden':
+        requireAdmin();
+        (new CajaController())->ordenar();
+        break;
+
     // ─── 404 ───────────────────────────────────────────────────────────────────
 
     default:

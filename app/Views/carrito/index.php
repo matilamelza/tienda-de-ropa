@@ -68,7 +68,7 @@
                                                name="cantidades[<?php echo $v['id_variante']; ?>]"
                                                value="<?php echo $item['cantidad']; ?>"
                                                min="1"
-                                                max="<?php echo (int) $v['disponible']; ?>"
+                                            max="<?php echo (int) $v['disponible']; ?>"
                                                class="w-20 border rounded-lg px-3 py-2 ml-2">
                                     </div>
 

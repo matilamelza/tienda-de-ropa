@@ -11,14 +11,8 @@ $margen   = $ganancia !== null && $producto['precio_base'] > 0 ? $ganancia / $pr
 
 $idp = (int) $producto['id_producto'];
 
-// Estados de pedido (viejos y nuevos, para que se vean bien en los dos casos)
-$estados = [
-    'pendiente_contacto' => 'Esperando contacto', 'contactado' => 'Contactado',
-    'pendiente_pago' => 'Pendiente de pago', 'pagado' => 'Pagado',
-    'nuevo' => 'Nuevo', 'confirmado' => 'Confirmado', 'encargado' => 'Encargado',
-    'llego' => 'Llegó', 'listo' => 'Listo para entregar',
-    'entregado' => 'Entregado', 'cancelado' => 'Cancelado',
-];
+// Estados de pedido: los nombres salen de la lista oficial
+$estados = array_map(fn($e) => $e[0], GestionPedido::ESTADOS);
 ?>
 
 <!-- Encabezado -->
@@ -209,7 +203,8 @@ $estados = [
                                     <span class="font-medium">#<?= (int) $pe['id_pedido'] ?></span>
                                     <span class="text-gray-500 truncate">· <?= htmlspecialchars(trim(($pe['nombre'] ?? '') . ' ' . ($pe['apellido'] ?? ''))) ?: '—' ?></span>
                                     <span class="block text-xs text-gray-400">
-                                        <?= date('d/m/Y', strtotime($pe['fecha'])) ?> · <?= htmlspecialchars($estados[$pe['estado']] ?? $pe['estado']) ?>
+                                       <?= date('d/m/Y', strtotime($pe['fecha'])) ?> ·
++                                        <span class="px-1.5 py-0.5 rounded <?= GestionPedido::clase($pe['estado']) ?>"><?= htmlspecialchars($estados[$pe['estado']] ?? $pe['estado']) ?></span>
                                     </span>
                                 </span>
                                 <span class="text-right whitespace-nowrap">

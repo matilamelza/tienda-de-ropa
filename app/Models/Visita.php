@@ -140,7 +140,7 @@ class Visita extends Conexion
                  INNER JOIN producto_variantes pv ON pv.id_variante = pi.id_variante
                  INNER JOIN pedidos pe ON pe.id_pedido = pi.id_pedido
                  WHERE pv.id_producto = v.id_ref
-                 AND pe.estado IN ('pagado', 'entregado')
+                 AND pe.estado IN " . Pedido::ESTADOS_VENDIDO . "
                  AND pe.fecha >= ? AND pe.fecha < ?) AS vendidas
              FROM visitas v
              INNER JOIN productos p ON p.id_producto = v.id_ref

@@ -1,12 +1,5 @@
 <?php
-$estados = [
-    'pendiente_contacto' => ['Pendiente contacto', 'bg-yellow-100 text-yellow-800'],
-    'contactado'         => ['Contactado',         'bg-blue-100 text-blue-800'],
-    'pendiente_pago'     => ['Pendiente pago',     'bg-orange-100 text-orange-800'],
-    'pagado'             => ['Pagado',             'bg-green-100 text-green-800'],
-    'cancelado'          => ['Cancelado',          'bg-red-100 text-red-700'],
-    'entregado'          => ['Entregado',          'bg-gray-200 text-gray-800'],
-];
+$estados = GestionPedido::ESTADOS;
 
 $nombreCompleto = trim($cliente['nombre'] . ' ' . $cliente['apellido']);
 $registrado     = !empty($cliente['id_usuario_cliente']);

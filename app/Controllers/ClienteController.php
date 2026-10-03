@@ -32,7 +32,7 @@ class ClienteController extends Controller
         $pedidoModel = new Pedido();
         $categoriaModel = new Categoria();
 
-        $pedido = $pedidoModel->buscarPedido($id);
+        $pedido = $pedidoModel->buscarPedidoCompleto($id);
 
         //  seguridad: solo ver su pedido
         if (!$pedido || $pedido['id_usuario_cliente'] != $_SESSION['cliente']['id_usuario_cliente']) {
