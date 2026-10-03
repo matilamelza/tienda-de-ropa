@@ -725,6 +725,285 @@ class GestionPedido extends Conexion
         $stmt->execute();
     }
 
+        // ═══════════════════════════════════════════════════════════════════════
+    // VENTA MANUAL
+    // ═══════════════════════════════════════════════════════════════════════
+
+    public const ORIGENES = [
+        'local'     => '🏪 Local',
+        'instagram' => '📸 Instagram',
+        'whatsapp'  => '💬 WhatsApp',
+        'facebook'  => '📘 Facebook',
+        'otro'      => '📝 Otro',
+    ];
+
+    /** Buscador de variantes para la venta manual (con stock y precio vigente). */
+    public function buscarVariantes(string $q, int $limite = 30): array
+    {
+        $like = '%' . $q . '%';
+
+        $stmt = $this->db->prepare(
+            "SELECT pv.id_variante, p.id_producto, p.nombre, m.nombre AS marca,
+                    t.nombre AS talle, co.nombre AS color, pv.sku,
+                    (pv.stock - pv.stock_reservado) AS disponible,
+                    COALESCE(pv.precio, p.precio_base) AS precio_lista,
+                    (SELECT pf.imagen FROM producto_fotos pf WHERE pf.id_producto = p.id_producto
+                     ORDER BY pf.principal DESC, pf.orden ASC LIMIT 1) AS foto,
+                    " . Promocion::columnasDescuento('p') . "
+             FROM producto_variantes pv
+             INNER JOIN productos p ON p.id_producto = pv.id_producto
+             LEFT JOIN marcas m     ON m.id_marca    = p.id_marca
+             LEFT JOIN talles t     ON t.id_talle    = pv.id_talle
+             LEFT JOIN colores co   ON co.id_color   = pv.id_color
+             WHERE p.eliminado_at IS NULL AND pv.activo = 1
+             AND (p.nombre LIKE ? OR m.nombre LIKE ? OR pv.sku LIKE ?)
+             ORDER BY p.nombre ASC, t.orden ASC, co.nombre ASC
+             LIMIT ?"
+        );
+        $stmt->bind_param("sssi", $like, $like, $like, $limite);
+        $stmt->execute();
+        $filas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        return array_map(function ($f) {
+            $pct = (float) ($f['descuento_pct'] ?? 0);
+            return [
+                'id'           => (int) $f['id_variante'],
+                'nombre'       => $f['nombre'],
+                'marca'        => $f['marca'],
+                'variante'     => variante_texto($f['talle'], $f['color']),
+                'sku'          => $f['sku'],
+                'disponible'   => (int) $f['disponible'],
+                'precio_lista' => (float) $f['precio_lista'],
+                'precio'       => $pct > 0 ? precio_con_descuento((float) $f['precio_lista'], $pct) : (float) $f['precio_lista'],
+                'oferta'       => $pct,
+                'foto'         => $f['foto'],
+            ];
+        }, $filas);
+    }
+
+    /** Buscador de clientes para la venta manual. */
+    public function buscarClientes(string $q, int $limite = 8): array
+    {
+        $like = '%' . $q . '%';
+
+        $stmt = $this->db->prepare(
+            "SELECT id_cliente, nombre, apellido, telefono, localidad
+             FROM clientes
+             WHERE nombre LIKE ? OR apellido LIKE ? OR telefono LIKE ? OR CONCAT(nombre, ' ', apellido) LIKE ?
+             ORDER BY nombre ASC
+             LIMIT ?"
+        );
+        $stmt->bind_param("ssssi", $like, $like, $like, $like, $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /**
+     * Crea una venta manual completa, todo o nada.
+     * $d: origen, fecha, cliente (['id'] | ['nuevo' => [nombre, apellido, telefono, localidad]] | null),
+     *     items ([['id_variante', 'cantidad', 'precio']]), descuento, motivo_descuento, id_medio_acordado,
+     *     entrega, envio_cobrado, envio_costo, notas, entregado (bool),
+     *     cobro (['monto', 'id_medio'] | null)
+     * Devuelve ['ok' => bool, 'id' => int, 'mensaje' => string]
+     */
+    public function crearVentaManual(array $d): array
+    {
+        if (empty($d['items'])) {
+            return ['ok' => false, 'id' => 0, 'mensaje' => 'Agregá al menos un producto.'];
+        }
+
+        try {
+            $this->db->begin_transaction();
+
+            // 1. Cliente
+            $idCliente = $this->clienteVenta($d['cliente']);
+
+            // 2. Productos (los datos salen de la base, el precio lo puede cambiar el admin)
+            $items    = [];
+            $subtotal = 0;
+            $detalle  = $this->db->prepare(
+                "SELECT pv.id_variante, p.nombre, t.nombre AS talle, co.nombre AS color,
+                        COALESCE(pv.precio, p.precio_base) AS precio_lista, p.precio_costo
+                 FROM producto_variantes pv
+                 INNER JOIN productos p ON p.id_producto = pv.id_producto
+                 LEFT JOIN talles t     ON t.id_talle    = pv.id_talle
+                 LEFT JOIN colores co   ON co.id_color   = pv.id_color
+                 WHERE pv.id_variante = ? AND p.eliminado_at IS NULL"
+            );
+
+            foreach ($d['items'] as $it) {
+                $idv  = (int) $it['id_variante'];
+                $cant = max(1, (int) $it['cantidad']);
+
+                $detalle->bind_param("i", $idv);
+                $detalle->execute();
+                $v = $detalle->get_result()->fetch_assoc();
+                if (!$v) {
+                    throw new RuntimeException('Uno de los productos ya no existe. Recargá la página.');
+                }
+
+                $precio = round(max(0, (float) $it['precio']), 2);
+                $items[] = [
+                    'id_variante'     => $idv,
+                    'producto'        => $v['nombre'],
+                    'talle'           => $v['talle'] ?? '',
+                    'color'           => $v['color'] ?? '',
+                    'cantidad'        => $cant,
+                    'precio_unitario' => $precio,
+                    'precio_lista'    => (float) $v['precio_lista'],
+                    'costo_unitario'  => $v['precio_costo'] !== null ? (float) $v['precio_costo'] : null,
+                    'subtotal'        => round($precio * $cant, 2),
+                ];
+                $subtotal += round($precio * $cant, 2);
+            }
+
+            // 3. Totales
+            $descuento = min(max(0, round((float) $d['descuento'], 2)), $subtotal);
+            $medio     = $d['id_medio_acordado'] ? $this->medio((int) $d['id_medio_acordado']) : null;
+            $idMedio   = $medio ? (int) $medio['id_medio'] : null;
+            $ajustePct = $medio ? (float) $medio['ajuste_pct'] : 0;
+            $ajuste    = round(($subtotal - $descuento) * $ajustePct / 100, 2);
+            $envioCob  = max(0, round((float) $d['envio_cobrado'], 2));
+            $envioCost = max(0, round((float) $d['envio_costo'], 2));
+            $total     = round($subtotal - $descuento + $ajuste + $envioCob, 2);
+            $entrega   = in_array($d['entrega'], ['retiro', 'envio'], true) ? $d['entrega'] : null;
+            $motivo    = $d['motivo_descuento'] !== '' ? mb_substr($d['motivo_descuento'], 0, 150) : null;
+            $notas     = $d['notas'] !== '' ? mb_substr($d['notas'], 0, 2000) : null;
+            $origen    = isset(self::ORIGENES[$d['origen']]) ? $d['origen'] : 'otro';
+
+            // 4. Pedido
+            $stmt = $this->db->prepare(
+                "INSERT INTO pedidos
+                 (id_cliente, fecha, origen, subtotal, descuento, motivo_descuento, id_medio_acordado, ajuste_pct, ajuste_monto,
+                  envio_cobrado, envio_costo, entrega, total, estado, notas_internas)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente_contacto', ?)"
+            );
+           $stmt->bind_param("issddsiddddsds",
+                 $idCliente, $d['fecha'], $origen, $subtotal, $descuento, $motivo, $idMedio, $ajustePct, $ajuste,
+                 $envioCob, $envioCost, $entrega, $total, $notas
+             );
+            if (!$stmt->execute()) {
+                throw new Exception('Guardar pedido: ' . $stmt->error);
+            }
+            $id = (int) $this->db->insert_id;
+
+            $insItem = $this->db->prepare(
+                "INSERT INTO pedido_items
+                 (id_pedido, id_variante, producto, talle, color, cantidad, precio_unitario, precio_lista, costo_unitario, subtotal)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            );
+            foreach ($items as $it) {
+                $insItem->bind_param("iisssidddd",
+                    $id, $it['id_variante'], $it['producto'], $it['talle'], $it['color'], $it['cantidad'],
+                    $it['precio_unitario'], $it['precio_lista'], $it['costo_unitario'], $it['subtotal']
+                );
+                if (!$insItem->execute()) {
+                    throw new Exception('Guardar producto: ' . $insItem->error);
+                }
+            }
+
+            $this->anotar($id, 'estado', 'Venta manual cargada (' . strip_tags(self::ORIGENES[$origen]) . ')');
+
+            // 5. Stock: se confirma (reserva) y, si ya se lo llevó, se entrega (descuenta)
+            $error = $this->aplicarEstado($this->pedidoParaActualizar($id), 'confirmado');
+            if (!$error && !empty($d['entregado'])) {
+                $error = $this->aplicarEstado($this->pedidoParaActualizar($id), 'entregado');
+            }
+            if ($error) {
+                throw new RuntimeException($error);
+            }
+
+            // 6. Cobro
+            if (!empty($d['cobro']) && (float) $d['cobro']['monto'] > 0) {
+                $medioCobro = $this->medio((int) $d['cobro']['id_medio']);
+                if (!$medioCobro) {
+                    throw new RuntimeException('Elegí con qué medio pagó.');
+                }
+                $monto    = round((float) $d['cobro']['monto'], 2);
+                $comision = round($monto * (float) $medioCobro['comision_pct'] / 100, 2);
+
+                $this->insertarMovimiento([
+                    'fecha'       => $d['fecha'],
+                    'id_caja'     => (int) $medioCobro['id_caja'],
+                    'tipo'        => 'cobro',
+                    'monto'       => $monto,
+                    'comision'    => $comision,
+                    'neto_caja'   => $monto - $comision,
+                    'id_medio'    => (int) $medioCobro['id_medio'],
+                    'id_pedido'   => $id,
+                    'concepto'    => 'Cobro pedido #' . $id,
+                    'comprobante' => null,
+                ]);
+                $this->anotar($id, 'cobro', 'Cobro ' . self::pesos($monto) . ' por ' . $medioCobro['nombre']
+                    . ($comision > 0 ? ' (comisión ' . self::pesos($comision) . ')' : ''));
+            }
+
+            $this->db->commit();
+            return ['ok' => true, 'id' => $id, 'mensaje' => 'Venta cargada.'];
+
+        } catch (Throwable $e) {
+            $this->db->rollback();
+            error_log('crearVentaManual: ' . $e->getMessage());
+            return [
+                'ok'      => false,
+                'id'      => 0,
+                'mensaje' => 'No se pudo guardar la venta. (' . $e->getMessage() . ')',
+             ];
+            
+        }
+    }
+
+    /** Cliente de la venta: existente, nuevo (o el que ya tenga ese teléfono), o ninguno. */
+    private function clienteVenta(?array $c): ?int
+    {
+        if (!$c) {
+            return null;
+        }
+
+        if (!empty($c['id'])) {
+            $stmt = $this->db->prepare("SELECT id_cliente FROM clientes WHERE id_cliente = ?");
+            $id   = (int) $c['id'];
+            $stmt->bind_param("i", $id);
+            if (!$stmt->execute()) {
+                throw new Exception('Guardar cliente: ' . $stmt->error);
+            }
+            if (!$stmt->get_result()->fetch_assoc()) {
+                throw new RuntimeException('El cliente elegido no existe.');
+            }
+            return $id;
+        }
+
+        $n = $c['nuevo'] ?? [];
+        $nombre = mb_substr(trim($n['nombre'] ?? ''), 0, 100);
+        if ($nombre === '') {
+            return null;
+        }
+        $apellido  = mb_substr(trim($n['apellido'] ?? ''), 0, 100);
+        $telefono  = mb_substr(preg_replace('/[^\d+ ]/', '', $n['telefono'] ?? ''), 0, 30);
+        $localidad = mb_substr(trim($n['localidad'] ?? ''), 0, 100);
+
+        // Si ya existe un cliente con ese teléfono, se usa ese
+        if ($telefono !== '') {
+            $stmt = $this->db->prepare("SELECT id_cliente FROM clientes WHERE telefono = ? LIMIT 1");
+            $stmt->bind_param("s", $telefono);
+            $stmt->execute();
+            $existe = $stmt->get_result()->fetch_assoc();
+            if ($existe) {
+                return (int) $existe['id_cliente'];
+            }
+        }
+
+        $vacio = '';
+        $stmt  = $this->db->prepare(
+            "INSERT INTO clientes (nombre, apellido, email, telefono, direccion, localidad) VALUES (?, ?, ?, ?, ?, ?)"
+        );
+        $stmt->bind_param("ssssss", $nombre, $apellido, $vacio, $telefono, $vacio, $localidad);
+        $stmt->execute();
+
+        return (int) $this->db->insert_id;
+    }
+
     public static function pesos(float $n): string
     {
         return '$' . number_format($n, 0, ',', '.');

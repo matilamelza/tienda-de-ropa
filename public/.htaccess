@@ -60,6 +60,11 @@ RewriteRule ^admin/pedido/condiciones/?$   index.php?route=pedido_condiciones   
 RewriteRule ^admin/pedido/nota/?$          index.php?route=pedido_nota           [L,QSA]
 RewriteRule ^admin/pedido/cancelar/?$      index.php?route=pedido_cancelar       [L,QSA]
 RewriteRule ^admin/pedido/contactado/?$    index.php?route=pedido_contactado     [L,QSA]
+# Venta manual
+RewriteRule ^admin/venta/nueva/?$             index.php?route=venta_nueva             [L,QSA]
+RewriteRule ^admin/venta/buscar-productos/?$  index.php?route=venta_buscar_productos  [L,QSA]
+RewriteRule ^admin/venta/buscar-clientes/?$   index.php?route=venta_buscar_clientes   [L,QSA]
+RewriteRule ^admin/venta/guardar/?$           index.php?route=venta_guardar           [L,QSA]
 
 RewriteRule ^admin/clientes/?$ index.php?route=admin_clientes [L,QSA]
 RewriteRule ^admin/cliente/?$ index.php?route=admin_cliente_detalle [L,QSA]

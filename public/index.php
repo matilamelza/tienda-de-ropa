@@ -117,6 +117,7 @@ require_once __DIR__ . '/../app/Controllers/ClienteController.php';
 require_once __DIR__ . '/../app/Controllers/ClienteAdminController.php';
 require_once __DIR__ . '/../app/Controllers/AdminAuthController.php';
 require_once __DIR__ . '/../app/Controllers/ConfiguracionController.php';
+require_once __DIR__ . '/../app/Controllers/VentaController.php';
 
 // ── Modo mantenimiento ───────────────────────────────────────────────────────
 $cfgTienda = new ConfiguracionTienda();
@@ -639,6 +640,26 @@ switch ($route) {
         requireAdmin();
         $controller = new PedidoController();
         $controller->actualizarEstado();
+        break;
+
+        case 'venta_nueva':
+        requireAdmin();
+        (new VentaController())->nueva();
+        break;
+
+    case 'venta_buscar_productos':
+        requireAdmin();
+        (new VentaController())->buscarProductos();
+        break;
+
+    case 'venta_buscar_clientes':
+        requireAdmin();
+        (new VentaController())->buscarClientes();
+        break;
+
+    case 'venta_guardar':
+        requireAdmin();
+        (new VentaController())->guardar();
         break;
 
     // ─── CLIENTES (ADMIN) ──────────────────────────────────────────────────────

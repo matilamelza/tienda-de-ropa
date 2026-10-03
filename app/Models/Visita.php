@@ -31,8 +31,6 @@ class Visita extends Conexion
         );
         $stmt->execute();
     }
-
-        /** Visitantes únicos por ciudad (con su provincia) o por provincia. Aproximado. */
         /** Visitantes únicos por ciudad (con su provincia) o por provincia, solo de un país. Aproximado. */
     public function ubicaciones(string $desde, string $hasta, string $nivel = 'ciudad', int $limite = 15, string $pais = 'AR'): array
     {
@@ -72,7 +70,7 @@ class Visita extends Conexion
         return [
             'total'  => array_sum(array_column($filas, 'visitantes')),
             'paises' => array_slice($filas, 0, 5),
-            'afuera'       => $visitaModel->fueraDelPais($d, $h),
+            
         ];
     }
 
@@ -284,7 +282,7 @@ class Visita extends Conexion
         // Pedidos hechos en el período (cualquier estado salvo cancelado)
         $stmt = $this->db->prepare(
             "SELECT COUNT(*) AS pedidos FROM pedidos
-             WHERE estado <> 'cancelado' AND fecha >= ? AND fecha < ?"
+             WHERE estado <> 'cancelado' AND origen = 'web' AND fecha >= ? AND fecha < ?"
         );
         $stmt->bind_param("ss", $desde, $hasta);
         $stmt->execute();

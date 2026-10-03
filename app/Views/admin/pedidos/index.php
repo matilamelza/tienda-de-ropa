@@ -57,6 +57,8 @@ $tarjetas = [
         <h2 class="text-2xl font-bold text-gray-800">Pedidos</h2>
         <p class="text-gray-500 text-sm"><?= (int) $total ?> pedido<?= $total !== 1 ? 's' : '' ?><?= $hayFiltros || $f['estado'] ? ' con estos filtros' : '' ?></p>
     </div>
+    <a href="<?= BASE_URL ?>/admin/venta/nueva"
+       class="shrink-0 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-800">+ Venta manual</a>
 </div>
 
 <!-- ══ QUÉ HAY QUE HACER ═══════════════════════════════════════════════ -->
@@ -199,6 +201,9 @@ $tarjetas = [
                     <a href="<?= BASE_URL ?>/admin/pedido/<?= $id ?>" class="flex-1 min-w-0 group">
                         <div class="flex items-center gap-2 text-sm">
                             <span class="font-bold text-gray-900">#<?= $id ?></span>
+                            <?php if (($p['origen'] ?? 'web') !== 'web'): ?>
+                                <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600"><?= GestionPedido::ORIGENES[$p['origen']] ?? htmlspecialchars($p['origen']) ?></span>
+                            <?php endif; ?>
                             <span class="<?= $clsHace ?> text-xs" title="<?= date('d/m/Y H:i', strtotime($p['fecha'])) ?>">· <?= $hace ?></span>
                             <?php if ($p['entrega'] === 'retiro'): ?>
                                 <span class="text-xs text-gray-500" title="Retira en el local">· 🏪</span>
