@@ -169,6 +169,11 @@ switch ($route) {
         $controller->index();
         break;
 
+    case 'dashboard_meta':
+        requireAdmin();
+        (new DashboardController())->guardarMeta();
+        break;
+
     case 'admin_estadisticas':
         requireAdmin();
         $controller = new EstadisticasController();

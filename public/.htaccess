@@ -49,6 +49,7 @@ RewriteRule ^mi-cuenta/pedido/([0-9]+)/?$ index.php?route=cliente_pedido_detalle
 
 # Panel admin
 RewriteRule ^admin/?$ index.php?route=dashboard [L,QSA]
+RewriteRule ^admin/meta/?$ index.php?route=dashboard_meta [L,QSA]
 RewriteRule ^admin/pedidos/?$ index.php?route=admin_pedidos [L,QSA]
 RewriteRule ^admin/pedido/([0-9]+)/?$ index.php?route=admin_pedido_detalle&id=$1 [L,QSA]
 RewriteRule ^admin/pedido/estado/?$ index.php?route=admin_pedido_estado [L,QSA]

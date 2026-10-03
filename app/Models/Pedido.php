@@ -472,6 +472,100 @@ class Pedido extends Conexion
         return true;
     }
 
+        /** Lo cobrado de verdad (cobros − devoluciones, sin anulados) en un período. */
+    public function cobradoPeriodo(string $desde, string $hasta): float
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COALESCE(SUM(CASE WHEN tipo = 'cobro' THEN monto ELSE -monto END), 0) AS c
+             FROM movimientos
+             WHERE tipo IN ('cobro', 'devolucion') AND anulado_at IS NULL AND fecha >= ? AND fecha < ?"
+        );
+        $stmt->bind_param("ss", $desde, $hasta);
+        $stmt->execute();
+
+        return (float) $stmt->get_result()->fetch_assoc()['c'];
+    }
+
+    /** Cobrado por día. Clave: 'Y-m-d'. */
+    public function cobradoPorDia(string $desde, string $hasta): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT DATE(fecha) AS dia, SUM(CASE WHEN tipo = 'cobro' THEN monto ELSE -monto END) AS total
+             FROM movimientos
+             WHERE tipo IN ('cobro', 'devolucion') AND anulado_at IS NULL AND fecha >= ? AND fecha < ?
+             GROUP BY DATE(fecha)"
+        );
+        $stmt->bind_param("ss", $desde, $hasta);
+        $stmt->execute();
+        $res = $stmt->get_result();
+
+        $dias = [];
+        while ($row = $res->fetch_assoc()) {
+            $dias[$row['dia']] = ['total' => (float) $row['total'], 'pedidos' => 0];
+        }
+        return $dias;
+    }
+
+    /** Lo del día: pedidos, vendido y cobrado. */
+    public function resumenHoy(): array
+    {
+        $hoy    = date('Y-m-d') . ' 00:00:00';
+        $manana = date('Y-m-d', strtotime('+1 day')) . ' 00:00:00';
+
+        $stmt = $this->db->prepare(
+            "SELECT
+                COALESCE(SUM(p.estado <> 'cancelado'), 0) AS pedidos,
+                COALESCE(SUM(CASE WHEN p.estado IN " . self::ESTADOS_VENDIDO . " THEN p.total END), 0) AS ventas
+             FROM pedidos p
+             WHERE p.fecha >= ? AND p.fecha < ?"
+        );
+        $stmt->bind_param("ss", $hoy, $manana);
+        $stmt->execute();
+        $r = $stmt->get_result()->fetch_assoc();
+
+        return [
+            'pedidos' => (int) $r['pedidos'],
+            'ventas'  => (float) $r['ventas'],
+            'cobrado' => $this->cobradoPeriodo($hoy, $manana),
+        ];
+    }
+
+    /** Ventas por canal (web, local, instagram…) en el período. */
+    public function ventasPorOrigen(string $desde, string $hasta): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COALESCE(p.origen, 'web') AS origen, COUNT(*) AS pedidos, SUM(p.total) AS total
+             FROM pedidos p
+             WHERE p.estado IN " . self::ESTADOS_VENDIDO . " AND p.fecha >= ? AND p.fecha < ?
+             GROUP BY origen
+             ORDER BY total DESC"
+        );
+        $stmt->bind_param("ss", $desde, $hasta);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /** Pedidos listos para entregar, los más viejos primero. */
+    public function listosParaEntregar(int $limite = 6): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT p.id_pedido, p.fecha, p.total, p.entrega, c.nombre, c.apellido, c.telefono,
+                    " . self::SQL_COBRADO . " AS cobrado
+             FROM pedidos p
+             LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
+             WHERE p.estado = 'listo'
+             ORDER BY p.fecha ASC
+             LIMIT ?"
+        );
+        $stmt->bind_param("i", $limite);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    
+
     // ─── TRANSACCIONES ─────────────────────────────────────────────────────────
 
     public function begin()    { $this->db->begin_transaction(); }

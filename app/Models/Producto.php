@@ -902,6 +902,7 @@ class Producto extends Conexion
     public function productosStockBajo($limiteStock = 3)
     {
         $sql = "SELECT 
+                    p.id_producto,
                     p.nombre AS producto,
                     pv.id_variante,
                     pv.stock,

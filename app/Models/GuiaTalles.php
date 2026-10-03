@@ -274,4 +274,16 @@ class GuiaTalles extends Conexion
     {
         return !empty($producto['id_guia']) ? $this->buscar((int) $producto['id_guia']) : null;
     }
+
+        /** Productos activos sin guía. 0 si todavía no hay guías armadas (no tiene sentido avisar). */
+    public function productosSinGuia(): int
+    {
+        $hayGuias = (int) $this->db->query("SELECT COUNT(*) AS n FROM guias_talles")->fetch_assoc()['n'];
+        if ($hayGuias === 0) {
+            return 0;
+        }
+        return (int) $this->db->query(
+            "SELECT COUNT(*) AS n FROM productos WHERE activo = 1 AND eliminado_at IS NULL AND id_guia IS NULL"
+        )->fetch_assoc()['n'];
+    }
 }
