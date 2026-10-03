@@ -246,6 +246,57 @@
         </form>
     </div>
 
+
+<?php if (!empty($producto['id_producto'])): ?>
+<!-- ══ Guía de talles ══════════════════════════════════════════════════ -->
+<form method="POST" action="<?= BASE_URL ?>/admin/productos/guia" class="bg-white rounded-lg shadow p-5 mt-6 max-w-3xl">
+    <?= csrf_field() ?>
+    <input type="hidden" name="id_producto" value="<?= (int) $producto['id_producto'] ?>">
+
+    <div class="flex items-start justify-between gap-3 mb-4">
+        <div>
+            <h3 class="font-bold text-gray-800">Guía de talles</h3>
+            <p class="text-xs text-gray-400">La tabla que ve el cliente al tocar "¿Qué talle soy?" en este producto.</p>
+        </div>
+        <a href="<?= BASE_URL ?>/admin/guias" class="text-sm text-gray-500 hover:text-gray-900 whitespace-nowrap">Ver guías →</a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <label class="block">
+            <span class="block text-gray-500 mb-1">Guía</span>
+            <select name="id_guia" class="w-full border rounded-lg px-3 py-2 bg-white">
+                <option value="">Sin guía</option>
+                <?php foreach ($guias ?? [] as $g): ?>
+                    <option value="<?= (int) $g['id_guia'] ?>" <?= (int) ($producto['id_guia'] ?? 0) === (int) $g['id_guia'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($g['nombre']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+
+        <label class="block">
+            <span class="block text-gray-500 mb-1">Cómo calza <span class="text-gray-400">(opcional)</span></span>
+            <input name="nota_calce" id="notaCalce" maxlength="150" value="<?= htmlspecialchars($producto['nota_calce'] ?? '') ?>"
+                   placeholder="Ej: Calza chico, te recomendamos un talle más" class="w-full border rounded-lg px-3 py-2">
+            <span class="flex flex-wrap gap-1 mt-1.5">
+                <?php foreach (['Calza chico, te recomendamos un talle más', 'Calza normal', 'Calza grande, te recomendamos un talle menos', 'Es holgado', 'Es entallado'] as $sug): ?>
+                    <button type="button" onclick="document.getElementById('notaCalce').value = this.textContent"
+                            class="text-xs px-2 py-0.5 rounded border text-gray-500 hover:bg-gray-50"><?= $sug ?></button>
+                <?php endforeach; ?>
+            </span>
+        </label>
+    </div>
+
+    <?php if (empty($guias)): ?>
+        <p class="text-xs text-gray-400 mt-3">Todavía no armaste ninguna guía. <a href="<?= BASE_URL ?>/admin/guias" class="underline">Crear una</a>.</p>
+    <?php endif; ?>
+
+    <div class="flex justify-end mt-4">
+        <button class="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm hover:bg-gray-800">Guardar guía</button>
+    </div>
+</form>
+<?php endif; ?>
+
     <script>
     (function () {
         const base   = <?= json_encode($precioBase) ?>;

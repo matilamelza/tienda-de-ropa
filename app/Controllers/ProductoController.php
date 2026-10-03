@@ -106,7 +106,24 @@ class ProductoController extends Controller
             'categorias' => $categoriaModel->listarActivas(),
             'marcas'     => $marcaModel->listarActivas(),
             'promocionesProducto' => (new Promocion())->promocionesDeProducto((int) $producto['id_producto']),
+            'guias' => (new GuiaTalles())->opciones(),
         ]);
+    }
+
+        /** Guarda la guía de talles y la nota de calce de un producto. */
+    public function guardarGuia()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . '/admin/productos');
+        }
+
+        $id     = (int) ($_POST['id_producto'] ?? 0);
+        $idGuia = (int) ($_POST['id_guia'] ?? 0) ?: null;
+
+        (new GuiaTalles())->asignar($id, $idGuia, $_POST['nota_calce'] ?? '');
+
+        $_SESSION['productos_msg'] = ['ok', 'Guía de talles guardada.'];
+        $this->redirect(BASE_URL . '/admin/productos/editar?id=' . $id);
     }
 
     public function actualizar()

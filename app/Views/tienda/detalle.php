@@ -142,10 +142,20 @@ $marca   = $producto['marca'] ?? null;
                 <div>
                     <div class="flex justify-between mb-2">
                         <label class="font-semibold text-gray-800">Talle</label>
-                        <span class="text-sm text-gray-400">Elegí una opción</span>
+                        <?php if (!empty($guia)): ?>
+                            <button type="button" onclick="abrirGuia()" class="text-sm text-gray-600 underline underline-offset-2 hover:text-gray-900">
+                                📏 ¿Qué talle soy?
+                            </button>
+                        <?php else: ?>
+                            <span class="text-sm text-gray-400">Elegí una opción</span>
+                        <?php endif; ?>
                     </div>
 
                     <div id="tallesBox" class="flex flex-wrap gap-2"></div>
+
+                    <?php if (!empty($producto['nota_calce'])): ?>
+                        <p class="text-sm text-gray-500 mt-2">ℹ️ <?= htmlspecialchars($producto['nota_calce']) ?></p>
+                    <?php endif; ?>
                 </div>
 
                 <!-- COLOR -->
@@ -286,6 +296,92 @@ $marca   = $producto['marca'] ?? null;
         <button type="button" onclick="visorMover(1)" aria-label="Foto siguiente"
                 class="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-3xl">›</button>
     <?php endif; ?>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($guia)): ?>
+<?php
+$colMedidas = array_keys(array_filter($guia['columnas'], fn($c) => $c['tipo'] === 'medida'));
+$colTalle   = array_key_first(array_filter($guia['columnas'], fn($c) => $c['tipo'] === 'talle')) ?? 0;
+$consejos   = array_filter(array_map('trim', explode("\n", (string) $guia['consejos'])));
+?>
+<!-- ── Guía de talles ──────────────────────────────────────────────────── -->
+<div id="modalGuia" class="hidden fixed inset-0 z-[60]">
+    <div class="absolute inset-0 bg-black/50" onclick="cerrarGuia()"></div>
+    <div class="absolute inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center md:p-6 pointer-events-none">
+        <div class="pointer-events-auto bg-white w-full md:max-w-2xl max-h-[90vh] overflow-y-auto rounded-t-3xl md:rounded-3xl shadow-xl">
+            <div class="sticky top-0 bg-white flex items-center justify-between px-6 py-4 border-b">
+                <h3 class="text-lg font-bold text-gray-900">Guía de talles</h3>
+                <button type="button" onclick="cerrarGuia()" class="text-2xl leading-none text-gray-400 hover:text-gray-900" aria-label="Cerrar">✕</button>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <?php if ($colMedidas): ?>
+                    <!-- Ayudante -->
+                    <div class="bg-gray-50 rounded-2xl p-4">
+                        <p class="font-semibold text-gray-900 mb-3">¿No sabés tu talle? Escribí tu medida</p>
+                        <div class="flex flex-wrap gap-3">
+                            <?php foreach ($colMedidas as $i): ?>
+                                <label class="text-sm">
+                                    <span class="block text-gray-500 mb-1"><?= htmlspecialchars($guia['columnas'][$i]['nombre']) ?></span>
+                                    <input type="text" inputmode="decimal" data-medida="<?= $i ?>" placeholder="Ej: 25"
+                                           class="w-32 border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-200">
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <p id="guiaResultado" class="hidden mt-3 text-sm"></p>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Tabla -->
+                <div class="overflow-x-auto border rounded-2xl">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                                <?php foreach ($guia['columnas'] as $c): ?>
+                                    <th class="px-4 py-3 text-left font-semibold whitespace-nowrap"><?= htmlspecialchars($c['nombre']) ?></th>
+                                <?php endforeach; ?>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($guia['filas'] as $r => $fila): ?>
+                                <tr class="border-t transition" data-fila="<?= $r ?>">
+                                    <?php foreach ($fila as $i => $valor): ?>
+                                        <td class="px-4 py-2.5 whitespace-nowrap <?= $i === $colTalle ? 'font-semibold text-gray-900' : 'text-gray-600' ?>">
+                                            <?= htmlspecialchars($valor) ?>
+                                        </td>
+                                    <?php endforeach; ?>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <?php if (!empty($guia['imagen']) || $consejos): ?>
+                    <div class="grid grid-cols-1 <?= !empty($guia['imagen']) && $consejos ? 'md:grid-cols-2' : '' ?> gap-5 items-start">
+                        <?php if (!empty($guia['imagen'])): ?>
+                            <img src="<?= BASE_URL ?>/public/uploads/guias/<?= htmlspecialchars($guia['imagen']) ?>" alt="Cómo medirse"
+                                 class="w-full rounded-2xl border bg-gray-50 object-contain max-h-72">
+                        <?php endif; ?>
+                        <?php if ($consejos): ?>
+                            <div>
+                                <p class="font-semibold text-gray-900 mb-2">Cómo medirte</p>
+                                <ul class="space-y-2 text-sm text-gray-600">
+                                    <?php foreach ($consejos as $c): ?>
+                                        <li class="flex gap-2"><span class="text-gray-400">•</span><span><?= htmlspecialchars($c) ?></span></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($producto['nota_calce'])): ?>
+                    <p class="text-sm bg-gray-50 rounded-xl px-4 py-3 text-gray-700">ℹ️ <strong>Este modelo:</strong> <?= htmlspecialchars($producto['nota_calce']) ?></p>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
 </div>
 <?php endif; ?>
 
@@ -486,6 +582,84 @@ function seleccionarTalle(talle) {
     cargarColores();
     actualizarStock();
 }
+
+// ══════════════════════════════════════════════════════════════
+// GUÍA DE TALLES
+// ══════════════════════════════════════════════════════════════
+const GUIA = <?= !empty($guia) ? json_encode(['filas' => $guia['filas'], 'columnas' => $guia['columnas']], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) : 'null' ?>;
+
+function abrirGuia() {
+    document.getElementById('modalGuia').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+function cerrarGuia() {
+    document.getElementById('modalGuia').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+/** "24,5" → {min: 24.5, max: 24.5}; "88–94" → {min: 88, max: 94}; texto → null */
+function leerMedida(texto) {
+    const nums = String(texto).replace(/,/g, '.').match(/\d+(\.\d+)?/g);
+    if (!nums) return null;
+    const v = nums.map(Number);
+    return { min: Math.min(...v), max: Math.max(...v), rango: v.length > 1 };
+}
+
+function recomendarTalle() {
+    if (!GUIA) return;
+    const entradas = [...document.querySelectorAll('[data-medida]')]
+        .map(i => ({ col: +i.dataset.medida, valor: parseFloat(i.value.replace(',', '.')) }))
+        .filter(e => !isNaN(e.valor) && e.valor > 0);
+
+    const filasHtml = document.querySelectorAll('#modalGuia tbody tr');
+    filasHtml.forEach(tr => tr.classList.remove('bg-gray-900', 'text-white'));
+    const res = document.getElementById('guiaResultado');
+
+    if (!entradas.length) { res.classList.add('hidden'); return; }
+
+    const colTalle = GUIA.columnas.findIndex(c => c.tipo === 'talle');
+    let mejor = null, mejorPuntaje = Infinity;
+
+    GUIA.filas.forEach((fila, r) => {
+        let puntaje = 0, valida = true;
+        entradas.forEach(e => {
+            const m = leerMedida(fila[e.col]);
+            if (!m) { valida = false; return; }
+            if (m.rango) {
+                // Rango (ropa): 0 si está adentro; si no, la distancia al borde
+                puntaje += e.valor < m.min ? m.min - e.valor : (e.valor > m.max ? (e.valor - m.max) * 2 : 0);
+            } else {
+                // Medida única (calzado): el talle cuya medida alcanza a cubrir la tuya, lo más justo posible
+                puntaje += m.max >= e.valor ? m.max - e.valor : (e.valor - m.max) * 10;
+            }
+        });
+        // Empate: gana la fila de abajo (el talle más grande)
+        if (valida && puntaje <= mejorPuntaje) { mejorPuntaje = puntaje; mejor = r; }
+    });
+
+    if (mejor === null) { res.classList.add('hidden'); return; }
+
+    filasHtml[mejor].classList.add('bg-gray-900', 'text-white');
+    filasHtml[mejor].querySelectorAll('td').forEach(td => td.classList.remove('text-gray-600', 'text-gray-900'));
+    filasHtml[mejor].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+    const talle = GUIA.filas[mejor][colTalle];
+    res.innerHTML = mejorPuntaje === 0
+        ? `Tu talle es el <strong>${talle}</strong>.`
+        : `Te recomendamos el <strong>${talle}</strong>${mejorPuntaje > 3 ? ' (tu medida está fuera de la tabla: confirmanos por WhatsApp)' : ''}.`;
+    res.classList.remove('hidden');
+
+    // Si ese talle existe en el producto, ofrecer elegirlo
+    if (variantes.some(v => v.talle === talle)) {
+        res.innerHTML += ` <button type="button" class="underline font-semibold" onclick="cerrarGuia(); seleccionarTalle('${talle.replace(/'/g, "\\'")}')">Elegirlo</button>`;
+    }
+}
+
+document.querySelectorAll('[data-medida]').forEach(i => i.addEventListener('input', recomendarTalle));
+document.addEventListener('keydown', e => {
+    const m = document.getElementById('modalGuia');
+    if (e.key === 'Escape' && m && !m.classList.contains('hidden')) cerrarGuia();
+});
 
 function cargarTalles() {
     const talles = [...new Set(variantes.map(v => v.talle).filter(Boolean))];

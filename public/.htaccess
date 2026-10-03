@@ -139,6 +139,7 @@ RewriteRule ^admin/productos/subir-foto/?$          index.php?route=productos_su
 RewriteRule ^admin/productos/subir-foto-ajax/?$     index.php?route=productos_subir_foto_ajax     [L,QSA]
 RewriteRule ^admin/productos/eliminar-foto/?$       index.php?route=productos_eliminar_foto       [L,QSA]
 RewriteRule ^admin/productos/ordenar-fotos/?$       index.php?route=productos_ordenar_fotos       [L,QSA]
+RewriteRule ^admin/productos/guia/?$                index.php?route=productos_guia                [L,QSA]
 
 # Talles
 RewriteRule ^admin/talles/?$            index.php?route=talles             [L,QSA]
@@ -148,6 +149,13 @@ RewriteRule ^admin/talles/editar/?$     index.php?route=talles_editar      [L,QS
 RewriteRule ^admin/talles/actualizar/?$ index.php?route=talles_actualizar  [L,QSA]
 RewriteRule ^admin/talles/eliminar/?$   index.php?route=talles_eliminar    [L,QSA]
 RewriteRule ^admin/talles/crear-ajax/?$ index.php?route=talles_crear_ajax  [L,QSA]
+
+# Guías de talles
+RewriteRule ^admin/guias/?$            index.php?route=guias            [L,QSA]
+RewriteRule ^admin/guias/editar/?$     index.php?route=guias_editar     [L,QSA]
+RewriteRule ^admin/guias/guardar/?$    index.php?route=guias_guardar    [L,QSA]
+RewriteRule ^admin/guias/duplicar/?$   index.php?route=guias_duplicar   [L,QSA]
+RewriteRule ^admin/guias/eliminar/?$   index.php?route=guias_eliminar   [L,QSA]
 
 # Promociones
 RewriteRule ^admin/promociones/?$                index.php?route=promociones                [L,QSA]

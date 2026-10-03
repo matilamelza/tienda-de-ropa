@@ -150,6 +150,7 @@ class TiendaController extends Controller
             'meta'           => $meta,
             'descuento'      => $descuento,
             'relacionados'   => $productoModel->relacionados($producto, 4),
+            'guia'           => (new GuiaTalles())->deProducto($producto),
         ], 'tienda');
     }
 

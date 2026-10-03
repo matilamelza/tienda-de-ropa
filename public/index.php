@@ -95,6 +95,7 @@ require_once __DIR__ . '/../app/Models/Movimiento.php';
 require_once __DIR__ . '/../app/Models/Promocion.php';
 require_once __DIR__ . '/../app/Models/ImportacionProductos.php';
 require_once __DIR__ . '/../app/Models/ConfiguracionTienda.php';
+require_once __DIR__ . '/../app/Models/GuiaTalles.php';
 
 // ── Controllers ──────────────────────────────────────────────────────────────
 require_once __DIR__ . '/../app/Controllers/DashboardController.php';
@@ -118,6 +119,7 @@ require_once __DIR__ . '/../app/Controllers/ClienteAdminController.php';
 require_once __DIR__ . '/../app/Controllers/AdminAuthController.php';
 require_once __DIR__ . '/../app/Controllers/ConfiguracionController.php';
 require_once __DIR__ . '/../app/Controllers/VentaController.php';
+require_once __DIR__ . '/../app/Controllers/GuiaTallesController.php';
 
 // ── Modo mantenimiento ───────────────────────────────────────────────────────
 $cfgTienda = new ConfiguracionTienda();
@@ -339,9 +341,14 @@ switch ($route) {
         (new ProductoController())->previsualizarImportacion();
         break;
 
-        case 'productos_importar_aplicar':
+    case 'productos_importar_aplicar':
         requireAdmin();
         (new ProductoController())->aplicarImportacion();
+        break;
+
+    case 'productos_guia':
+        requireAdmin();
+        (new ProductoController())->guardarGuia();
         break;
     
         // ─── PROMOCIONES ───────────────────────────────────────────────────────────
@@ -391,6 +398,7 @@ switch ($route) {
         requireAdmin();
         (new PromocionController())->ofertaRapida();
         break;
+        
 
         // ─── CATÁLOGO ──────────────────────────────────────────────────────────────
 
@@ -521,6 +529,33 @@ switch ($route) {
         requireAdmin();
         $controller = new TalleController();
         $controller->crearAjax();
+        break;
+
+        // ─── GUÍAS DE TALLES ───────────────────────────────────────────────────────
+
+    case 'guias':
+        requireAdmin();
+        (new GuiaTallesController())->index();
+        break;
+
+    case 'guias_editar':
+        requireAdmin();
+        (new GuiaTallesController())->editar();
+        break;
+
+    case 'guias_guardar':
+        requireAdmin();
+        (new GuiaTallesController())->guardar();
+        break;
+
+    case 'guias_duplicar':
+        requireAdmin();
+        (new GuiaTallesController())->duplicar();
+        break;
+
+    case 'guias_eliminar':
+        requireAdmin();
+        (new GuiaTallesController())->eliminar();
         break;
 
     // ─── COLORES ───────────────────────────────────────────────────────────────
