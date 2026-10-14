@@ -160,9 +160,8 @@
             </a>
 
                         <!-- Nav categorías (desktop): entran todas las que caben; el resto va a "Más" -->
-            <nav id="navCategorias" class="hidden md:flex flex-1 min-w-0 items-center justify-center gap-5 text-sm font-medium"
+            <nav id="navCategorias" class="hidden md:flex flex-1 min-w-0 items-center justify-center gap-6 lg:gap-7 mx-6 lg:mx-10 text-sm font-medium"
                  style="visibility: hidden">
-                <a href="<?= BASE_URL ?>/tienda" class="hover:opacity-70 whitespace-nowrap shrink-0">Inicio</a>
 
                 <?php foreach ($itemsMenu as $i => $catMenu): ?>
                     <a href="<?= BASE_URL ?>/categoria/<?= urlencode($catMenu['slug']) ?>"
