@@ -135,8 +135,8 @@
                 </svg>
             </button>
 
-            <!-- Logo + Nombre -->
-            <a href="<?= BASE_URL ?>/tienda" class="flex items-center gap-3 min-w-0">
+             <!-- Logo + Nombre (nunca se achica: es el menú el que se adapta) -->
+            <a href="<?= BASE_URL ?>/tienda" class="flex items-center gap-3 shrink-0">
                 <?php if (!empty($conf['tienda_logo'])): ?>
                     <img src="<?= BASE_URL ?>/<?= htmlspecialchars($conf['tienda_logo']) ?>"
                          alt="<?= htmlspecialchars($nombreTienda) ?>"
@@ -147,31 +147,67 @@
                         <?= htmlspecialchars($inicial) ?>
                     </div>
                 <?php endif; ?>
-                <div class="min-w-0">
-                    <span class="block text-lg md:text-xl font-bold leading-none truncate">
+                <div>
+                    <span class="block text-lg md:text-xl font-bold leading-none whitespace-nowrap">
                         <?= htmlspecialchars($nombreTienda) ?>
                     </span>
                     <?php if (!empty($conf['tienda_slogan'])): ?>
-                        <span class="hidden sm:block text-xs text-gray-500 mt-1 truncate">
+                        <span class="hidden lg:block text-xs text-gray-500 mt-1 whitespace-nowrap">
                             <?= htmlspecialchars($conf['tienda_slogan']) ?>
                         </span>
                     <?php endif; ?>
                 </div>
             </a>
 
-            <!-- Nav categorías (desktop) -->
-            <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
-                <a href="<?= BASE_URL ?>/tienda" class="hover:opacity-70">Inicio</a>
-                <?php foreach ($itemsMenu as $catMenu): ?>
-                    <a href="<?= BASE_URL ?>/categoria/<?= urlencode($catMenu['slug']) ?>"
-                       class="hover:opacity-70">
-                        <?= htmlspecialchars($catMenu['nombre']) ?>
-                    </a>
+            <!-- Nav categorías (desktop): las primeras en la barra, el resto en "Más" -->
+            <?php
+            $totalCats = count($itemsMenu);
+            // Cuántas van en la barra según el ancho: 2 en lg, 4 en xl. En md, ninguna (todas en el desplegable).
+            $enBarra = fn(int $i) => $i < 2 ? 'hidden lg:inline-flex' : ($i < 4 ? 'hidden xl:inline-flex' : null);
+            $enMas   = fn(int $i) => $i < 2 ? 'lg:hidden'            : ($i < 4 ? 'xl:hidden'            : '');
+            // El botón "Más" desaparece si en ese ancho ya entran todas
+            $claseMas = $totalCats <= 2 ? 'lg:hidden' : ($totalCats <= 4 ? 'xl:hidden' : '');
+            ?>
+            <nav class="hidden md:flex flex-1 min-w-0 items-center justify-center gap-5 text-sm font-medium">
+                <a href="<?= BASE_URL ?>/tienda" class="hover:opacity-70 whitespace-nowrap">Inicio</a>
+
+                <?php foreach ($itemsMenu as $i => $catMenu): ?>
+                    <?php if ($clase = $enBarra($i)): ?>
+                        <a href="<?= BASE_URL ?>/categoria/<?= urlencode($catMenu['slug']) ?>"
+                           class="<?= $clase ?> hover:opacity-70 whitespace-nowrap">
+                            <?= htmlspecialchars($catMenu['nombre']) ?>
+                        </a>
+                    <?php endif; ?>
                 <?php endforeach; ?>
+
+                <?php if ($totalCats > 0): ?>
+                    <div class="relative <?= $claseMas ?>" id="menuMas">
+                        <button type="button" onclick="alternarMenuMas(event)" aria-haspopup="true" aria-expanded="false"
+                                class="inline-flex items-center gap-1 hover:opacity-70 whitespace-nowrap">
+                            <span class="lg:hidden">Categorías</span>
+                            <span class="hidden lg:inline">Más</span>
+                            <svg class="w-3.5 h-3.5 transition-transform" id="flechaMas" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
+                            </svg>
+                        </button>
+
+                        <div id="panelMas"
+                             class="hidden absolute right-0 lg:left-1/2 lg:right-auto lg:-translate-x-1/2 top-full mt-3 z-50
+                                    bg-white text-gray-900 border rounded-2xl shadow-xl p-2
+                                    <?= $totalCats > 8 ? 'w-[26rem] grid grid-cols-2' : 'w-56' ?> max-h-[70vh] overflow-y-auto">
+                            <?php foreach ($itemsMenu as $i => $catMenu): ?>
+                                <a href="<?= BASE_URL ?>/categoria/<?= urlencode($catMenu['slug']) ?>"
+                                   class="<?= $enMas($i) ?> block px-3 py-2 rounded-lg text-sm font-normal hover:bg-gray-50 whitespace-nowrap overflow-hidden text-ellipsis">
+                                    <?= htmlspecialchars($catMenu['nombre']) ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </nav>
 
             <!-- Acciones -->
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-4 shrink-0 whitespace-nowrap">
                 <div class="hidden md:flex items-center gap-4">
                     <?php if (isset($_SESSION['cliente'])): ?>
                         <a href="<?= BASE_URL ?>/mi-cuenta/pedidos" class="text-sm hover:opacity-70">Mis pedidos</a>
@@ -332,5 +368,32 @@
     window.matchMedia('(min-width: 768px)').addEventListener('change', e => {
         if (e.matches) cerrarMenuMobile();
     });
+})();
+</script>
+
+<script>
+(function () {
+    const panel  = document.getElementById('panelMas');
+    const flecha = document.getElementById('flechaMas');
+    if (!panel) return;
+    const boton = panel.previousElementSibling;
+
+    function cerrar() {
+        panel.classList.add('hidden');
+        flecha.classList.remove('rotate-180');
+        boton.setAttribute('aria-expanded', 'false');
+    }
+
+    window.alternarMenuMas = function (e) {
+        e.stopPropagation();
+        const abrir = panel.classList.contains('hidden');
+        panel.classList.toggle('hidden', !abrir);
+        flecha.classList.toggle('rotate-180', abrir);
+        boton.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+    };
+
+    // Cerrar al tocar afuera o con Escape
+    document.addEventListener('click', e => { if (!panel.contains(e.target)) cerrar(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrar(); });
 })();
 </script>
