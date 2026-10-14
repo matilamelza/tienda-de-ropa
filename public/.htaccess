@@ -102,6 +102,8 @@ RewriteRule ^admin/categorias/guardar/?$      index.php?route=categorias_guardar
 RewriteRule ^admin/categorias/editar/?$       index.php?route=categorias_editar [L,QSA]
 RewriteRule ^admin/categorias/actualizar/?$   index.php?route=categorias_actualizar [L,QSA]
 RewriteRule ^admin/categorias/eliminar/?$     index.php?route=categorias_eliminar [L,QSA]
+RewriteRule ^admin/categorias/ordenar/?$      index.php?route=categorias_ordenar [L,QSA]
+RewriteRule ^admin/categorias/toggle/?$       index.php?route=categorias_toggle [L,QSA]
 
 # Marcas
 RewriteRule ^admin/marcas/?$                  index.php?route=marcas [L,QSA]

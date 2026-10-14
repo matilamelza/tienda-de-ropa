@@ -8,7 +8,7 @@ class Categoria extends Conexion
     
     public function listarActivas()
     {
-        return $this->db->query("SELECT * FROM categorias WHERE activo = 1 ORDER BY nombre ASC");
+        return $this->db->query("SELECT * FROM categorias WHERE activo = 1 ORDER BY orden ASC, nombre ASC");
     }
 
     public function listarMenu()
@@ -16,7 +16,7 @@ class Categoria extends Conexion
         $sql = "SELECT id_categoria, nombre, slug 
                 FROM categorias 
                 WHERE activo = 1 
-                ORDER BY nombre ASC";
+                ORDER BY orden ASC, nombre ASC";
 
         return $this->db->query($sql);
     }
@@ -31,7 +31,7 @@ class Categoria extends Conexion
                 LEFT JOIN productos p ON p.id_categoria = c.id_categoria
                 WHERE c.slug <> '" . self::SLUG_ARCHIVO . "'
                 GROUP BY c.id_categoria
-                ORDER BY c.nombre ASC";
+                ORDER BY c.orden ASC, c.nombre ASC";
 
         return $this->db->query($sql);
     }
@@ -138,5 +138,36 @@ class Categoria extends Conexion
         );
         $stmt->bind_param("ii", $idArchivo, $id);
         $stmt->execute();
+    }
+
+        /** Guarda el orden según la posición en el array de ids. */
+    public function ordenar(array $ids): void
+    {
+        $stmt = $this->db->prepare("UPDATE categorias SET orden = ? WHERE id_categoria = ?");
+        foreach (array_values($ids) as $pos => $id) {
+            $orden = $pos + 1;
+            $id    = (int) $id;
+            $stmt->bind_param("ii", $orden, $id);
+            $stmt->execute();
+        }
+    }
+
+    /** Activa o desactiva. Devuelve el valor nuevo (null si no existe o es la de archivo). */
+    public function alternarActivo(int $id): ?int
+    {
+        $archivo = self::SLUG_ARCHIVO;
+
+        $stmt = $this->db->prepare("UPDATE categorias SET activo = 1 - activo WHERE id_categoria = ? AND slug <> ?");
+        $stmt->bind_param("is", $id, $archivo);
+        $stmt->execute();
+        if ($stmt->affected_rows === 0) {
+            return null;
+        }
+
+        $stmt = $this->db->prepare("SELECT activo FROM categorias WHERE id_categoria = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+
+        return (int) $stmt->get_result()->fetch_assoc()['activo'];
     }
 }

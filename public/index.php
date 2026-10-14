@@ -454,6 +454,16 @@ switch ($route) {
         $controller->eliminar();
         break;
 
+        case 'categorias_ordenar':
+        requireAdmin();
+        (new CategoriaController())->ordenar();
+        break;
+
+    case 'categorias_toggle':
+        requireAdmin();
+        (new CategoriaController())->toggle();
+        break;
+
     // ─── MARCAS ────────────────────────────────────────────────────────────────
 
     case 'marcas':

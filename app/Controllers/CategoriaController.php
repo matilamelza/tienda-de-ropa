@@ -111,4 +111,28 @@ class CategoriaController extends Controller
 
         $this->redirect(BASE_URL . '/admin/categorias?ok=eliminada');
     }
+
+        /** AJAX: nuevo orden después de arrastrar. */
+    public function ordenar()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['ok' => false], 405);
+        }
+        $ids = array_values(array_filter(array_map('intval', (array) ($_POST['ids'] ?? []))));
+        if (!$ids) {
+            $this->json(['ok' => false], 400);
+        }
+        (new Categoria())->ordenar($ids);
+        $this->json(['ok' => true]);
+    }
+
+    /** AJAX: activar / desactivar con un toque. */
+    public function toggle()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['ok' => false], 405);
+        }
+        $valor = (new Categoria())->alternarActivo((int) ($_POST['id'] ?? 0));
+        $this->json($valor === null ? ['ok' => false] : ['ok' => true, 'activo' => $valor]);
+    }
 }
