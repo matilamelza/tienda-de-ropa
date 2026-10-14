@@ -159,45 +159,35 @@
                 </div>
             </a>
 
-            <!-- Nav categorías (desktop): las primeras en la barra, el resto en "Más" -->
-            <?php
-            $totalCats = count($itemsMenu);
-            // Cuántas van en la barra según el ancho: 2 en lg, 4 en xl. En md, ninguna (todas en el desplegable).
-            $enBarra = fn(int $i) => $i < 2 ? 'hidden lg:inline-flex' : ($i < 4 ? 'hidden xl:inline-flex' : null);
-            $enMas   = fn(int $i) => $i < 2 ? 'lg:hidden'            : ($i < 4 ? 'xl:hidden'            : '');
-            // El botón "Más" desaparece si en ese ancho ya entran todas
-            $claseMas = $totalCats <= 2 ? 'lg:hidden' : ($totalCats <= 4 ? 'xl:hidden' : '');
-            ?>
-            <nav class="hidden md:flex flex-1 min-w-0 items-center justify-center gap-5 text-sm font-medium">
-                <a href="<?= BASE_URL ?>/tienda" class="hover:opacity-70 whitespace-nowrap">Inicio</a>
+                        <!-- Nav categorías (desktop): entran todas las que caben; el resto va a "Más" -->
+            <nav id="navCategorias" class="hidden md:flex flex-1 min-w-0 items-center justify-center gap-5 text-sm font-medium"
+                 style="visibility: hidden">
+                <a href="<?= BASE_URL ?>/tienda" class="hover:opacity-70 whitespace-nowrap shrink-0">Inicio</a>
 
                 <?php foreach ($itemsMenu as $i => $catMenu): ?>
-                    <?php if ($clase = $enBarra($i)): ?>
-                        <a href="<?= BASE_URL ?>/categoria/<?= urlencode($catMenu['slug']) ?>"
-                           class="<?= $clase ?> hover:opacity-70 whitespace-nowrap">
-                            <?= htmlspecialchars($catMenu['nombre']) ?>
-                        </a>
-                    <?php endif; ?>
+                    <a href="<?= BASE_URL ?>/categoria/<?= urlencode($catMenu['slug']) ?>"
+                       data-cat="<?= $i ?>" class="cat-barra hover:opacity-70 whitespace-nowrap shrink-0">
+                        <?= htmlspecialchars($catMenu['nombre']) ?>
+                    </a>
                 <?php endforeach; ?>
 
-                <?php if ($totalCats > 0): ?>
-                    <div class="relative <?= $claseMas ?>" id="menuMas">
+                <?php if (!empty($itemsMenu)): ?>
+                    <div class="relative shrink-0 hidden" id="menuMas">
                         <button type="button" onclick="alternarMenuMas(event)" aria-haspopup="true" aria-expanded="false"
                                 class="inline-flex items-center gap-1 hover:opacity-70 whitespace-nowrap">
-                            <span class="lg:hidden">Categorías</span>
-                            <span class="hidden lg:inline">Más</span>
+                            <span id="textoMas">Más</span>
                             <svg class="w-3.5 h-3.5 transition-transform" id="flechaMas" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
                             </svg>
                         </button>
 
                         <div id="panelMas"
-                             class="hidden absolute right-0 lg:left-1/2 lg:right-auto lg:-translate-x-1/2 top-full mt-3 z-50
-                                    bg-white text-gray-900 border rounded-2xl shadow-xl p-2
-                                    <?= $totalCats > 8 ? 'w-[26rem] grid grid-cols-2' : 'w-56' ?> max-h-[70vh] overflow-y-auto">
+                             class="hidden absolute right-0 top-full mt-3 z-50 bg-white text-gray-900 border rounded-2xl shadow-xl p-2
+                                    w-56 max-h-[70vh] overflow-y-auto">
                             <?php foreach ($itemsMenu as $i => $catMenu): ?>
                                 <a href="<?= BASE_URL ?>/categoria/<?= urlencode($catMenu['slug']) ?>"
-                                   class="<?= $enMas($i) ?> block px-3 py-2 rounded-lg text-sm font-normal hover:bg-gray-50 whitespace-nowrap overflow-hidden text-ellipsis">
+                                   data-cat="<?= $i ?>"
+                                   class="cat-mas hidden px-3 py-2 rounded-lg text-sm font-normal hover:bg-gray-50 whitespace-nowrap overflow-hidden text-ellipsis">
                                     <?= htmlspecialchars($catMenu['nombre']) ?>
                                 </a>
                             <?php endforeach; ?>
@@ -370,11 +360,69 @@
     });
 })();
 </script>
-
 <script>
 (function () {
+    const nav    = document.getElementById('navCategorias');
+    const wrap   = document.getElementById('menuMas');
     const panel  = document.getElementById('panelMas');
     const flecha = document.getElementById('flechaMas');
+    const texto  = document.getElementById('textoMas');
+    if (!nav) return;
+
+    const enBarra = [...nav.querySelectorAll('.cat-barra')];
+    const enMas   = panel ? [...panel.querySelectorAll('.cat-mas')] : [];
+
+    /** Ancho que ocupa todo lo visible del menú (elementos + separaciones) */
+    function anchoUsado() {
+        const visibles = [...nav.children].filter(el => !el.classList.contains('hidden'));
+        const gap = parseFloat(getComputedStyle(nav).columnGap) || 0;
+        return visibles.reduce((s, el) => s + el.getBoundingClientRect().width, 0) + gap * Math.max(0, visibles.length - 1);
+    }
+
+    /** Pone en la barra todas las que entran; las demás, al "Más" */
+    function acomodar() {
+        if (!wrap) { nav.style.visibility = 'visible'; return; }
+
+        // Arranca con todo en la barra
+        enBarra.forEach(a => a.classList.remove('hidden'));
+        enMas.forEach(a => a.classList.add('hidden'));
+        wrap.classList.add('hidden');
+
+        const disponible = nav.clientWidth;
+
+        if (anchoUsado() > disponible) {
+            // Con el botón "Más" a la vista, saca categorías desde la última hasta que entre
+            wrap.classList.remove('hidden');
+            for (let i = enBarra.length - 1; i >= 0 && anchoUsado() > disponible; i--) {
+                enBarra[i].classList.add('hidden');
+                enMas[i].classList.remove('hidden');
+                enMas[i].classList.add('block');
+            }
+        }
+
+        // Si no quedó ninguna en la barra, el botón dice "Categorías"
+        const quedanEnBarra = enBarra.some(a => !a.classList.contains('hidden'));
+        if (texto) texto.textContent = quedanEnBarra ? 'Más' : 'Categorías';
+
+        // Si son muchas en el desplegable, en dos columnas
+        const cantMas = enMas.filter(a => !a.classList.contains('hidden')).length;
+        if (panel) {
+            panel.classList.toggle('w-56', cantMas <= 8);
+            panel.classList.toggle('w-[26rem]', cantMas > 8);
+            panel.classList.toggle('grid', cantMas > 8);
+            panel.classList.toggle('grid-cols-2', cantMas > 8);
+        }
+
+        nav.style.visibility = 'visible';
+    }
+
+    // Al cargar, cuando terminan de cargar las fuentes (cambian el ancho del texto) y al cambiar el tamaño
+    acomodar();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(acomodar);
+    let timer;
+    window.addEventListener('resize', () => { clearTimeout(timer); timer = setTimeout(acomodar, 100); });
+
+    // ── Abrir y cerrar el desplegable ────────────────────────────
     if (!panel) return;
     const boton = panel.previousElementSibling;
 
@@ -392,7 +440,6 @@
         boton.setAttribute('aria-expanded', abrir ? 'true' : 'false');
     };
 
-    // Cerrar al tocar afuera o con Escape
     document.addEventListener('click', e => { if (!panel.contains(e.target)) cerrar(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrar(); });
 })();
