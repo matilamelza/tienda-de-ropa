@@ -546,6 +546,15 @@ switch ($route) {
         $controller->crearAjax();
         break;
 
+    case 'talles_ordenar':
+        requireAdmin();
+        (new TalleController())->ordenar();
+        break;
+
+    case 'talles_toggle':
+        requireAdmin();
+        (new TalleController())->toggle();
+        break;
         // ─── GUÍAS DE TALLES ───────────────────────────────────────────────────────
 
     case 'guias':

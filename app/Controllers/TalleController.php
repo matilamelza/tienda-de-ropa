@@ -155,4 +155,28 @@ class TalleController extends Controller
 
         $this->json(['ok' => true, 'id' => $id, 'nombre' => $nombre]);
     }
+
+        /** AJAX: nuevo orden después de arrastrar u ordenar automáticamente. */
+    public function ordenar()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['ok' => false], 405);
+        }
+        $ids = array_values(array_filter(array_map('intval', (array) ($_POST['ids'] ?? []))));
+        if (!$ids) {
+            $this->json(['ok' => false], 400);
+        }
+        (new Talle())->ordenar($ids);
+        $this->json(['ok' => true]);
+    }
+
+    /** AJAX: activar / desactivar con un toque. */
+    public function toggle()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['ok' => false], 405);
+        }
+        $valor = (new Talle())->alternarActivo((int) ($_POST['id'] ?? 0));
+        $this->json($valor === null ? ['ok' => false] : ['ok' => true, 'activo' => $valor]);
+    }
 }

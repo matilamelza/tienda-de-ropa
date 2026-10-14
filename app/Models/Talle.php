@@ -102,4 +102,33 @@ class Talle extends Conexion
 
         return $stmt->execute();
     }
+
+        /** Guarda el orden según la posición en el array de ids. */
+    public function ordenar(array $ids): void
+    {
+        $stmt = $this->db->prepare("UPDATE talles SET orden = ? WHERE id_talle = ?");
+        foreach (array_values($ids) as $pos => $id) {
+            $orden = $pos + 1;
+            $id    = (int) $id;
+            $stmt->bind_param("ii", $orden, $id);
+            $stmt->execute();
+        }
+    }
+
+    /** Activa o desactiva. Devuelve el valor nuevo (null si no existe). */
+    public function alternarActivo(int $id): ?int
+    {
+        $stmt = $this->db->prepare("UPDATE talles SET activo = 1 - activo WHERE id_talle = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        if ($stmt->affected_rows === 0) {
+            return null;
+        }
+
+        $stmt = $this->db->prepare("SELECT activo FROM talles WHERE id_talle = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+
+        return (int) $stmt->get_result()->fetch_assoc()['activo'];
+    }
 }

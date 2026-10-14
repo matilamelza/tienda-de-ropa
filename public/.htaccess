@@ -152,6 +152,8 @@ RewriteRule ^admin/talles/editar/?$     index.php?route=talles_editar      [L,QS
 RewriteRule ^admin/talles/actualizar/?$ index.php?route=talles_actualizar  [L,QSA]
 RewriteRule ^admin/talles/eliminar/?$   index.php?route=talles_eliminar    [L,QSA]
 RewriteRule ^admin/talles/crear-ajax/?$ index.php?route=talles_crear_ajax  [L,QSA]
+RewriteRule ^admin/talles/ordenar/?$    index.php?route=talles_ordenar     [L,QSA]
+RewriteRule ^admin/talles/toggle/?$     index.php?route=talles_toggle      [L,QSA]
 
 # Guías de talles
 RewriteRule ^admin/guias/?$            index.php?route=guias            [L,QSA]
