@@ -6,7 +6,7 @@
   // ── Tu firma ────────────────────────────────────────────────────────
   // A dónde lleva tu nombre (WhatsApp, Instagram o tu web). Vacío = sin link.
   $creditoNombre = 'Matias Lamelza';
-  $creditoUrl    = '';   // ej: 'https://wa.me/5492364XXXXXX?text=' . rawurlencode('Hola Matias! Vi una tienda tuya y quiero una igual')
+  $creditoUrl    = 'https://wa.me/5492364513715?text=' . rawurlencode('Hola Matias! Vi la tienda de ' . ($conf['tienda_nombre'] ?? '') . ' y quiero una tienda online para mi negocio.');
 
   // Limpia usuarios de redes: saca @, espacios y URLs pegadas completas
   $usuarioRed = function (string $valor): string {
@@ -205,18 +205,14 @@
     <div class="<?= $medios ? 'mt-8' : 'mt-12 border-t border-white/10' ?> pt-6 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
       <p class="opacity-50"><?= htmlspecialchars($textoFooter) ?></p>
 
-      <p class="opacity-50 hover:opacity-90 transition flex items-center gap-1.5">
-        Hecho con
-        <svg class="w-3.5 h-3.5 text-red-400" fill="currentColor" viewBox="0 0 24 24" aria-label="amor">
-          <path d="M12 21s-7.5-4.6-9.6-9.4C.9 8.2 3 4.5 6.6 4.5c2 0 3.6 1.1 4.4 2.6.8-1.5 2.4-2.6 4.4-2.6 3.6 0 5.7 3.7 4.2 7.1C19.5 16.4 12 21 12 21z"/>
-        </svg>
-        por
+      <p class="opacity-40">
+        Desarrollado por
         <?php if ($creditoUrl): ?>
-          <a href="<?= htmlspecialchars($creditoUrl) ?>" target="_blank" rel="noopener" class="font-semibold underline-offset-2 hover:underline">
+          <a href="<?= htmlspecialchars($creditoUrl) ?>" target="_blank" rel="noopener" class="hover:opacity-100 hover:underline underline-offset-2">
             <?= htmlspecialchars($creditoNombre) ?>
           </a>
         <?php else: ?>
-          <span class="font-semibold"><?= htmlspecialchars($creditoNombre) ?></span>
+          <?= htmlspecialchars($creditoNombre) ?>
         <?php endif; ?>
       </p>
     </div>
