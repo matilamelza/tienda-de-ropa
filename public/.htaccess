@@ -112,6 +112,7 @@ RewriteRule ^admin/marcas/guardar/?$          index.php?route=marcas_guardar [L,
 RewriteRule ^admin/marcas/editar/?$           index.php?route=marcas_editar [L,QSA]
 RewriteRule ^admin/marcas/actualizar/?$       index.php?route=marcas_actualizar [L,QSA]
 RewriteRule ^admin/marcas/eliminar/?$         index.php?route=marcas_eliminar [L,QSA]
+RewriteRule ^admin/marcas/toggle/?$           index.php?route=marcas_toggle [L,QSA]
 
 # Productos
 RewriteRule ^admin/productos/?$                     index.php?route=productos                     [L,QSA]

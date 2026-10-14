@@ -502,6 +502,11 @@ switch ($route) {
         $controller->eliminar();
         break;
 
+    case 'marcas_toggle':
+        requireAdmin();
+        (new MarcaController())->toggle();
+        break;
+
     // ─── TALLES ────────────────────────────────────────────────────────────────
 
     case 'talles':

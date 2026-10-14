@@ -106,4 +106,14 @@ class MarcaController extends Controller
 
         $this->redirect(BASE_URL . '/admin/marcas?ok=eliminada');
     }
+
+        /** AJAX: activar / desactivar con un toque. */
+    public function toggle()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['ok' => false], 405);
+        }
+        $valor = (new Marca())->alternarActivo((int) ($_POST['id'] ?? 0));
+        $this->json($valor === null ? ['ok' => false] : ['ok' => true, 'activo' => $valor]);
+    }
 }

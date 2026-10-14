@@ -87,4 +87,21 @@ class Marca extends Conexion
         $stmt->bind_param("i", $id);
         $stmt->execute();
     }
+
+        /** Activa o desactiva. Devuelve el valor nuevo (null si no existe). */
+    public function alternarActivo(int $id): ?int
+    {
+        $stmt = $this->db->prepare("UPDATE marcas SET activo = 1 - activo WHERE id_marca = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        if ($stmt->affected_rows === 0) {
+            return null;
+        }
+
+        $stmt = $this->db->prepare("SELECT activo FROM marcas WHERE id_marca = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+
+        return (int) $stmt->get_result()->fetch_assoc()['activo'];
+    }
 }
