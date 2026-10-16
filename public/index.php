@@ -781,6 +781,10 @@ switch ($route) {
         $controller->index();
         break;
 
+    case 'tienda_mas':
+        (new TiendaController())->masProductos();
+        break;
+
     case 'producto':
         $controller = new TiendaController();
         $controller->detalle();

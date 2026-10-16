@@ -1,111 +1,3 @@
-<?php
-function urlFiltro(array $nuevos): string {
-    $base = array_merge($_GET, $nuevos);
-    $base = array_filter($base, fn($v) => $v !== '' && $v !== '0' && $v !== null);
-    unset($base['route']);
-    return BASE_URL . '/tienda?' . http_build_query($base);
-}
-?>
-
-<?php if (!$hayFiltros && ($config['hero_estilo'] ?? '') !== 'ninguno'):
-    $heroImg    = !empty($config['hero_imagen']) ? BASE_URL . '/' . $config['hero_imagen'] : '';
-    $heroEstilo = $config['hero_estilo'] ?? '';
-
-    if ($heroEstilo === '') {
-        $heroEstilo = $heroImg ? 'imagen' : 'gradiente';
-    }
-    if ($heroEstilo === 'imagen' && !$heroImg) {
-        $heroEstilo = 'gradiente';
-    }
-
-    $estilosHero = [
-        'imagen'    => "background-image:url('" . htmlspecialchars($heroImg, ENT_QUOTES) . "');background-size:cover;background-position:center;",
-        'gradiente' => 'background:linear-gradient(135deg, var(--color-primario), var(--color-secundario));',
-        'color'     => 'background:var(--color-primario);',
-    ];
-    $heroBg       = $estilosHero[$heroEstilo] ?? $estilosHero['gradiente'];
-    $heroEtiqueta = $config['hero_etiqueta'] ?? '';
-?>
-<!-- ── Hero (solo sin filtros activos) ─────────────────────────────────────── -->
-<section class="relative overflow-hidden" style="<?= $heroBg ?>">
-
-    <?php if ($heroEstilo === 'imagen'): ?>
-        <div class="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-transparent"></div>
-    <?php else: ?>
-        <!-- Formas decorativas -->
-        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/10 blur-3xl"></div>
-        <div class="absolute -bottom-32 left-1/3 w-80 h-80 rounded-full bg-white/10 blur-3xl"></div>
-    <?php endif; ?>
-
-    <div class="relative max-w-7xl mx-auto px-4 py-20 md:py-32">
-        <div class="max-w-2xl text-white">
-
-            <?php if (trim($heroEtiqueta) !== ''): ?>
-                <span class="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/25 text-white text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6">
-                    <span class="w-2 h-2 rounded-full animate-pulse" style="background:var(--color-acento)"></span>
-                    <?= htmlspecialchars($heroEtiqueta) ?>
-                </span>
-            <?php endif; ?>
-
-            <h2 class="text-4xl md:text-6xl font-bold leading-tight drop-shadow-sm">
-                <?= htmlspecialchars($config['hero_titulo'] ?? 'Ropa con estilo para todos los días') ?>
-            </h2>
-
-            <p class="mt-5 text-lg md:text-xl text-white/85 max-w-xl">
-                <?= htmlspecialchars($config['hero_subtitulo'] ?? 'Descubrí prendas seleccionadas, talles disponibles y stock actualizado.') ?>
-            </p>
-
-            <a href="#productos"
-               class="inline-flex items-center gap-2 mt-8 bg-white text-gray-900 font-semibold px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition">
-                <?= htmlspecialchars($config['hero_boton_texto'] ?? 'Ver productos') ?>
-                <span aria-hidden="true">→</span>
-            </a>
-        </div>
-    </div>
-</section>
-<?php endif; ?>
-
-<?php if (!empty($destacados)): ?>
-<!-- ── Destacados ──────────────────────────────────────────────────────────── -->
-<section class="max-w-7xl mx-auto px-4 pt-10">
-    <div class="flex items-end justify-between mb-5">
-        <h2 class="text-2xl md:text-3xl font-bold text-gray-900">Destacados</h2>
-        <a href="#productos" class="text-sm text-gray-500 hover:text-gray-900">Ver todo →</a>
-    </div>
-
-    <!-- Mobile: se desliza de costado · Desktop: grilla -->
-    <div class="flex md:grid md:grid-cols-4 gap-4 md:gap-8 overflow-x-auto md:overflow-visible snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 pb-2">
-        <?php foreach ($destacados as $d): ?>
-            <a href="<?= BASE_URL ?>/producto/<?= htmlspecialchars($d['slug']) ?>"
-               class="group block shrink-0 w-[70%] sm:w-[45%] md:w-auto snap-start">
-                <div class="relative aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden shadow-sm group-hover:shadow-lg transition">
-                    <?php if (!empty($d['foto_principal'])): ?>
-                        <img src="<?= BASE_URL ?>/public/uploads/productos/<?= htmlspecialchars($d['foto_principal']) ?>"
-                             alt="<?= htmlspecialchars($d['nombre']) ?>"
-                             class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                             loading="lazy">
-                    <?php else: ?>
-                        <div class="w-full h-full flex items-center justify-center text-gray-400 text-sm">Sin imagen</div>
-                    <?php endif; ?>
-
-                    <span class="absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm"
-                          style="background: var(--color-acento); color: var(--color-boton-texto)">★ Destacado</span>
-
-                    <?= html_badge_oferta((float) ($d['descuento_pct'] ?? 0), $d['descuento_etiqueta'] ?? null) ?>
-                </div>
-                <div class="mt-3">
-                    <p class="text-xs text-gray-400">
-                        <?= htmlspecialchars($d['categoria']) ?><?= !empty($d['marca']) ? ' · ' . htmlspecialchars($d['marca']) : '' ?>
-                    </p>
-                    <h3 class="font-semibold text-gray-900 mt-1 line-clamp-2"><?= htmlspecialchars($d['nombre']) ?></h3>
-                    <p class="mt-1"><?= html_precio((float) $d['precio_base'], (float) ($d['descuento_pct'] ?? 0)) ?></p>
-                </div>
-            </a>
-        <?php endforeach; ?>
-    </div>
-</section>
-<?php endif; ?>
-
 <!-- ── Sección de productos ─────────────────────────────────────────────────── -->
 <section id="productos" class="max-w-7xl mx-auto px-4 py-10 scroll-mt-24">
 
@@ -114,7 +6,7 @@ function urlFiltro(array $nuevos): string {
 
         <!-- Buscador -->
         <form method="GET" action="<?= BASE_URL ?>/tienda" class="flex gap-2 flex-1 min-w-[200px]">
-            <?php foreach (['categoria','marca','precio_min','precio_max','orden','oferta'] as $k): ?>
+            <?php foreach (['categoria', 'marca', 'precio_min', 'precio_max', 'orden', 'oferta', 'talle'] as $k): ?>
                 <?php if (!empty($filtros[$k])): ?>
                     <input type="hidden" name="<?= $k ?>" value="<?= htmlspecialchars((string) $filtros[$k]) ?>">
                 <?php endif; ?>
@@ -122,9 +14,7 @@ function urlFiltro(array $nuevos): string {
             <input type="text" name="q" value="<?= htmlspecialchars($filtros['q']) ?>"
                    placeholder="Buscar productos…"
                    class="flex-1 border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200">
-            <button type="submit" class="btn-primario px-4 py-2 rounded-xl text-sm">
-                Buscar
-            </button>
+            <button type="submit" class="btn-primario px-4 py-2 rounded-xl text-sm">Buscar</button>
         </form>
 
         <div class="flex flex-wrap gap-2 items-center">
@@ -169,6 +59,19 @@ function urlFiltro(array $nuevos): string {
             </select>
             <?php endif; ?>
 
+            <!-- Talle (solo los que tienen stock) -->
+            <?php if (!empty($tallesFiltro)): ?>
+            <select onchange="aplicarFiltro('talle', this.value)"
+                    class="border rounded-xl px-3 py-2 text-sm focus:outline-none cursor-pointer">
+                <option value="">Todos los talles</option>
+                <?php foreach ($tallesFiltro as $t): ?>
+                    <option value="<?= htmlspecialchars($t) ?>" <?= $filtros['talle'] === $t ? 'selected' : '' ?>>
+                        Talle <?= htmlspecialchars($t) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <?php endif; ?>
+
             <!-- Precio -->
             <div class="flex items-center gap-1 border rounded-xl px-3 py-2">
                 <span class="text-xs text-gray-400">$</span>
@@ -176,13 +79,13 @@ function urlFiltro(array $nuevos): string {
                        value="<?= htmlspecialchars($filtros['precio_min']) ?>"
                        placeholder="Mín"
                        class="w-16 text-sm focus:outline-none"
-                       onblur="aplicarPrecios()">
+                       onchange="aplicarPrecios()">
                 <span class="text-gray-300 mx-1">—</span>
                 <input type="number" id="precioMax" min="0"
                        value="<?= htmlspecialchars($filtros['precio_max']) ?>"
                        placeholder="Máx"
                        class="w-16 text-sm focus:outline-none"
-                       onblur="aplicarPrecios()">
+                       onchange="aplicarPrecios()">
             </div>
 
             <!-- Orden -->
@@ -211,6 +114,9 @@ function urlFiltro(array $nuevos): string {
         <?php if (!empty($filtros['oferta'])): ?>
             <span class="bg-red-50 text-red-700 text-xs px-3 py-1 rounded-full">🔥 En oferta</span>
         <?php endif; ?>
+        <?php if ($filtros['talle'] !== ''): ?>
+            <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full">Talle <?= htmlspecialchars($filtros['talle']) ?></span>
+        <?php endif; ?>
         <?php if ($filtros['q']): ?>
             <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full">
                 "<?= htmlspecialchars($filtros['q']) ?>"
@@ -227,44 +133,28 @@ function urlFiltro(array $nuevos): string {
             </span>
         <?php endif; ?>
         <span class="text-sm text-gray-400 ml-auto">
-            <?= count($productos) ?> producto<?= count($productos) !== 1 ? 's' : '' ?>
+            <?= (int) $total ?> producto<?= $total !== 1 ? 's' : '' ?>
         </span>
     </div>
     <?php endif; ?>
 
     <!-- Grid de productos -->
     <?php if (!empty($productos)): ?>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div id="grillaProductos" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <?php foreach ($productos as $p): ?>
-                <a href="<?= BASE_URL ?>/producto/<?= htmlspecialchars($p['slug']) ?>" class="group block">
-                    <div class="relative aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden shadow-sm group-hover:shadow-lg transition">
-                        <?php if (!empty($p['foto_principal'])): ?>
-                            <img src="<?= BASE_URL ?>/public/uploads/productos/<?= htmlspecialchars($p['foto_principal']) ?>"
-                                 alt="<?= htmlspecialchars($p['nombre']) ?>"
-                                 class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                                 loading="lazy">
-                        <?php else: ?>
-                            <div class="w-full h-full flex items-center justify-center text-gray-400 text-sm">Sin imagen</div>
-                        <?php endif; ?>
-
-                        <?php if (!empty($p['destacado'])): ?>
-                            <span class="absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm"
-                                  style="background: var(--color-acento); color: var(--color-boton-texto)">★ Destacado</span>
-                        <?php endif; ?>
-
-                        <?= html_badge_oferta((float) ($p['descuento_pct'] ?? 0), $p['descuento_etiqueta'] ?? null) ?>
-                    </div>
-                    <div class="mt-4">
-                        <p class="text-xs text-gray-400">
-                            <?= htmlspecialchars($p['categoria']) ?>
-                            <?= !empty($p['marca']) ? ' · ' . htmlspecialchars($p['marca']) : '' ?>
-                        </p>
-                        <h3 class="font-semibold text-gray-900 mt-1"><?= htmlspecialchars($p['nombre']) ?></h3>
-                        <p class="mt-2"><?= html_precio((float) $p['precio_base'], (float) ($p['descuento_pct'] ?? 0)) ?></p>
-                    </div>
-                </a>
+                <?php require __DIR__ . '/_tarjeta.php'; ?>
             <?php endforeach; ?>
         </div>
+
+        <?php if ($total > count($productos)): ?>
+            <div id="cargarMas" class="mt-10 flex justify-center">
+                <div id="cargando" class="hidden w-8 h-8 rounded-full border-2 border-gray-200 border-t-gray-900 animate-spin"></div>
+                <button type="button" id="btnMas" onclick="cargarMas()"
+                        class="px-6 py-3 rounded-full border text-sm font-medium hover:border-gray-900">
+                    Ver más productos
+                </button>
+            </div>
+        <?php endif; ?>
     <?php else: ?>
         <div class="bg-gray-50 rounded-2xl p-12 text-center">
             <p class="text-4xl mb-3">🔍</p>
@@ -306,4 +196,45 @@ function aplicarPrecios() {
     params.delete('route');
     window.location.href = '<?= BASE_URL ?>/tienda?' + params.toString();
 }
+
+// ── Carga infinita: al acercarse al final, trae los siguientes ──
+(function () {
+    const grilla = document.getElementById('grillaProductos');
+    const caja   = document.getElementById('cargarMas');
+    if (!grilla || !caja) return;
+
+    const QUERY = <?= json_encode($queryFiltros) ?>;
+    let pagina   = 1;
+    let cargando = false;
+    let hayMas   = true;
+
+    window.cargarMas = async function () {
+        if (cargando || !hayMas) return;
+        cargando = true;
+        document.getElementById('cargando').classList.remove('hidden');
+        document.getElementById('btnMas').classList.add('hidden');
+
+        try {
+            const r = await fetch('<?= BASE_URL ?>/tienda/mas?' + QUERY + (QUERY ? '&' : '') + 'pagina=' + (pagina + 1));
+            const j = await r.json();
+            grilla.insertAdjacentHTML('beforeend', j.html);
+            pagina++;
+            hayMas = j.hayMas;
+        } catch (e) {
+            // si falló, queda el botón para reintentar
+        }
+
+        cargando = false;
+        document.getElementById('cargando').classList.add('hidden');
+        if (hayMas) {
+            document.getElementById('btnMas').classList.remove('hidden');
+        } else {
+            caja.remove();
+        }
+    };
+
+    if ('IntersectionObserver' in window) {
+        new IntersectionObserver(e => { if (e[0].isIntersecting) cargarMas(); }, { rootMargin: '400px 0px' }).observe(caja);
+    }
+})();
 </script>

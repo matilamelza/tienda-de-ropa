@@ -2,6 +2,7 @@
 
 class TiendaController extends Controller
 {
+    public const POR_PAGINA = 24;
     public function index()
     {
         $productoModel  = new Producto();
@@ -41,11 +42,12 @@ class TiendaController extends Controller
         }
 
         // ── Productos ────────────────────────────────────────────────────────
-        $productos = $productoModel->buscarFiltrado($filtros);
+        $productos = $productoModel->buscarFiltrado($filtros, self::POR_PAGINA, 0);
+        $total     = $productoModel->contarFiltrado($filtros);
 
         // ── Estadísticas ─────────────────────────────────────────────────────
         if ($filtros['q'] !== '') {
-            registrar_visita('busqueda', null, $filtros['q'], count($productos));
+            registrar_visita('busqueda', null, $filtros['q'], $total);
         } elseif ($categoriaActual) {
             registrar_visita('categoria', (int) $categoriaActual['id_categoria']);
         } elseif ($filtros['marca'] > 0) {
@@ -78,6 +80,8 @@ class TiendaController extends Controller
             'destacados'      => $destacados,
             'meta'            => $meta,
             'hayOfertas'      => $productoModel->hayOfertasVigentes(),
+            'total'        => $total,
+            'porPagina'    => self::POR_PAGINA,
         ], 'tienda');
     }
 
@@ -195,5 +199,34 @@ class TiendaController extends Controller
         }
         echo '</urlset>';
         exit;
+    }
+
+        /** AJAX: la página siguiente de productos, ya armada en HTML. */
+    public function masProductos()
+    {
+        $filtros = [
+            'q'          => trim($_GET['q'] ?? ''),
+            'categoria'  => trim($_GET['categoria'] ?? ''),
+            'marca'      => (int) ($_GET['marca'] ?? 0),
+            'precio_min' => $_GET['precio_min'] ?? '',
+            'precio_max' => $_GET['precio_max'] ?? '',
+            'orden'      => $_GET['orden'] ?? 'reciente',
+            'oferta'     => !empty($_GET['oferta']),
+            'talle'      => mb_substr(trim($_GET['talle'] ?? ''), 0, 20),
+        ];
+        $pagina = max(2, (int) ($_GET['pagina'] ?? 2));
+
+        // Se pide uno de más para saber si quedan
+        $productos = (new Producto())->buscarFiltrado($filtros, self::POR_PAGINA + 1, ($pagina - 1) * self::POR_PAGINA);
+        $hayMas    = count($productos) > self::POR_PAGINA;
+        $productos = array_slice($productos, 0, self::POR_PAGINA);
+
+        ob_start();
+        foreach ($productos as $p) {
+            require __DIR__ . '/../Views/tienda/_tarjeta.php';
+        }
+        $html = ob_get_clean();
+
+        $this->json(['ok' => true, 'html' => $html, 'hayMas' => $hayMas]);
     }
 }

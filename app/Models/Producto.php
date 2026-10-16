@@ -1067,38 +1067,30 @@ class Producto extends Conexion
         ];
     }
 
-    /**
-     * Busca y filtra productos para la tienda.
-     * Soporta: búsqueda por texto, categoría, marca, precio min/max y orden.
-     */
-        public function buscarFiltrado(array $filtros = []): array
+       /** WHERE de la tienda, compartido por la búsqueda y el conteo. */
+    private function filtroTienda(array $filtros): array
     {
-        $q          = trim($filtros['q']          ?? '');
-        $categoria  = trim($filtros['categoria']  ?? '');
-        $marca      = (int)($filtros['marca']     ?? 0);
-        $precioMin  = ($filtros['precio_min'] ?? '') !== '' ? (float) $filtros['precio_min'] : null;
-        $precioMax  = ($filtros['precio_max'] ?? '') !== '' ? (float) $filtros['precio_max'] : null;
-        $orden      = $filtros['orden'] ?? 'reciente';
+        $q         = trim($filtros['q'] ?? '');
+        $categoria = trim($filtros['categoria'] ?? '');
+        $marca     = (int) ($filtros['marca'] ?? 0);
+        $precioMin = ($filtros['precio_min'] ?? '') !== '' ? (float) $filtros['precio_min'] : null;
+        $precioMax = ($filtros['precio_max'] ?? '') !== '' ? (float) $filtros['precio_max'] : null;
 
         $where  = ['p.activo = 1', 'p.eliminado_at IS NULL'];
         $params = [];
         $types  = '';
 
         if ($q !== '') {
-            $like = '%' . $q . '%';
+            $like     = '%' . $q . '%';
             $where[]  = '(p.nombre LIKE ? OR p.descripcion LIKE ? OR m.nombre LIKE ?)';
-            $params[] = $like;
-            $params[] = $like;
-            $params[] = $like;
+            $params   = array_merge($params, [$like, $like, $like]);
             $types   .= 'sss';
         }
-
         if ($categoria !== '') {
             $where[]  = 'c.slug = ?';
             $params[] = $categoria;
             $types   .= 's';
         }
-
         if ($marca > 0) {
             $where[]  = 'p.id_marca = ?';
             $params[] = $marca;
@@ -1110,22 +1102,29 @@ class Producto extends Conexion
             $params[] = $precioMin;
             $types   .= 'd';
         }
-
         if ($precioMax !== null && $precioMax > 0) {
             $where[]  = 'p.precio_base <= ?';
             $params[] = $precioMax;
             $types   .= 'd';
         }
-
-        // Solo productos con una promoción vigente
         if (!empty($filtros['oferta'])) {
             $where[] = "EXISTS (SELECT 1 FROM promocion_productos pp
                                 INNER JOIN promociones pr ON pr.id_promocion = pp.id_promocion
                                 WHERE pp.id_producto = p.id_producto AND " . Promocion::SQL_VIGENTE . ")";
         }
 
-        // El orden va sobre la consulta de afuera (t), así puede usar el descuento ya calculado
-        switch ($orden) {
+        return [implode(' AND ', $where), $params, $types];
+    }
+
+    /**
+     * Productos de la tienda. Con $limite, devuelve esa página (para la carga infinita).
+     * Los agotados van siempre al final.
+     */
+    public function buscarFiltrado(array $filtros = [], ?int $limite = null, int $offset = 0): array
+    {
+        [$where, $params, $types] = $this->filtroTienda($filtros);
+
+        switch ($filtros['orden'] ?? 'reciente') {
             case 'precio_asc':  $orderBy = 't.precio_base * (1 - COALESCE(t.descuento_pct, 0) / 100) ASC';  break;
             case 'precio_desc': $orderBy = 't.precio_base * (1 - COALESCE(t.descuento_pct, 0) / 100) DESC'; break;
             case 'nombre':      $orderBy = 't.nombre ASC'; break;
@@ -1138,30 +1137,77 @@ class Producto extends Conexion
                         c.nombre AS categoria,
                         c.slug   AS categoria_slug,
                         m.nombre AS marca,
-                        (
-                            SELECT pf.imagen
-                            FROM producto_fotos pf
-                            WHERE pf.id_producto = p.id_producto
-                            ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC
-                            LIMIT 1
-                        ) AS foto_principal,
+                        (SELECT pf.imagen FROM producto_fotos pf WHERE pf.id_producto = p.id_producto
+                         ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC LIMIT 1) AS foto_principal,
+                        (SELECT pf.imagen FROM producto_fotos pf WHERE pf.id_producto = p.id_producto
+                         ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC LIMIT 1 OFFSET 1) AS foto_secundaria,
+                        EXISTS (SELECT 1 FROM producto_variantes pv
+                                WHERE pv.id_producto = p.id_producto AND pv.activo = 1
+                                AND (pv.stock - pv.stock_reservado) > 0) AS con_stock,
+                        
                         " . Promocion::columnasDescuento('p') . "
                     FROM productos p
                     INNER JOIN categorias c ON c.id_categoria = p.id_categoria
                     LEFT JOIN marcas m ON m.id_marca = p.id_marca
-                    WHERE " . implode(' AND ', $where) . "
+                    WHERE $where
                 ) t
-                ORDER BY " . $orderBy;
+                ORDER BY t.con_stock DESC, $orderBy"
+              . ($limite !== null ? ' LIMIT ? OFFSET ?' : '');
 
-        $stmt = $this->db->prepare($sql);
-
-        if (!empty($params)) {
-            $stmt->bind_param($types, ...$params);
+        if ($limite !== null) {
+            $params[] = $limite;
+            $params[] = $offset;
+            $types   .= 'ii';
         }
 
+        $stmt = $this->db->prepare($sql);
+        if ($params) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /** Cuántos productos hay con esos filtros (para el contador y la carga infinita). */
+    public function contarFiltrado(array $filtros = []): int
+    {
+        [$where, $params, $types] = $this->filtroTienda($filtros);
+
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) AS n FROM productos p
+             INNER JOIN categorias c ON c.id_categoria = p.id_categoria
+             LEFT JOIN marcas m ON m.id_marca = p.id_marca
+             WHERE $where"
+        );
+        if ($params) {
+            $stmt->bind_param($types, ...$params);
+        }
         $stmt->execute();
 
-        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        return (int) $stmt->get_result()->fetch_assoc()['n'];
+    }
+
+    /** Talles que tienen stock (en toda la tienda o en una categoría), en el orden de los talles. */
+    public function tallesConStock(string $categoriaSlug = ''): array
+    {
+        $sql = "SELECT tt.nombre
+                FROM talles tt
+                INNER JOIN producto_variantes pv ON pv.id_talle = tt.id_talle
+                INNER JOIN productos p ON p.id_producto = pv.id_producto
+                INNER JOIN categorias c ON c.id_categoria = p.id_categoria
+                WHERE tt.activo = 1 AND pv.activo = 1 AND p.activo = 1 AND p.eliminado_at IS NULL
+                AND (pv.stock - pv.stock_reservado) > 0"
+             . ($categoriaSlug !== '' ? ' AND c.slug = ?' : '')
+             . " GROUP BY tt.id_talle, tt.nombre, tt.orden
+                ORDER BY tt.orden ASC, tt.nombre ASC";
+
+        $stmt = $this->db->prepare($sql);
+        if ($categoriaSlug !== '') {
+            $stmt->bind_param("s", $categoriaSlug);
+        }
+        $stmt->execute();
+
+        return array_column($stmt->get_result()->fetch_all(MYSQLI_ASSOC), 'nombre');
     }
 
     /**
