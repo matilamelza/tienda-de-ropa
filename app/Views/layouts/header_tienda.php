@@ -216,13 +216,12 @@
                             <path stroke-linecap="round" stroke-linejoin="round"
                                   d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.4 6M17 13l1.4 6M9 19a1 1 0 100 2 1 1 0 000-2zm8 0a1 1 0 100 2 1 1 0 000-2z"/>
                         </svg>
-                        <?php if ($totalItemsCarrito > 0): ?>
-                            <span class="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1
-                                         rounded-full text-[10px] font-bold flex items-center justify-center"
-                                  style="background-color: var(--color-primario); color: var(--color-boton-texto)">
-                                <?= $totalItemsCarrito > 99 ? '99+' : $totalItemsCarrito ?>
-                            </span>
-                        <?php endif; ?>
+                        <span id="contadorCarrito"
+                              class="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold items-center justify-center
+                                     <?= $totalItemsCarrito > 0 ? 'flex' : 'hidden' ?>"
+                              style="background-color: var(--color-primario); color: var(--color-boton-texto)">
+                            <?= $totalItemsCarrito > 99 ? '99+' : $totalItemsCarrito ?>
+                        </span>
                     </span>
                     <span class="hidden md:inline">Carrito</span>
                 </a>

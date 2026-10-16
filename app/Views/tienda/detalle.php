@@ -25,6 +25,34 @@ $pctDesc = !empty($descuento) ? (float) $descuento['pct'] : 0;
 // Ruta de navegación (si el modelo trae el slug de la categoría, se linkea)
 $catSlug = $producto['categoria_slug'] ?? null;
 $marca   = $producto['marca'] ?? null;
+
+
+// WhatsApp de la tienda (para "Consultar")
+$whatsappTienda = preg_replace('/\D/', '', $conf['tienda_whatsapp'] ?? '');
+
+// Datos para Google (schema.org)
+$hayStock    = count(array_filter($variantesArray, fn($v) => (int) $v['stock_disponible'] > 0)) > 0;
+$precioFinal = $pctDesc > 0 ? precio_con_descuento((float) $producto['precio_base'], $pctDesc) : (float) $producto['precio_base'];
+$urlProducto = url_absoluta('/producto/' . $producto['slug']);
+$schema = [
+    '@context'    => 'https://schema.org',
+    '@type'       => 'Product',
+    'name'        => $producto['nombre'],
+    'description' => trim((string) ($producto['descripcion'] ?? '')) ?: $producto['nombre'],
+    'image'       => array_map('url_absoluta', array_map(fn($f) => '/public/uploads/productos/' . $f['imagen'], $fotosArray)),
+    'category'    => $producto['categoria'],
+    'offers'      => [
+        '@type'         => 'Offer',
+        'url'           => $urlProducto,
+        'priceCurrency' => 'ARS',
+        'price'         => number_format($precioFinal, 2, '.', ''),
+        'availability'  => $hayStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        'itemCondition' => 'https://schema.org/NewCondition',
+    ],
+];
+if ($marca) {
+    $schema['brand'] = ['@type' => 'Brand', 'name' => $marca];
+}
 ?>
 
 <section class="max-w-7xl mx-auto px-4 py-10">
@@ -133,7 +161,7 @@ $marca   = $producto['marca'] ?? null;
                 </p>
             <?php endif; ?>
 
-            <form action="<?= BASE_URL ?>/carrito/agregar" method="POST" class="space-y-6">
+            <form action="<?= BASE_URL ?>/carrito/agregar" method="POST" class="space-y-6" id="formAgregar">
                 <input type="hidden" name="id_variante" id="id_variante">
 
                 <?= csrf_field() ?>
@@ -197,6 +225,16 @@ $marca   = $producto['marca'] ?? null;
                         class="w-full bg-gray-300 text-white py-4 rounded-full font-semibold cursor-not-allowed">
                     Seleccioná talle y color
                 </button>
+
+                <?php if ($whatsappTienda): ?>
+                    <a href="#" id="btnConsultar" target="_blank" rel="noopener"
+                       class="w-full flex items-center justify-center gap-2 py-3.5 rounded-full border font-semibold text-gray-800 hover:border-gray-900 transition -mt-2">
+                        <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.3-.4.8-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.8-1.2.2-.6.2-1.1.1-1.2l-.4-.3z"/>
+                        </svg>
+                        Consultar por WhatsApp
+                    </a>
+                <?php endif; ?>
 
             </form>
 
@@ -384,6 +422,64 @@ $consejos   = array_filter(array_map('trim', explode("\n", (string) $guia['conse
     </div>
 </div>
 <?php endif; ?>
+
+<!-- ── Barra fija del celular (aparece cuando el botón de compra sale de la pantalla) ── -->
+<div id="barraCompra" class="md:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t shadow-[0_-4px_12px_rgba(0,0,0,0.06)]
+                             px-4 py-3 flex items-center gap-3 translate-y-full transition-transform duration-200">
+    <div class="min-w-0 flex-1">
+        <p class="text-xs text-gray-500 truncate"><?= htmlspecialchars($producto['nombre']) ?></p>
+        <p id="barraPrecio" class="text-lg leading-tight"></p>
+    </div>
+    <button type="button" id="barraBoton" class="shrink-0 px-5 py-3 rounded-full font-semibold text-sm"></button>
+</div>
+<!-- Espacio para que la barra no tape el final de la página -->
+<div class="md:hidden h-20"></div>
+<style>
+  /* En la ficha, el botón flotante de WhatsApp sube un poco para no tapar la barra */
+  @media (max-width: 767px) { a[aria-label="Escribinos por WhatsApp"] { bottom: 5.5rem; } }
+</style>
+
+<!-- ── Panel "Agregado al carrito" ──────────────────────────────────────── -->
+<div id="panelCarrito" class="hidden fixed inset-0 z-[70]">
+    <div class="absolute inset-0 bg-black/40" onclick="cerrarPanelCarrito()"></div>
+    <aside class="absolute inset-x-0 bottom-0 max-h-[90vh] md:max-h-none md:inset-x-auto md:top-0 md:right-0 md:h-full md:w-96 bg-white
+                  rounded-t-3xl md:rounded-none shadow-xl flex flex-col">
+        <div class="flex items-center justify-between px-5 py-4 border-b">
+            <p class="font-bold text-gray-900 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-green-600 text-white text-sm flex items-center justify-center">✓</span>
+                <span id="panelTitulo">Agregado al carrito</span>
+            </p>
+            <button type="button" onclick="cerrarPanelCarrito()" class="text-2xl leading-none text-gray-400 hover:text-gray-900" aria-label="Cerrar">✕</button>
+        </div>
+
+        <p id="panelAviso" class="hidden mx-5 mt-4 text-xs text-orange-600"></p>
+
+        <div class="px-5 pt-4 pb-2 flex items-center justify-between text-sm">
+            <span class="font-semibold text-gray-900">Tu carrito</span>
+            <span class="text-gray-400"><span id="panelCantidad">0</span> producto(s)</span>
+        </div>
+
+        <ul id="panelLista" class="flex-1 min-h-0 overflow-y-auto px-5 divide-y max-h-[45vh] md:max-h-none"></ul>
+
+        <div class="px-5 pt-4 pb-6 border-t space-y-2">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-gray-500">Total</span>
+                <span id="panelTotal" class="text-xl font-bold text-gray-900"></span>
+            </div>
+            <a href="<?= BASE_URL ?>/carrito" class="btn-primario w-full py-3.5 rounded-full font-semibold flex items-center justify-center">
+                Ir al carrito
+            </a>
+            <button type="button" onclick="cerrarPanelCarrito()" class="w-full py-3.5 rounded-full border font-semibold text-gray-800 hover:border-gray-900">
+                Seguir comprando
+            </button>
+        </div>
+
+       
+    </aside>
+</div>
+
+<!-- ── Datos para Google ────────────────────────────────────────────────── -->
+<script type="application/ld+json"><?= json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?></script>
 
 <script>
 const variantes   = <?php echo json_encode($variantesArray, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
@@ -759,6 +855,7 @@ function actualizarStock() {
         btnAgregar.textContent = !talleSeleccionado
             ? (HAY_COLORES ? 'Seleccioná talle y color' : 'Seleccioná un talle')
             : 'Seleccioná un color';
+            sincronizarBarra();
         return;
     }
 
@@ -783,6 +880,7 @@ function actualizarStock() {
         btnAgregar.className = 'btn-primario w-full py-4 rounded-full font-semibold';
         btnAgregar.textContent = 'Agregar al carrito';
     }
+    sincronizarBarra();
 }
 
 function cambiarCantidad(valor) {
@@ -806,4 +904,146 @@ const tallesUnicos = [...new Set(variantes.map(v => v.talle).filter(Boolean))];
 if (tallesUnicos.length === 1) {
     seleccionarTalle(tallesUnicos[0]);
 }
+
+// ══════════════════════════════════════════════════════════════
+// CONSULTAR POR WHATSAPP
+// ══════════════════════════════════════════════════════════════
+const WHATSAPP = <?= json_encode($whatsappTienda) ?>;
+const URL_PRODUCTO = <?= json_encode($urlProducto) ?>;
+const NOMBRE_PRODUCTO = <?= json_encode($producto['nombre']) ?>;
+
+function linkConsulta() {
+    let texto = 'Hola! Quería consultar por *' + NOMBRE_PRODUCTO + '*';
+    if (talleSeleccionado) texto += ', talle ' + talleSeleccionado;
+    if (colorSeleccionado) texto += ', color ' + colorSeleccionado;
+    return 'https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent(texto + '.\n' + URL_PRODUCTO);
+}
+
+const btnConsultar = document.getElementById('btnConsultar');
+if (btnConsultar) {
+    // Se arma al tocarlo, así incluye el talle y el color que eligió
+    btnConsultar.addEventListener('click', () => { btnConsultar.href = linkConsulta(); });
+}
+
+// ══════════════════════════════════════════════════════════════
+// BARRA FIJA DEL CELULAR
+// ══════════════════════════════════════════════════════════════
+const barra      = document.getElementById('barraCompra');
+const barraBoton = document.getElementById('barraBoton');
+
+function sincronizarBarra() {
+    const boton = document.getElementById('barraBoton');
+    if (!boton) return;
+    document.getElementById('barraPrecio').innerHTML = document.getElementById('precioProducto').innerHTML;
+    boton.textContent = btnAgregar.disabled && !talleSeleccionado ? 'Elegir talle' : btnAgregar.textContent;
+    boton.className = 'shrink-0 px-5 py-3 rounded-full font-semibold text-sm '
+        + (btnAgregar.disabled && talleSeleccionado ? 'bg-gray-300 text-white' : 'btn-primario');
+}
+
+if (barra) {
+    barraBoton.addEventListener('click', () => {
+        if (!btnAgregar.disabled) {
+            document.getElementById('formAgregar').requestSubmit();
+        } else {
+            // Todavía no eligió talle: lo lleva a los talles
+            tallesBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+
+    // Se muestra solo cuando el botón de compra original no está a la vista
+    new IntersectionObserver(e => {
+        barra.classList.toggle('translate-y-full', e[0].isIntersecting || e[0].boundingClientRect.top > window.innerHeight);
+    }).observe(btnAgregar);
+
+    sincronizarBarra();
+}
+
+// ══════════════════════════════════════════════════════════════
+// AGREGAR AL CARRITO SIN SALIR DE LA PÁGINA
+// ══════════════════════════════════════════════════════════════
+const formAgregar = document.getElementById('formAgregar');
+const panel       = document.getElementById('panelCarrito');
+
+function abrirPanelCarrito() {
+    panel.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+function cerrarPanelCarrito() {
+    panel.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+formAgregar.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (btnAgregar.disabled || !document.getElementById('id_variante').value) return;
+
+    const textoBoton = btnAgregar.textContent;
+    btnAgregar.disabled = true;
+    btnAgregar.textContent = 'Agregando…';
+
+    try {
+        const r = await fetch(formAgregar.action, {
+            method: 'POST',
+            body: new FormData(formAgregar),
+            headers: { 'X-Requested-With': 'fetch' },
+            credentials: 'same-origin',
+        });
+        const j = await r.json();
+
+        if (!j.ok) {
+            stockBox.className = 'rounded-2xl border p-4 text-sm';
+            stockBox.innerHTML = '<strong class="text-red-600">' + j.mensaje + '</strong>';
+        } else {
+            // Contador del encabezado
+            const contador = document.getElementById('contadorCarrito');
+            if (contador) {
+                contador.textContent = j.cantidad_total > 99 ? '99+' : j.cantidad_total;
+                contador.classList.remove('hidden');
+                contador.classList.add('flex');
+            }
+
+            // Panel
+                       // Panel: el carrito completo, con lo recién agregado resaltado
+            const idAgregado = parseInt(document.getElementById('id_variante').value);
+            const esc = t => { const d = document.createElement('div'); d.textContent = t ?? ''; return d.innerHTML; };
+
+            document.getElementById('panelLista').innerHTML = j.items.map(it => `
+                <li class="py-3 flex gap-3 ${it.id_variante === idAgregado ? 'bg-green-50 -mx-5 px-5' : ''}">
+                    <div class="w-14 h-16 rounded-lg bg-gray-100 overflow-hidden shrink-0">
+                        ${it.foto ? `<img src="${esc(it.foto)}" alt="" class="w-full h-full object-cover">` : ''}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium text-gray-900 truncate">${esc(it.nombre)}</p>
+                        <p class="text-xs text-gray-500">${esc(it.variante || '')}${it.variante ? ' · ' : ''}${it.cantidad} u.</p>
+                        ${it.id_variante === idAgregado ? '<p class="text-xs text-green-700 font-medium">Recién agregado</p>' : ''}
+                    </div>
+                    <span class="text-sm font-semibold text-gray-900 whitespace-nowrap">${formatoPesos(it.subtotal)}</span>
+                </li>`).join('');
+
+            document.getElementById('panelCantidad').textContent = j.items.length;
+            document.getElementById('panelTotal').textContent = formatoPesos(j.total);
+
+            const aviso = document.getElementById('panelAviso');
+            aviso.classList.toggle('hidden', j.mensaje === 'Agregado al carrito.');
+            aviso.textContent = j.mensaje;
+
+            abrirPanelCarrito();
+
+            // Que se vea lo recién agregado
+            const nuevo = document.querySelector('#panelLista li.bg-green-50');
+            if (nuevo) nuevo.scrollIntoView({ block: 'nearest' });
+        }
+    } catch (err) {
+        formAgregar.submit();   // si algo falló, se agrega a la antigua (va al carrito)
+        return;
+    }
+
+    btnAgregar.disabled = false;
+    btnAgregar.textContent = textoBoton;
+    cantidadInput.value = 1;
+});
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !panel.classList.contains('hidden')) cerrarPanelCarrito();
+});
 </script>

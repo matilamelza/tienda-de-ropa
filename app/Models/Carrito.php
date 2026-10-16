@@ -38,4 +38,18 @@ class Carrito extends Conexion
 
         return $stmt->get_result()->fetch_assoc();
     }
+
+        /** Foto principal de un producto (para el panel del carrito). */
+    public function fotoProducto(int $idProducto): ?string
+    {
+        $stmt = $this->db->prepare(
+            "SELECT imagen FROM producto_fotos WHERE id_producto = ?
+             ORDER BY principal DESC, orden ASC, id_foto ASC LIMIT 1"
+        );
+        $stmt->bind_param("i", $idProducto);
+        $stmt->execute();
+        $f = $stmt->get_result()->fetch_assoc();
+
+        return $f['imagen'] ?? null;
+    }
 }
