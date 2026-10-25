@@ -1119,6 +1119,10 @@ class Producto extends Conexion
     /**
      * Productos de la tienda. Con $limite, devuelve esa página (para la carga infinita).
      * Los agotados van siempre al final.
+     *
+     * Se hace en dos pasos para que la paginación sea exacta:
+     *   1) la lista completa de ids, ya ordenada (liviana),
+     *   2) los datos completos solo de los ids de esta página.
      */
     public function buscarFiltrado(array $filtros = [], ?int $limite = null, int $offset = 0): array
     {
@@ -1128,63 +1132,70 @@ class Producto extends Conexion
             case 'precio_asc':  $orderBy = 't.precio_base * (1 - COALESCE(t.descuento_pct, 0) / 100) ASC';  break;
             case 'precio_desc': $orderBy = 't.precio_base * (1 - COALESCE(t.descuento_pct, 0) / 100) DESC'; break;
             case 'nombre':      $orderBy = 't.nombre ASC'; break;
-            default:            $orderBy = 't.destacado DESC, t.id_producto DESC'; break;
+            default:            $orderBy = 't.destacado DESC'; break;
         }
 
-        $sql = "SELECT t.* FROM (
-                    SELECT
-                        p.*,
-                        c.nombre AS categoria,
-                        c.slug   AS categoria_slug,
-                        m.nombre AS marca,
-                        (SELECT pf.imagen FROM producto_fotos pf WHERE pf.id_producto = p.id_producto
-                         ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC LIMIT 1) AS foto_principal,
-                        (SELECT pf.imagen FROM producto_fotos pf WHERE pf.id_producto = p.id_producto
-                         ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC LIMIT 1 OFFSET 1) AS foto_secundaria,
-                        EXISTS (SELECT 1 FROM producto_variantes pv
-                                WHERE pv.id_producto = p.id_producto AND pv.activo = 1
-                                AND (pv.stock - pv.stock_reservado) > 0) AS con_stock,
-                        
-                        " . Promocion::columnasDescuento('p') . "
-                    FROM productos p
-                    INNER JOIN categorias c ON c.id_categoria = p.id_categoria
-                    LEFT JOIN marcas m ON m.id_marca = p.id_marca
-                    WHERE $where
-                ) t
-                ORDER BY t.con_stock DESC, $orderBy"
-              . ($limite !== null ? ' LIMIT ? OFFSET ?' : '');
+        $sinStock = "NOT EXISTS (SELECT 1 FROM producto_variantes pv
+                                 WHERE pv.id_producto = p.id_producto AND pv.activo = 1
+                                 AND (pv.stock - pv.stock_reservado) > 0)";
 
-        if ($limite !== null) {
-            $params[] = $limite;
-            $params[] = $offset;
-            $types   .= 'ii';
-        }
-
-        $stmt = $this->db->prepare($sql);
-        if ($params) {
-            $stmt->bind_param($types, ...$params);
-        }
-        $stmt->execute();
-            return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    }
-
-    /** Cuántos productos hay con esos filtros (para el contador y la carga infinita). */
-    public function contarFiltrado(array $filtros = []): int
-    {
-        [$where, $params, $types] = $this->filtroTienda($filtros);
-
+        // ── 1) Ids ordenados ─────────────────────────────────────────────────
         $stmt = $this->db->prepare(
-            "SELECT COUNT(*) AS n FROM productos p
-             INNER JOIN categorias c ON c.id_categoria = p.id_categoria
-             LEFT JOIN marcas m ON m.id_marca = p.id_marca
-             WHERE $where"
+            "SELECT t.id_producto FROM (
+                SELECT p.id_producto, p.nombre, p.precio_base, p.destacado,
+                       $sinStock AS agotado,
+                       " . Promocion::columnasDescuento('p') . "
+                FROM productos p
+                INNER JOIN categorias c ON c.id_categoria = p.id_categoria
+                LEFT JOIN marcas m ON m.id_marca = p.id_marca
+                WHERE $where
+             ) t
+             ORDER BY t.agotado ASC, $orderBy, t.id_producto DESC"
         );
         if ($params) {
             $stmt->bind_param($types, ...$params);
         }
         $stmt->execute();
+        $ids = array_map('intval', array_column($stmt->get_result()->fetch_all(MYSQLI_ASSOC), 'id_producto'));
 
-        return (int) $stmt->get_result()->fetch_assoc()['n'];
+        if ($limite !== null) {
+            $ids = array_slice($ids, $offset, $limite);
+        }
+        if (!$ids) {
+            return [];
+        }
+
+        // ── 2) Datos completos de esos ids ───────────────────────────────────
+        $lista = implode(',', $ids);   // son enteros (intval), es seguro
+
+        $filas = $this->db->query(
+            "SELECT
+                p.*,
+                c.nombre AS categoria,
+                c.slug   AS categoria_slug,
+                m.nombre AS marca,
+                (SELECT pf.imagen FROM producto_fotos pf WHERE pf.id_producto = p.id_producto
+                 ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC LIMIT 1) AS foto_principal,
+                (SELECT pf.imagen FROM producto_fotos pf WHERE pf.id_producto = p.id_producto
+                 ORDER BY pf.principal DESC, pf.orden ASC, pf.id_foto ASC LIMIT 1 OFFSET 1) AS foto_secundaria,
+                NOT $sinStock AS con_stock,
+                " . Promocion::columnasDescuento('p') . "
+             FROM productos p
+             INNER JOIN categorias c ON c.id_categoria = p.id_categoria
+             LEFT JOIN marcas m ON m.id_marca = p.id_marca
+             WHERE p.id_producto IN ($lista)"
+        )->fetch_all(MYSQLI_ASSOC);
+
+        // Devolverlos en el orden del paso 1
+        $porId = array_column($filas, null, 'id_producto');
+        $resultado = [];
+        foreach ($ids as $id) {
+            if (isset($porId[$id])) {
+                $resultado[] = $porId[$id];
+            }
+        }
+
+        return $resultado;
     }
 
     /** Talles que tienen stock (en toda la tienda o en una categoría), en el orden de los talles. */
