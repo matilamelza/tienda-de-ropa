@@ -214,6 +214,23 @@ class TiendaController extends Controller
             'oferta'     => !empty($_GET['oferta']),
         ];
 
+                // ── TEMPORAL: diagnóstico de la paginación ──
+        if (isset($_GET['debug'])) {
+            header('Content-Type: text/plain; charset=utf-8');
+            $m = new Producto();
+            echo 'Total: ' . $m->contarFiltrado($filtros) . "\n\n";
+            $vistos = [];
+            for ($p = 1; $p <= 8; $p++) {
+                $ids = array_column($m->buscarFiltrado($filtros, self::POR_PAGINA, ($p - 1) * self::POR_PAGINA), 'id_producto');
+                $rep = array_values(array_intersect($ids, $vistos));
+                echo "Pagina $p: " . count($ids) . " productos · repetidos: " . count($rep)
+                   . ($rep ? ' (' . implode(', ', array_slice($rep, 0, 10)) . ')' : '') . "\n";
+                $vistos = array_merge($vistos, $ids);
+            }
+            echo "\nDistintos en total: " . count(array_unique($vistos));
+            exit;
+        }
+
         $pagina  = max(2, (int) ($_GET['pagina'] ?? 2));
         $offset  = ($pagina - 1) * self::POR_PAGINA;
         $modelo  = new Producto();
