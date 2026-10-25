@@ -217,9 +217,18 @@ function aplicarPrecios() {
         try {
             const r = await fetch('<?= BASE_URL ?>/tienda/mas?' + QUERY + (QUERY ? '&' : '') + 'pagina=' + (pagina + 1));
             const j = await r.json();
-            grilla.insertAdjacentHTML('beforeend', j.html);
+
+            // Agregar solo los que no están ya en pantalla
+            const yaEstan = new Set([...grilla.querySelectorAll('[data-id]')].map(a => a.dataset.id));
+            const tmp = document.createElement('div');
+            tmp.innerHTML = j.html;
+            let nuevos = 0;
+            [...tmp.children].forEach(el => {
+                if (!yaEstan.has(el.dataset.id)) { grilla.appendChild(el); nuevos++; }
+            });
+
             pagina++;
-            hayMas = j.hayMas;
+            hayMas = j.hayMas && nuevos > 0;   // si no trajo nada nuevo, no sigue
         } catch (e) {
             // si falló, queda el botón para reintentar
         }

@@ -3,7 +3,7 @@
 $sinStock = isset($p['con_stock']) && !$p['con_stock'];
 $foto2    = !empty($p['foto_secundaria']) ? BASE_URL . '/public/uploads/productos/' . htmlspecialchars($p['foto_secundaria']) : '';
 ?>
-<a href="<?= BASE_URL ?>/producto/<?= htmlspecialchars($p['slug']) ?>" class="group block">
+<a href="<?= BASE_URL ?>/producto/<?= htmlspecialchars($p['slug']) ?>" data-id="<?= (int) $p['id_producto'] ?>" class="group block">
     <div class="relative aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden shadow-sm group-hover:shadow-lg transition">
         <?php if (!empty($p['foto_principal'])): ?>
             <img src="<?= BASE_URL ?>/public/uploads/productos/<?= htmlspecialchars($p['foto_principal']) ?>"

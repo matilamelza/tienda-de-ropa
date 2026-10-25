@@ -201,7 +201,7 @@ class TiendaController extends Controller
         exit;
     }
 
-        /** AJAX: la página siguiente de productos, ya armada en HTML. */
+    /** AJAX: la página siguiente de productos, ya armada en HTML. */
     public function masProductos()
     {
         $filtros = [
@@ -212,14 +212,20 @@ class TiendaController extends Controller
             'precio_max' => $_GET['precio_max'] ?? '',
             'orden'      => $_GET['orden'] ?? 'reciente',
             'oferta'     => !empty($_GET['oferta']),
-            'talle'      => mb_substr(trim($_GET['talle'] ?? ''), 0, 20),
         ];
-        $pagina = max(2, (int) ($_GET['pagina'] ?? 2));
 
-        // Se pide uno de más para saber si quedan
-        $productos = (new Producto())->buscarFiltrado($filtros, self::POR_PAGINA + 1, ($pagina - 1) * self::POR_PAGINA);
-        $hayMas    = count($productos) > self::POR_PAGINA;
-        $productos = array_slice($productos, 0, self::POR_PAGINA);
+        $pagina  = max(2, (int) ($_GET['pagina'] ?? 2));
+        $offset  = ($pagina - 1) * self::POR_PAGINA;
+        $modelo  = new Producto();
+        $total   = $modelo->contarFiltrado($filtros);
+
+        // Ya no quedan productos: respuesta vacía y se corta la carga
+        if ($offset >= $total) {
+            $this->json(['ok' => true, 'html' => '', 'hayMas' => false]);
+        }
+
+        $productos = $modelo->buscarFiltrado($filtros, self::POR_PAGINA, $offset);
+        $hayMas    = $offset + count($productos) < $total;
 
         ob_start();
         foreach ($productos as $p) {
