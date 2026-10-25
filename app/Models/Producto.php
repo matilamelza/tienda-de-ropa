@@ -1198,6 +1198,25 @@ class Producto extends Conexion
         return $resultado;
     }
 
+        /** Cuántos productos hay con esos filtros (para el contador y la carga infinita). */
+    public function contarFiltrado(array $filtros = []): int
+    {
+        [$where, $params, $types] = $this->filtroTienda($filtros);
+
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) AS n FROM productos p
+             INNER JOIN categorias c ON c.id_categoria = p.id_categoria
+             LEFT JOIN marcas m ON m.id_marca = p.id_marca
+             WHERE $where"
+        );
+        if ($params) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+
+        return (int) $stmt->get_result()->fetch_assoc()['n'];
+    }
+
     /** Talles que tienen stock (en toda la tienda o en una categoría), en el orden de los talles. */
     public function tallesConStock(string $categoriaSlug = ''): array
     {
