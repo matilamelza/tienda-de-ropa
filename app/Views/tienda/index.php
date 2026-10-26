@@ -228,7 +228,7 @@ function aplicarPrecios() {
             });
 
             pagina++;
-            hayMas = j.hayMas && nuevos > 0;   // si no trajo nada nuevo, no sigue
+            hayMas = j.hayMas;                 // el servidor dice cuándo se terminan
         } catch (e) {
             // si falló, queda el botón para reintentar
         }
